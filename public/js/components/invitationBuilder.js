@@ -59,7 +59,24 @@ App.renderInvitationBuilder = async function(container) {
 
               <div>
                 <label for="inviteCustomerPhone">Customer Mobile / WhatsApp *</label>
-                <input id="inviteCustomerPhone" type="tel" required placeholder="+91 98101 23456" oninput="App.updateLivePreview()">
+                <div style="display:flex; gap:6px;">
+                  <select id="inviteCountryCode" style="width:115px; flex-shrink:0; font-weight:600; padding:8px 6px;" onchange="App.updateLivePreview()">
+                    <option value="+91" selected>🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+61">🇦🇺 +61</option>
+                    <option value="+966">🇸🇦 +966</option>
+                    <option value="+974">🇶🇦 +974</option>
+                    <option value="+965">🇰🇼 +965</option>
+                    <option value="+968">🇴🇲 +968</option>
+                    <option value="+973">🇧🇭 +973</option>
+                    <option value="+49">🇩🇪 +49</option>
+                    <option value="+33">🇫🇷 +33</option>
+                  </select>
+                  <input id="inviteCustomerPhone" type="tel" required placeholder="98101 23456" style="flex:1;" oninput="App.updateLivePreview()">
+                </div>
               </div>
 
               <div>
@@ -98,12 +115,25 @@ App.renderInvitationBuilder = async function(container) {
 
               <div>
                 <label for="inviteSize">Apartment / Unit Size</label>
-                <input id="inviteSize" placeholder="e.g. 2,400 sq. ft." oninput="App.updateLivePreview()">
+                <div style="display:flex; gap:6px;">
+                  <input id="inviteSize" placeholder="e.g. 2,400" style="flex:1;" oninput="App.updateLivePreview()">
+                  <select id="inviteSizeUnit" style="width:115px; flex-shrink:0; font-weight:600; padding:8px 6px;" onchange="App.updateLivePreview()">
+                    <option value="Sq. Ft." selected>Sq. Ft.</option>
+                    <option value="Sq. Yards">Sq. Yards</option>
+                    <option value="Sq. Meters">Sq. Meters</option>
+                    <option value="Acres">Acres</option>
+                    <option value="BHK">BHK</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label for="invitePrice">Price / Quotation</label>
-                <input id="invitePrice" placeholder="e.g. ₹4.80 Cr" oninput="App.updateLivePreview()">
+                <label for="invitePrice">Price / Quotation (in ₹ Cr)</label>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <span style="position:absolute; left:12px; color:var(--muted); font-weight:700; pointer-events:none;">₹</span>
+                  <input id="invitePrice" type="text" placeholder="e.g. 4.80" style="padding-left:26px; padding-right:45px; flex:1;" oninput="App.updateLivePreview()">
+                  <span style="position:absolute; right:12px; color:var(--muted); font-weight:700; font-size:13px; pointer-events:none;">Cr</span>
+                </div>
               </div>
 
               <div class="field-full">
@@ -205,7 +235,23 @@ App.onBuilderCustomerSelect = function(custId) {
   if (!opt) return;
 
   document.getElementById('inviteCustomerName').value = opt.getAttribute('data-name') || '';
-  document.getElementById('inviteCustomerPhone').value = opt.getAttribute('data-phone') || '';
+  
+  let rawPhone = (opt.getAttribute('data-phone') || '').trim();
+  if (rawPhone) {
+    const codeSelect = document.getElementById('inviteCountryCode');
+    if (codeSelect && rawPhone.startsWith('+')) {
+      for (const optCode of codeSelect.options) {
+        if (rawPhone.startsWith(optCode.value)) {
+          codeSelect.value = optCode.value;
+          rawPhone = rawPhone.substring(optCode.value.length).trim();
+          break;
+        }
+      }
+    }
+    document.getElementById('inviteCustomerPhone').value = rawPhone;
+  } else {
+    document.getElementById('inviteCustomerPhone').value = '';
+  }
 
   const interestedProj = opt.getAttribute('data-project');
   if (interestedProj) {
@@ -251,8 +297,40 @@ App.onBuilderProjectChange = function(projId) {
 
   document.getElementById('inviteLocation').value = proj.location || '';
   document.getElementById('inviteMaps').value = proj.google_maps_url || '';
-  document.getElementById('inviteSize').value = proj.super_built_up_area || '';
-  document.getElementById('invitePrice').value = proj.starting_price || '';
+  
+  // Intelligent populate for size and unit
+  if (proj.super_built_up_area) {
+    const areaStr = proj.super_built_up_area.trim();
+    const sizeInput = document.getElementById('inviteSize');
+    const unitSelect = document.getElementById('inviteSizeUnit');
+    if (unitSelect) {
+      if (/sq\.?\s*yards/i.test(areaStr)) {
+        unitSelect.value = 'Sq. Yards';
+        if (sizeInput) sizeInput.value = areaStr.replace(/sq\.?\s*yards/i, '').trim();
+      } else if (/sq\.?\s*meters?/i.test(areaStr)) {
+        unitSelect.value = 'Sq. Meters';
+        if (sizeInput) sizeInput.value = areaStr.replace(/sq\.?\s*meters?/i, '').trim();
+      } else if (/acres?/i.test(areaStr)) {
+        unitSelect.value = 'Acres';
+        if (sizeInput) sizeInput.value = areaStr.replace(/acres?/i, '').trim();
+      } else if (/bhk/i.test(areaStr) && !/sq/i.test(areaStr)) {
+        unitSelect.value = 'BHK';
+        if (sizeInput) sizeInput.value = areaStr.replace(/bhk/i, '').trim();
+      } else {
+        unitSelect.value = 'Sq. Ft.';
+        if (sizeInput) sizeInput.value = areaStr.replace(/sq\.?\s*(ft\.?|feet)?/i, '').trim();
+      }
+    } else if (sizeInput) {
+      sizeInput.value = areaStr;
+    }
+  }
+
+  // Populate price in Cr
+  if (proj.starting_price) {
+    const priceStr = proj.starting_price.trim();
+    const cleanPrice = priceStr.replace(/^[₹\s]+/, '').replace(/[\s]*(cr|crore|crores)?$/i, '').trim();
+    document.getElementById('invitePrice').value = cleanPrice;
+  }
 
   this.updateLivePreview();
 };
@@ -284,8 +362,21 @@ App._renderLivePreviewImmediate = function() {
   const projName = proj?.name || projSelect?.options[projSelect.selectedIndex]?.text || 'Luxury Showcase Residence';
   const projLogo = proj?.project_logo || '';
 
-  const size = document.getElementById('inviteSize')?.value.trim() || '2,400 sq. ft.';
-  const price = document.getElementById('invitePrice')?.value.trim() || 'Price as discussed';
+  const sizeVal = document.getElementById('inviteSize')?.value.trim();
+  const sizeUnit = document.getElementById('inviteSizeUnit')?.value || 'Sq. Ft.';
+  let size = '2,400 Sq. Ft.';
+  if (sizeVal) {
+    size = (sizeVal.toLowerCase().includes('sq') || sizeVal.toLowerCase().includes('bhk') || sizeVal.toLowerCase().includes('acre'))
+      ? sizeVal
+      : `${sizeVal} ${sizeUnit}`;
+  }
+
+  const rawPrice = document.getElementById('invitePrice')?.value.trim();
+  let price = 'Price as discussed';
+  if (rawPrice) {
+    let clean = rawPrice.replace(/^[₹\s]+/, '').replace(/[\s]*(cr|crore|crores)?$/i, '').trim();
+    price = clean ? `₹${clean} Cr` : rawPrice;
+  }
   const location = document.getElementById('inviteLocation')?.value.trim() || 'Project Experience Centre';
   const dateVal = document.getElementById('inviteDate')?.value || '';
   const timeVal = document.getElementById('inviteTime')?.value || '';
@@ -419,11 +510,26 @@ App.handleCreateInvitation = async function(e) {
     const custSelect = document.getElementById('inviteCustomerSelect');
     const customerId = custSelect.value || null;
     const customerName = document.getElementById('inviteCustomerName').value.trim();
-    const customerPhone = document.getElementById('inviteCustomerPhone').value.trim();
+    
+    const countryCode = document.getElementById('inviteCountryCode')?.value || '+91';
+    let rawPhone = document.getElementById('inviteCustomerPhone').value.trim();
+    const customerPhone = rawPhone.startsWith('+') ? rawPhone : `${countryCode} ${rawPhone}`;
+
     const projectId = document.getElementById('inviteProjectSelect').value;
     const developerId = document.getElementById('inviteDeveloperSelect').value;
-    const size = document.getElementById('inviteSize').value.trim();
-    const price = document.getElementById('invitePrice').value.trim();
+
+    const sizeVal = document.getElementById('inviteSize').value.trim();
+    const sizeUnit = document.getElementById('inviteSizeUnit')?.value || 'Sq. Ft.';
+    const size = sizeVal
+      ? ((sizeVal.toLowerCase().includes('sq') || sizeVal.toLowerCase().includes('bhk') || sizeVal.toLowerCase().includes('acre')) ? sizeVal : `${sizeVal} ${sizeUnit}`)
+      : '';
+
+    const rawPrice = document.getElementById('invitePrice').value.trim();
+    let price = '';
+    if (rawPrice) {
+      let clean = rawPrice.replace(/^[₹\s]+/, '').replace(/[\s]*(cr|crore|crores)?$/i, '').trim();
+      price = clean ? `₹${clean} Cr` : rawPrice;
+    }
     const location = document.getElementById('inviteLocation').value.trim();
     const mapsUrl = document.getElementById('inviteMaps').value.trim();
     const visitDate = document.getElementById('inviteDate').value;
