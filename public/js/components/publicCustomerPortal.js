@@ -73,16 +73,16 @@ App.renderPublicInvitation = async function(token) {
                   </div>
                   <div class="inv-agency-sub">${Utils.escapeHTML(inv.agency_subtitle || 'A personal property invitation')}</div>
                 </div>
-                <div class="inv-dev-badge" style="display:flex; align-items:center; gap:8px;">
+                <div class="inv-dev-badge" style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
+                  <div style="text-align:right;">
+                    <div class="inv-dev-name" style="font-size:15px; font-weight:700; color:var(--ink); line-height:1.2;">${Utils.escapeHTML(inv.developer_name || 'Developer')}</div>
+                    <div class="inv-dev-sub" style="font-size:9px; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase;">BUILDER / DEVELOPER</div>
+                  </div>
                   ${inv.developer_logo ? `
-                    <div style="width:34px; height:34px; border-radius:6px; background:#ffffff; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:2px; flex-shrink:0;">
+                    <div style="width:42px; height:42px; border-radius:8px; background:#ffffff; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
                       <img src="${inv.developer_logo}" alt="Developer Logo" style="max-width:100%; max-height:100%; object-fit:contain;">
                     </div>
                   ` : ''}
-                  <div>
-                    <div class="inv-dev-name">${Utils.escapeHTML(inv.developer_name || 'Developer')}</div>
-                    <div class="inv-dev-sub">DEVELOPER</div>
-                  </div>
                 </div>
               </div>
 
@@ -99,14 +99,21 @@ App.renderPublicInvitation = async function(token) {
               </div>
 
               <!-- Property Residence Box -->
-              <div class="inv-property-box" style="position:relative;">
-                ${inv.project_logo ? `
-                  <div style="position:absolute; top:16px; right:16px; width:46px; height:46px; border-radius:8px; background:#ffffff; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                    <img src="${inv.project_logo}" alt="Project Logo" style="max-width:100%; max-height:100%; object-fit:contain;">
+              <div class="inv-property-box" style="position:relative; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                  <div style="flex:1;">
+                    <div class="eyebrow" style="color:var(--muted); margin-bottom:4px;">YOUR SELECTED RESIDENCE</div>
+                    <h3 class="inv-property-title" style="margin-bottom:4px;">${Utils.escapeHTML(inv.project_name)}</h3>
+                    <div style="font-size:12px; color:var(--purple); font-weight:600; margin-bottom:12px;">
+                      BY ${Utils.escapeHTML(inv.developer_name || 'Developer')}
+                    </div>
                   </div>
-                ` : ''}
-                <div class="eyebrow" style="color:var(--muted);">YOUR SELECTED RESIDENCE</div>
-                <h3 class="inv-property-title" style="${inv.project_logo ? 'padding-right:54px;' : ''}">${Utils.escapeHTML(inv.project_name)}</h3>
+                  ${inv.project_logo ? `
+                    <div style="width:52px; height:52px; border-radius:10px; background:#ffffff; border:1.5px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+                      <img src="${inv.project_logo}" alt="Project Logo" style="max-width:100%; max-height:100%; object-fit:contain;">
+                    </div>
+                  ` : ''}
+                </div>
                 <div class="inv-prop-specs">
                   <div>
                     <span>Super built-up area</span>

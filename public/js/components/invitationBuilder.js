@@ -273,9 +273,17 @@ App._renderLivePreviewImmediate = function() {
   const advisorName = document.getElementById('inviteAdvisorName')?.value.trim() || this.currentUser.name;
   const advisorPhone = document.getElementById('inviteAdvisorPhone')?.value.trim() || '+91 98111 22334';
   const devSelect = document.getElementById('inviteDeveloperSelect');
-  const devName = devSelect?.options[devSelect.selectedIndex]?.text || 'Developer';
+  const devId = devSelect?.value;
+  const dev = this.cache?.developers?.find(d => d.id === devId);
+  const devName = dev?.name || devSelect?.options[devSelect.selectedIndex]?.text || 'Developer';
+  const devLogo = dev?.company_logo || '';
+
   const projSelect = document.getElementById('inviteProjectSelect');
-  const projName = projSelect?.options[projSelect.selectedIndex]?.text || 'Luxury Showcase Residence';
+  const projId = projSelect?.value;
+  const proj = this.cache?.projects?.find(p => p.id === projId);
+  const projName = proj?.name || projSelect?.options[projSelect.selectedIndex]?.text || 'Luxury Showcase Residence';
+  const projLogo = proj?.project_logo || '';
+
   const size = document.getElementById('inviteSize')?.value.trim() || '2,400 sq. ft.';
   const price = document.getElementById('invitePrice')?.value.trim() || 'Price as discussed';
   const location = document.getElementById('inviteLocation')?.value.trim() || 'Project Experience Centre';
@@ -297,9 +305,20 @@ App._renderLivePreviewImmediate = function() {
             <div class="inv-agency">${Utils.escapeHTML(this.currentUser.organization_name || 'Visit Studio Realty')}</div>
             <div class="inv-agency-sub">Private Viewings & Luxury Portfolio</div>
           </div>
-          <div class="inv-dev-badge">
-            <div class="inv-dev-name">${Utils.escapeHTML(devName)}</div>
-            <div class="inv-dev-sub">Developer</div>
+          <div class="inv-dev-badge" style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
+            <div style="text-align:right;">
+              <div class="inv-dev-name" style="font-size:15px; font-weight:700; color:var(--ink); line-height:1.2;">
+                ${Utils.escapeHTML(devName)}
+              </div>
+              <div class="inv-dev-sub" style="font-size:9px; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase;">
+                BUILDER / DEVELOPER
+              </div>
+            </div>
+            ${devLogo ? `
+              <div style="width:42px; height:42px; border-radius:8px; background:#ffffff; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                <img src="${devLogo}" alt="${Utils.escapeHTML(devName)}" style="max-width:100%; max-height:100%; object-fit:contain;">
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -312,9 +331,21 @@ App._renderLivePreviewImmediate = function() {
         </div>
 
         <!-- Property Specs -->
-        <div class="inv-property-box">
-          <div class="eyebrow" style="color:var(--muted);">YOUR SELECTED RESIDENCE</div>
-          <h3 class="inv-property-title">${Utils.escapeHTML(projName)}</h3>
+        <div class="inv-property-box" style="position:relative; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div style="flex:1;">
+              <div class="eyebrow" style="color:var(--muted); margin-bottom:4px;">YOUR SELECTED RESIDENCE</div>
+              <h3 class="inv-property-title" style="margin-bottom:4px;">${Utils.escapeHTML(projName)}</h3>
+              <div style="font-size:12px; color:var(--purple); font-weight:600; margin-bottom:12px;">
+                BY ${Utils.escapeHTML(devName)}
+              </div>
+            </div>
+            ${projLogo ? `
+              <div style="width:52px; height:52px; border-radius:10px; background:#ffffff; border:1.5px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+                <img src="${projLogo}" alt="${Utils.escapeHTML(projName)}" style="max-width:100%; max-height:100%; object-fit:contain;">
+              </div>
+            ` : ''}
+          </div>
           <div class="inv-prop-specs">
             <div>
               <span>Super built-up area</span>
