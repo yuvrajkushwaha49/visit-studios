@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e1b4b">
+  <meta name="description" content="Visit Studio - Real Estate Property Visit Management & Digital Invitation Platform">
+  <title>Visit Studio — Real Estate Site Visit Platform</title>
+
+  <!-- Typography & Preconnect Performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="/css/style.css?v=v7-zero-space">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+  <script>
+    (function() {
+      var s = window.location.search || '';
+      var h = window.location.hash || '';
+      if (s.indexOf('invite=') !== -1 || h.indexOf('invite=') !== -1 || s.indexOf('feedback=') !== -1 || h.indexOf('feedback=') !== -1) {
+        document.documentElement.classList.add('public-mode');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Main Authenticated SaaS Shell (Hidden by default to prevent blank space flash on public passes) -->
+  <div id="appShell" class="shell hidden">
+    <!-- Populated dynamically by App.renderShell() -->
+  </div>
+
+  <!-- Fixed Mobile Touch Bottom Navigation Bar (Direct child of body for 100% fixed viewport anchoring) -->
+  <nav id="mobileBottomNav" class="mobile-bottom-nav hidden" aria-label="Mobile Navigation">
+    <button type="button" class="mob-nav-btn active" onclick="App.navigate('dashboard')" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="mob-nav-btn" onclick="App.navigate('invitations')" data-page="invitations">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span>Invites</span>
+    </button>
+    <button type="button" class="mob-nav-btn mob-nav-create" onclick="App.navigate('create_invitation')" data-page="create_invitation">
+      <div class="mob-nav-fab">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </div>
+      <span>Create</span>
+    </button>
+    <button type="button" class="mob-nav-btn" onclick="App.navigate('visits')" data-page="visits">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      <span>Visits</span>
+    </button>
+    <button type="button" class="mob-nav-btn" onclick="App.toggleSidebar(true)" aria-label="More navigation options">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <span>Menu</span>
+    </button>
+  </nav>
+
+  <!-- Public Customer-Facing Invitation View (Rendered when URL has #invite=...) -->
+  <div id="publicViewContainer" class="hidden"></div>
+
+  <!-- Global Modal Dialog Overlay -->
+  <div id="globalModalOverlay" class="modal-overlay hidden"></div>
+
+  <!-- Global Toast Notification Banner -->
+  <div id="globalToast" class="toast hidden" role="status"></div>
+
+  <!-- Core Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js?v=v12-logo-upload"></script>
+  <script src="/js/app.js?v=v12-logo-upload"></script>
+
+  <!-- UI Components -->
+  <script src="/js/components/dashboard.js"></script>
+  <script src="/js/components/invitationBuilder.js?v=v12-logo-upload"></script>
+  <script src="/js/components/invitationsList.js?v=v4"></script>
+  <script src="/js/components/visitsList.js"></script>
+  <script src="/js/components/customersList.js"></script>
+  <script src="/js/components/followupsList.js"></script>
+  <script src="/js/components/teamManagement.js?v=v2"></script>
+  <script src="/js/components/projectsManagement.js?v=v12-logo-upload"></script>
+  <script src="/js/components/whatsappAutomation.js"></script>
+  <script src="/js/components/reportsAnalytics.js"></script>
+  <script src="/js/components/settingsView.js"></script>
+  <script src="/js/components/superAdminView.js"></script>
+  <script src="/js/components/publicCustomerPortal.js?v=v12-logo-upload"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>

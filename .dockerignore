@@ -1,0 +1,7 @@
+node_modules
+.git
+.env
+logs
+server/data/*.db-shm
+server/data/*.db-wal
+.ai

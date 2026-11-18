@@ -1,0 +1,18 @@
+# Node.js dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# PM2 & Application logs
+logs/
+*.log
+npm-debug.log*
+
+# Scratch and temporary agent files
+scratch/
+
+# Operating System files
+.DS_Store
+Thumbs.db
