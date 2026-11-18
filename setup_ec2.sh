@@ -56,10 +56,10 @@ apt-get clean
 apt-get update -y -q
 apt-get install -y -q curl wget git ufw
 
-echo -e "${BLUE}[2/8] Installing Node.js LTS (v20.x) and PM2...${NC}"
-if ! command -v node >/dev/null 2>&1 || [[ "$(node -v)" != v2* ]] || ! command -v npm >/dev/null 2>&1; then
-  echo -e "${YELLOW}Downloading pre-built Node.js LTS binary directly (super fast, zero apt memory)...${NC}"
-  curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.gz -o /tmp/node.tar.gz
+echo -e "${BLUE}[2/8] Installing Node.js LTS (v22.x with node:sqlite) and PM2...${NC}"
+if ! command -v node >/dev/null 2>&1 || [[ "$(node -v)" != v22* ]] || ! command -v npm >/dev/null 2>&1; then
+  echo -e "${YELLOW}Downloading pre-built Node.js v22 LTS binary directly (super fast, zero apt memory)...${NC}"
+  curl -fsSL https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-x64.tar.gz -o /tmp/node.tar.gz
   tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1
   rm -f /tmp/node.tar.gz
 fi

@@ -34,8 +34,8 @@ grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fsta
 sysctl vm.swappiness=10 >/dev/null 2>&1 || true
 echo -e "${GREEN}✓ Swap memory enabled.${NC}"
 
-echo -e "${YELLOW}>>> [3/6] Installing Node.js LTS v20 & NPM directly from binary...${NC}"
-curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.gz -o /tmp/node.tar.gz
+echo -e "${YELLOW}>>> [3/6] Installing Node.js LTS v22 (with built-in node:sqlite) & NPM...${NC}"
+curl -fsSL https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-x64.tar.gz -o /tmp/node.tar.gz
 tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1
 rm -f /tmp/node.tar.gz
 echo -e "${GREEN}✓ Node.js $(node -v) & npm $(npm -v) ready.${NC}"
