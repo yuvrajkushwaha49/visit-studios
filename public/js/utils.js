@@ -356,49 +356,74 @@ const Utils = {
       }
 
       // Drawing Routine
-      const drawCardContent = (logoImg = null) => {
-        // 1. Top Architectural Building Logo Mark
-        const logoX = 540;
-        const logoY = 125;
+      const drawCardContent = (projLogoImg = null, devLogoImg = null) => {
+        // 1. Top Architectural / Brand Logo Mark (Project or Developer Logo)
+        const topLogo = projLogoImg || devLogoImg;
 
-        // Left Building Tower (Navy Blue)
-        ctx.fillStyle = '#102a45';
-        ctx.beginPath();
-        ctx.moveTo(logoX - 10, logoY - 45);
-        ctx.lineTo(logoX - 42, logoY - 25);
-        ctx.lineTo(logoX - 42, logoY + 30);
-        ctx.lineTo(logoX - 26, logoY + 30);
-        ctx.lineTo(logoX - 26, logoY - 8);
-        ctx.lineTo(logoX - 10, logoY - 20);
-        ctx.closePath();
-        ctx.fill();
+        if (topLogo) {
+          try {
+            const maxW = 160;
+            const maxH = 80;
+            let w = topLogo.naturalWidth || topLogo.width || maxW;
+            let h = topLogo.naturalHeight || topLogo.height || maxH;
+            const ratio = Math.min(maxW / w, maxH / h);
+            const renderW = Math.max(30, w * ratio);
+            const renderH = Math.max(30, h * ratio);
+            const drawX = 540 - renderW / 2;
+            const drawY = 118 - renderH / 2;
 
-        // Right Building Tower (Gold/Yellow)
-        ctx.fillStyle = '#f5ba13';
-        ctx.beginPath();
-        ctx.moveTo(logoX + 2, logoY - 42);
-        ctx.lineTo(logoX + 42, logoY - 18);
-        ctx.lineTo(logoX + 42, logoY + 30);
-        ctx.lineTo(logoX + 26, logoY + 30);
-        ctx.lineTo(logoX + 26, logoY - 4);
-        ctx.lineTo(logoX + 2, logoY - 16);
-        ctx.closePath();
-        ctx.fill();
+            ctx.save();
+            ctx.drawImage(topLogo, drawX, drawY, renderW, renderH);
+            ctx.restore();
+          } catch (e) {
+            drawFallbackBuildingLogo();
+          }
+        } else {
+          drawFallbackBuildingLogo();
+        }
 
-        // Inner decorative window pillar
-        ctx.fillStyle = '#102a45';
-        ctx.fillRect(logoX - 4, logoY - 5, 8, 35);
+        function drawFallbackBuildingLogo() {
+          const logoX = 540;
+          const logoY = 125;
+          ctx.fillStyle = '#102a45';
+          ctx.beginPath();
+          ctx.moveTo(logoX - 10, logoY - 45);
+          ctx.lineTo(logoX - 42, logoY - 25);
+          ctx.lineTo(logoX - 42, logoY + 30);
+          ctx.lineTo(logoX - 26, logoY + 30);
+          ctx.lineTo(logoX - 26, logoY - 8);
+          ctx.lineTo(logoX - 10, logoY - 20);
+          ctx.closePath();
+          ctx.fill();
 
-        // 2. Main Brand Typography
+          ctx.fillStyle = '#f5ba13';
+          ctx.beginPath();
+          ctx.moveTo(logoX + 2, logoY - 42);
+          ctx.lineTo(logoX + 42, logoY - 18);
+          ctx.lineTo(logoX + 42, logoY + 30);
+          ctx.lineTo(logoX + 26, logoY + 30);
+          ctx.lineTo(logoX + 26, logoY - 4);
+          ctx.lineTo(logoX + 2, logoY - 16);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#102a45';
+          ctx.fillRect(logoX - 4, logoY - 5, 8, 35);
+        }
+
+        // 2. Main Brand Typography: Project Name & Builder
         ctx.textAlign = 'center';
         ctx.fillStyle = '#102a45';
-        ctx.font = 'bold 36px "Inter", "Segoe UI", sans-serif';
-        ctx.fillText(agencyName, 540, 200);
+        let titleSize = 34;
+        if (projectName.length > 28) titleSize = 25;
+        else if (projectName.length > 20) titleSize = 29;
+        ctx.font = `bold ${titleSize}px "Inter", "Segoe UI", sans-serif`;
+        ctx.fillText(projectName.toUpperCase(), 540, 196);
 
         ctx.fillStyle = '#1e293b';
-        ctx.font = '700 13px "Inter", sans-serif';
-        const subText = 'PROPERTY VISIT INVITATION';
-        ctx.fillText(subText.split('').join(' '), 540, 228);
+        ctx.font = '700 12.5px "Inter", sans-serif';
+        const subText = developerName ? `BY ${developerName.toUpperCase()} · PROPERTY VISIT INVITATION` : 'PROPERTY VISIT INVITATION';
+        ctx.fillText(subText, 540, 226);
 
         // 3. Lead-in Text with Flanking Yellow Accent Lines
         ctx.fillStyle = '#1e293b';
@@ -552,7 +577,9 @@ const Utils = {
         const bldX = boxX + 65;
         const bldY = boxY + 70;
 
-        if (logoImg) {
+        const boxLogo = devLogoImg || projLogoImg;
+
+        if (boxLogo) {
           try {
             ctx.save();
             ctx.beginPath();
@@ -560,7 +587,7 @@ const Utils = {
             ctx.fillStyle = '#ffffff';
             ctx.fill();
             ctx.clip();
-            ctx.drawImage(logoImg, bldX - 38, bldY - 38, 76, 76);
+            ctx.drawImage(boxLogo, bldX - 38, bldY - 38, 76, 76);
             ctx.restore();
             ctx.strokeStyle = '#cbd5e1';
             ctx.lineWidth = 1;
@@ -697,26 +724,45 @@ const Utils = {
         }, 'image/png');
       };
 
-      // Load background template image (Reference Image 1) & optional Project/Developer Logo
+      // Helper function to safely load image with crossOrigin
+      const loadImg = (src) => {
+        if (!src) return Promise.resolve(null);
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = src;
+        });
+      };
+
+      // Load background template image (Reference Image 1) & Project/Developer Logos
       const bgImg = new Image();
       bgImg.crossOrigin = 'anonymous';
-      bgImg.onload = () => {
+      bgImg.onload = async () => {
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-        const logoSrc = data.project_logo || data.developer_logo;
-        if (logoSrc) {
-          const lImg = new Image();
-          lImg.crossOrigin = 'anonymous';
-          lImg.onload = () => drawCardContent(lImg);
-          lImg.onerror = () => drawCardContent(null);
-          lImg.src = logoSrc;
-        } else {
-          drawCardContent(null);
+        try {
+          const [pLogo, dLogo] = await Promise.all([
+            loadImg(data.project_logo),
+            loadImg(data.developer_logo)
+          ]);
+          drawCardContent(pLogo, dLogo);
+        } catch (err) {
+          drawCardContent(null, null);
         }
       };
-      bgImg.onerror = () => {
+      bgImg.onerror = async () => {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        drawCardContent(null);
+        try {
+          const [pLogo, dLogo] = await Promise.all([
+            loadImg(data.project_logo),
+            loadImg(data.developer_logo)
+          ]);
+          drawCardContent(pLogo, dLogo);
+        } catch (err) {
+          drawCardContent(null, null);
+        }
       };
       bgImg.src = '/images/card-template.jpg';
     });

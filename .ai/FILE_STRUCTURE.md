@@ -1,7 +1,7 @@
 # Project File Structure
 
 Generated automatically by `scripts/generate-ai-context.cjs`.
-*Last scanned: 2026-11-18T09:54:06.574Z*
+*Last scanned: 2026-11-18T10:51:47.475Z*
 
 ```
 invi/
@@ -15,10 +15,12 @@ invi/
 │   └── RULES.md
 ├── public/
 │   ├── cards/
+│   │   ├── inv-3b763317.png
 │   │   ├── inv-5cd342c3.png
 │   │   ├── inv-686c4b3e.png
 │   │   ├── inv-712851d4.png
 │   │   ├── inv-b6d3a974.png
+│   │   ├── inv-ca84329e.png
 │   │   └── inv-e2d15506.png
 │   ├── css/
 │   │   └── style.css
@@ -42,6 +44,17 @@ invi/
 │   │   ├── api.js
 │   │   ├── app.js
 │   │   └── utils.js
+│   ├── uploads/
+│   │   └── logos/
+│   │       ├── logo-2c6de208.png
+│   │       ├── logo-4bb771f4.png
+│   │       ├── logo-9f7fe60c.jpg
+│   │       ├── logo-11f5307a.jpg
+│   │       ├── logo-39f99d0e.png
+│   │       ├── logo-89943740.jpg
+│   │       ├── logo-a46a11c8.png
+│   │       ├── logo-cabc6c9d.png
+│   │       └── logo-d32401ff.png
 │   └── index.html
 ├── scratch/
 │   └── update_builder.js
@@ -91,7 +104,10 @@ invi/
 ├── ecosystem.config.cjs
 ├── package-lock.json
 ├── package.json
-└── README.md
+├── push_to_git.bat
+├── push_to_git.sh
+├── README.md
+└── setup_ec2.sh
 ```
 
 ## Key Directory Guide
