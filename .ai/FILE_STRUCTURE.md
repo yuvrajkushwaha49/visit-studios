@@ -1,7 +1,7 @@
 # Project File Structure
 
 Generated automatically by `scripts/generate-ai-context.cjs`.
-*Last scanned: 2026-11-18T10:51:47.475Z*
+*Last scanned: 2026-11-18T12:24:36.642Z*
 
 ```
 invi/
@@ -19,6 +19,7 @@ invi/
 │   │   ├── inv-5cd342c3.png
 │   │   ├── inv-686c4b3e.png
 │   │   ├── inv-712851d4.png
+│   │   ├── inv-933873cd.png
 │   │   ├── inv-b6d3a974.png
 │   │   ├── inv-ca84329e.png
 │   │   └── inv-e2d15506.png
@@ -54,7 +55,17 @@ invi/
 │   │       ├── logo-89943740.jpg
 │   │       ├── logo-a46a11c8.png
 │   │       ├── logo-cabc6c9d.png
-│   │       └── logo-d32401ff.png
+│   │       ├── logo-d32401ff.png
+│   │       ├── logo-dev-godrej.png
+│   │       ├── logo-dev-gulshan.png
+│   │       ├── logo-dev-ncr.png
+│   │       ├── logo-dev-saya.webp
+│   │       ├── logo-ncr-group.png
+│   │       ├── logo-proj-godrej-gbc.png
+│   │       ├── logo-proj-gulshan-hummingbird.png
+│   │       ├── logo-proj-ncr-monarch.png
+│   │       ├── logo-proj-ncr-studios.png
+│   │       └── logo-proj-saya-rajnagar.webp
 │   └── index.html
 ├── scratch/
 │   └── update_builder.js

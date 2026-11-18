@@ -106,25 +106,49 @@ async function seedDatabase() {
   const dev2Id = 'dev-max-002';
   const dev3Id = 'dev-prestige-003';
   const dev4Id = 'dev-dlf-004';
+  const dev5Id = 'dev-saya-005';
+  const dev6Id = 'dev-ncr-006';
+  const dev7Id = 'dev-gulshan-007';
+  const dev8Id = 'dev-godrej-008';
 
   db.run(
-    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [dev1Id, org1Id, 'M3M India', 'Nitin Goel', '+91 124 4777000', 'crm@m3mindia.com', 'https://m3mindia.com', 'M3M Cosmopolitan, Sector 66, Gurugram', 'Leading visionary developer creating world-class residential masterpieces.', 'active']
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev1Id, org1Id, 'M3M India', 'Nitin Goel', '+91 124 4777000', 'crm@m3mindia.com', 'https://m3mindia.com', 'M3M Cosmopolitan, Sector 66, Gurugram', 'Leading visionary developer creating world-class residential masterpieces.', '/uploads/logos/logo-39f99d0e.png', 'active']
   );
 
   db.run(
-    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [dev2Id, org1Id, 'Max Estates', 'Saurabh Juneja', '+91 120 4000100', 'sales@maxestates.in', 'https://maxestates.in', 'Max Towers, Sector 16B, Noida', 'Pioneering wellness-integrated luxury living spaces.', 'active']
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev2Id, org1Id, 'Max Estates', 'Saurabh Juneja', '+91 120 4000100', 'sales@maxestates.in', 'https://maxestates.in', 'Max Towers, Sector 16B, Noida', 'Pioneering wellness-integrated luxury living spaces.', '/uploads/logos/logo-9f7fe60c.jpg', 'active']
   );
 
   db.run(
-    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [dev3Id, org1Id, 'Prestige Group', 'Ramesh Rao', '+91 80 25591080', 'enquiry@prestigeconstructions.com', 'https://prestigeconstructions.com', 'The Falcon House, Bangalore & NCR Hub', 'Synonymous with innovation and luxury for over 35 years.', 'active']
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev3Id, org1Id, 'Prestige Group', 'Ramesh Rao', '+91 80 25591080', 'enquiry@prestigeconstructions.com', 'https://prestigeconstructions.com', 'The Falcon House, Bangalore & NCR Hub', 'Synonymous with innovation and luxury for over 35 years.', '/uploads/logos/logo-4bb771f4.png', 'active']
   );
 
   db.run(
-    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [dev4Id, org1Id, 'DLF Luxury', 'Aditya Singh', '+91 124 4567890', 'luxury@dlf.in', 'https://dlf.in', 'DLF Gateway Tower, Cyber City, Gurugram', 'India’s premier real estate developer defining super-luxury living.', 'active']
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev4Id, org1Id, 'DLF Luxury', 'Aditya Singh', '+91 124 4567890', 'luxury@dlf.in', 'https://dlf.in', 'DLF Gateway Tower, Cyber City, Gurugram', 'India’s premier real estate developer defining super-luxury living.', '/uploads/logos/logo-d32401ff.png', 'active']
+  );
+
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev5Id, org1Id, 'Saya Group', 'Vikas Sharma', '+91 120 4888000', 'info@sayahomes.in', 'https://sayahomes.in', 'Saya Homes HQ, Ghaziabad & Noida', 'Premier NCR luxury developer known for iconic architectural landmarks.', '/uploads/logos/logo-dev-saya.webp', 'active']
+  );
+
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev6Id, org1Id, 'NCR Group', 'Ajay Kumar', '+91 120 6777100', 'contact@ncrmonarch.in', 'https://ncrmonarch.in', 'Plot No GH-02, Sector 1, Greater Noida West', 'Leading real estate developer delivering quality residential and commercial hubs.', '/uploads/logos/logo-dev-ncr.png', 'active']
+  );
+
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev7Id, org1Id, 'Gulshan Homz', 'Deepak Kapoor', '+91 120 4777500', 'care@gulshangroup.com', 'https://gulshangroup.com', 'Gulshan One29, Sector 129, Noida', 'Pioneers of grand luxury living and bespoke residential communities in Delhi NCR.', '/uploads/logos/logo-dev-gulshan.png', 'active']
+  );
+
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [dev8Id, org1Id, 'Godrej Properties', 'Mohit Malhotra', '+91 22 61664444', 'sales@godrejproperties.com', 'https://godrejproperties.com', 'Godrej One, Pirojshanagar, Eastern Express Highway, Mumbai & NCR Hub', "India's most trusted developer bringing sustainability and innovation to NCR.", '/uploads/logos/logo-dev-godrej.png', 'active']
   );
 
   // 4. Projects
@@ -132,14 +156,21 @@ async function seedDatabase() {
   const proj2Id = 'proj-cullinan-002';
   const proj3Id = 'proj-max105-003';
   const proj4Id = 'proj-prestige150-004';
+  const proj5Id = 'proj-dlf-camellias-005';
+  const proj6Id = 'proj-saya-rajnagar-006';
+  const proj7Id = 'proj-ncr-monarch-007';
+  const proj8Id = 'proj-ncr-studios-008';
+  const proj9Id = 'proj-gulshan-hummingbird-009';
+  const proj10Id = 'proj-godrej-gbc-010';
 
   db.run(
-    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       proj1Id, org1Id, dev1Id, 'M3M Jacob & Co Residences',
       'Sector 65, Golf Course Extension Road, Gurugram',
       'https://maps.google.com/?q=Sector+65+Golf+Course+Extension+Road+Gurgaon',
       'Ultra-exclusive branded residences crafted in collaboration with world-renowned watchmaker & jeweler Jacob & Co. Features private sky infinity pools and Michelin-grade dining.',
+      '/uploads/logos/logo-11f5307a.jpg',
       '1,850 sq. ft.', '2,200 sq. ft.', '2,400 sq. ft.', '₹4.80 Cr', '₹4.80 Cr - ₹9.50 Cr',
       'Private Helipad, Infinity Sky Pool, Valet Concierge, Observatory Lounge, Cigar Bar',
       'active'
@@ -147,12 +178,13 @@ async function seedDatabase() {
   );
 
   db.run(
-    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       proj2Id, org1Id, dev1Id, 'M3M The Cullinan',
       'Sector 94, Noida Expressway, Noida',
       'https://maps.google.com/?q=M3M+The+Cullinan+Sector+94+Noida',
       'Mixed-use high-street luxury development on the junction of South Delhi and Noida. 5.5-acre central green piazza with private elevators.',
+      '/uploads/logos/logo-2c6de208.png',
       '2,450 sq. ft.', '3,100 sq. ft.', '3,600 sq. ft.', '₹5.80 Cr', '₹5.80 Cr - ₹12.00 Cr',
       'Direct South Delhi Connectivity, 100,000 sq ft Clubhouse, 7-tier Security, Temperature Controlled Olympic Pool',
       'active'
@@ -160,12 +192,13 @@ async function seedDatabase() {
   );
 
   db.run(
-    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       proj3Id, org1Id, dev2Id, 'Max Estate 105',
       'Sector 105, Noida Expressway, Noida',
       'https://maps.google.com/?q=Sector+105+Noida+Expressway',
       'Biophilic architectural marvel curated around wellness, nature and pristine air quality filtration for supreme family wellbeing.',
+      '/uploads/logos/logo-89943740.jpg',
       '2,100 sq. ft.', '2,600 sq. ft.', '2,850 sq. ft.', '₹4.20 Cr', '₹4.20 Cr - ₹7.80 Cr',
       'Forest Walkway, Organic Cafe, IGBC Platinum Pre-certified, Hydrotherapy Spa',
       'active'
@@ -173,14 +206,99 @@ async function seedDatabase() {
   );
 
   db.run(
-    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       proj4Id, org1Id, dev3Id, 'Prestige 150 Sanctuary',
       'Sector 150, Sports City, Noida',
       'https://maps.google.com/?q=Sector+150+Noida+Sports+City',
       'Low-density golf-centric residential paradise surrounded by 42 acres of curated sports amenities and verdant landscapes.',
+      '/uploads/logos/logo-a46a11c8.png',
       '2,600 sq. ft.', '3,200 sq. ft.', '3,500 sq. ft.', '₹3.90 Cr', '₹3.90 Cr - ₹6.50 Cr',
       '9-Hole Executive Golf Course, Olympic Gymnastics Arena, Tennis Academy',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      proj5Id, org1Id, dev4Id, 'DLF The Camellias',
+      'Golf Course Road, Sector 42, Gurugram',
+      'https://maps.google.com/?q=DLF+The+Camellias+Gurugram',
+      'Unrivalled super-luxury residences set amidst sprawling pristine fairways on Golf Course Road with a private club and butler service.',
+      '/uploads/logos/logo-cabc6c9d.png',
+      '4,500 sq. ft.', '5,800 sq. ft.', '7,400 sq. ft.', '₹35.00 Cr', '₹35.00 Cr - ₹75.00 Cr',
+      'Private Helipad, Spa by Clarins, Indoor Heated Pool, Cigar Lounge, Concierge',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      proj6Id, org1Id, dev5Id, 'Saya - Rajnagar',
+      'Rajnagar Extension, Ghaziabad',
+      'https://maps.google.com/?q=Saya+Rajnagar+Extension+Ghaziabad',
+      'Ultra-luxury residential enclave in the heart of Rajnagar Extension featuring signature clubhouse and green central gardens.',
+      '/uploads/logos/logo-proj-saya-rajnagar.webp',
+      '1,100 sq. ft.', '1,450 sq. ft.', '1,750 sq. ft.', '₹85 Lakhs', '₹85 Lakhs - ₹1.65 Cr',
+      'Grand Clubhouse, Infinity Pool, Sky Deck, Sports Arena, 24/7 Multi-Tier Security',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      proj7Id, org1Id, dev6Id, 'NCR Monarch',
+      'Sector 1, Greater Noida West',
+      'https://maps.google.com/?q=NCR+Monarch+Sector+1+Greater+Noida+West',
+      'Government SWAMIH-backed luxury residential towers featuring 2 & 3 BHK ready-to-move homes with high-end club amenities.',
+      '/uploads/logos/logo-proj-ncr-monarch.png',
+      '950 sq. ft.', '1,250 sq. ft.', '1,550 sq. ft.', '₹75 Lakhs', '₹75 Lakhs - ₹1.40 Cr',
+      'Clubhouse, Swimming Pool, Gymnasium, Jogging Track, Children Play Area, Landscaped Gardens',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      proj8Id, org1Id, dev6Id, 'NCR Studios',
+      'Sector 1, Greater Noida West',
+      'https://maps.google.com/?q=NCR+Monarch+Greater+Noida+West',
+      'Modern smart studio suites & serviced residences with high rental yields in Greater Noida West.',
+      '/uploads/logos/logo-proj-ncr-studios.png',
+      '450 sq. ft.', '650 sq. ft.', '850 sq. ft.', '₹42 Lakhs', '₹42 Lakhs - ₹68 Lakhs',
+      'Business Lounge, Concierge, High-Speed Elevators, Cafe, 24/7 Power Backup',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      proj9Id, org1Id, dev7Id, 'Gulshan - Hummingbird',
+      'Madhuban Bapudham, Ghaziabad',
+      'https://maps.google.com/?q=Gulshan+Hummingbird+Madhuban+Bapudham+Ghaziabad',
+      'Boutique luxury residences featuring private work pods, temperature-controlled pool, and lush themed gardens.',
+      '/uploads/logos/logo-proj-hummingbird.png',
+      '1,250 sq. ft.', '1,650 sq. ft.', '2,050 sq. ft.', '₹1.25 Cr', '₹1.25 Cr - ₹2.20 Cr',
+      'Private Work Pods, Heated Pool, Spa & Wellness, Banquet Hall, Indoor Games, Kids Play Zone',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      proj10Id, org1Id, dev8Id, 'Godrej - GBC',
+      'DMIC Integrated Industrial Township, Greater Noida',
+      'https://maps.google.com/?q=Godrej+Global+Business+City+Greater+Noida',
+      'Flagship global integrated township featuring smart high-rise residences along the DMIC economic corridor.',
+      '/uploads/logos/logo-proj-godrej-gbc.png',
+      '1,050 sq. ft.', '1,450 sq. ft.', '1,850 sq. ft.', '₹1.35 Cr', '₹1.35 Cr - ₹2.65 Cr',
+      'Golf-Themed Living, Smart Home Automation, Olympic-Sized Pool, Multipurpose Sports Complex, Grand Club',
       'active'
     ]
   );
