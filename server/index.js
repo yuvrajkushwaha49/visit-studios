@@ -86,6 +86,23 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/upload', require('./routes/upload'));
 
+// On-demand QR Code Generator Endpoint (returns PNG directly)
+app.get('/api/qr', async (req, res) => {
+  try {
+    const text = req.query.text || 'https://visitstudio.com';
+    const QRCode = require('qrcode');
+    const buf = await QRCode.toBuffer(text, {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      color: { dark: '#102a45', light: '#ffffff' },
+      width: 320
+    });
+    res.type('png').set('Cache-Control', 'public, max-age=86400').send(buf);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 // Short Invitation Link Redirect (/i/:code) protected by rate limiter
 app.get('/i/:code', publicRateLimiter, (req, res) => {
   try {

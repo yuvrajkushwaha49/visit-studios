@@ -356,7 +356,7 @@ const Utils = {
       }
 
       // Drawing Routine
-      const drawCardContent = (projLogoImg = null, devLogoImg = null) => {
+      const drawCardContent = (projLogoImg = null, devLogoImg = null, qrImg = null) => {
         // 1. Top Architectural / Brand Logo Mark (Project or Developer Logo)
         const topLogo = projLogoImg || devLogoImg;
 
@@ -425,27 +425,27 @@ const Utils = {
         const subText = developerName ? `BY ${developerName.toUpperCase()} · PROPERTY VISIT INVITATION` : 'PROPERTY VISIT INVITATION';
         ctx.fillText(subText, 540, 226);
 
-        // 3. Lead-in Text with Flanking Yellow Accent Lines
-        ctx.fillStyle = '#1e293b';
-        ctx.font = '500 20px "Inter", sans-serif';
-        ctx.fillText('You are cordially invited for a', 540, 305);
+        // 3. Personalized Guest Greeting (Placed on top of invitation lead-in)
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 24px "Inter", sans-serif';
+        ctx.fillText(`Dear ${customerName},`, 540, 292);
+
+        // Lead-in Text with Flanking Yellow Accent Lines (Below Greeting)
+        ctx.fillStyle = '#334155';
+        ctx.font = '600 19px "Inter", sans-serif';
+        ctx.fillText('You are cordially invited for a', 540, 328);
 
         ctx.strokeStyle = '#f5ba13';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(150, 298);
-        ctx.lineTo(330, 298);
+        ctx.moveTo(150, 321);
+        ctx.lineTo(320, 321);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.moveTo(750, 298);
-        ctx.lineTo(930, 298);
+        ctx.moveTo(760, 321);
+        ctx.lineTo(930, 321);
         ctx.stroke();
-
-        // Personalized Guest Greeting
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 22px "Inter", sans-serif';
-        ctx.fillText(`Dear ${customerName},`, 540, 338);
 
         // 4. Hero Title: PROPERTY SITE VISIT
         // Word: PROPERTY
@@ -667,54 +667,81 @@ const Utils = {
 
         // 8. Advisor Section
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#334155';
-        ctx.font = '500 20px "Inter", sans-serif';
-        ctx.fillText('Your Property Advisor', 540, 948);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '600 18px "Inter", sans-serif';
+        ctx.fillText('Your Property Advisor', 540, 915);
 
         ctx.fillStyle = '#0f172a';
-        ctx.font = '900 38px "Inter", sans-serif';
-        ctx.fillText(advisorName, 540, 998);
+        ctx.font = '900 35px "Inter", sans-serif';
+        ctx.fillText(advisorName, 540, 955);
 
         // 9. Golden Phone Pill Button
-        const pillW = 430;
-        const pillH = 68;
+        const pillW = 390;
+        const pillH = 56;
         const pillX = (1080 - pillW) / 2;
-        const pillY = 1032;
+        const pillY = 978;
 
         ctx.fillStyle = '#f5ba13';
         ctx.beginPath();
-        ctx.roundRect(pillX, pillY, pillW, pillH, 34);
+        ctx.roundRect(pillX, pillY, pillW, pillH, 28);
         ctx.fill();
 
         // Phone handset icon inside pill
-        const phX = pillX + 50;
-        const phY = pillY + 34;
+        const phX = pillX + 44;
+        const phY = pillY + 28;
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(phX, phY - 6, 8, Math.PI * 0.7, Math.PI * 1.8);
-        ctx.arc(phX + 10, phY + 4, 8, Math.PI * 0.2, Math.PI * 1.3);
+        ctx.arc(phX, phY - 5, 7, Math.PI * 0.7, Math.PI * 1.8);
+        ctx.arc(phX + 9, phY + 4, 7, Math.PI * 0.2, Math.PI * 1.3);
         ctx.fill();
 
         ctx.fillStyle = '#000000';
-        ctx.font = '800 26px "Inter", sans-serif';
+        ctx.font = '800 23px "Inter", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(advisorPhone, 555, pillY + 43);
+        ctx.fillText(advisorPhone, 550, pillY + 36);
 
-        // 10. Prominent Official Pass Link Box on Card
-        const linkBoxW = 780;
-        const linkBoxH = 52;
-        const linkBoxX = (1080 - linkBoxW) / 2;
-        const linkBoxY = 1130;
+        // 10. Luxury VIP Entry QR Code Box (Replaced raw link bar)
+        if (qrImg) {
+          const qrBoxW = 206;
+          const qrBoxH = 206;
+          const qrBoxX = (1080 - qrBoxW) / 2;
+          const qrBoxY = 1060;
 
-        ctx.fillStyle = '#0f172a';
-        ctx.beginPath();
-        ctx.roundRect(linkBoxX, linkBoxY, linkBoxW, linkBoxH, 12);
-        ctx.fill();
+          // Crisp white background card with gentle shadow
+          ctx.save();
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
+          ctx.shadowBlur = 20;
+          ctx.shadowOffsetY = 6;
+          ctx.beginPath();
+          ctx.roundRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, 18);
+          ctx.fill();
+          ctx.restore();
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#f5ba13';
-        ctx.font = 'bold 16px "Inter", monospace, sans-serif';
-        ctx.fillText(`🔗 OFFICIAL LIVE PASS: ${shortUrl}`, 540, linkBoxY + 33);
+          // Elegant thin border
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, 18);
+          ctx.stroke();
+
+          // Draw QR Code centered inside card
+          const qrSize = 176;
+          const qrX = 540 - qrSize / 2;
+          const qrY = qrBoxY + (qrBoxH - qrSize) / 2;
+          ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+          // VIP Entry caption below QR
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#102a45';
+          ctx.font = '800 15px "Inter", sans-serif';
+          ctx.fillText('SCAN FOR VIP ENTRY PASS', 540, qrBoxY + qrBoxH + 32);
+
+          ctx.fillStyle = '#64748b';
+          ctx.font = '600 12.5px "Inter", sans-serif';
+          const cleanDisplayUrl = shortUrl.replace(/^https?:\/\//, '');
+          ctx.fillText(cleanDisplayUrl, 540, qrBoxY + qrBoxH + 52);
+        }
 
         // Return final output
         const dataUrl = canvas.toDataURL('image/png', 1.0);
@@ -736,32 +763,41 @@ const Utils = {
         });
       };
 
-      // Load background template image (Reference Image 1) & Project/Developer Logos
+      // Determine QR Code source: use data URL if available, otherwise fetch from /api/qr
+      let qrSource = data.qr_code_data;
+      if (!qrSource || !qrSource.startsWith('data:image')) {
+        const qrPayload = qrSource || data.shortUrl || `${window.location.origin}/i/${data.short_code || ''}`;
+        qrSource = `/api/qr?text=${encodeURIComponent(qrPayload)}`;
+      }
+
+      // Load background template image (Reference Image 1) & Project/Developer Logos & QR Code
       const bgImg = new Image();
       bgImg.crossOrigin = 'anonymous';
       bgImg.onload = async () => {
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
         try {
-          const [pLogo, dLogo] = await Promise.all([
+          const [pLogo, dLogo, qr] = await Promise.all([
             loadImg(data.project_logo),
-            loadImg(data.developer_logo)
+            loadImg(data.developer_logo),
+            loadImg(qrSource)
           ]);
-          drawCardContent(pLogo, dLogo);
+          drawCardContent(pLogo, dLogo, qr);
         } catch (err) {
-          drawCardContent(null, null);
+          drawCardContent(null, null, null);
         }
       };
       bgImg.onerror = async () => {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         try {
-          const [pLogo, dLogo] = await Promise.all([
+          const [pLogo, dLogo, qr] = await Promise.all([
             loadImg(data.project_logo),
-            loadImg(data.developer_logo)
+            loadImg(data.developer_logo),
+            loadImg(qrSource)
           ]);
-          drawCardContent(pLogo, dLogo);
+          drawCardContent(pLogo, dLogo, qr);
         } catch (err) {
-          drawCardContent(null, null);
+          drawCardContent(null, null, null);
         }
       };
       bgImg.src = '/images/card-template.jpg';
