@@ -58,10 +58,9 @@ apt-get install -y -q curl wget git ufw
 
 echo -e "${BLUE}[2/8] Installing Node.js LTS (v20.x) and PM2...${NC}"
 if ! command -v node >/dev/null 2>&1 || [[ "$(node -v)" != v2* ]]; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y -q nodejs
+  echo -e "${YELLOW}Downloading pre-built Node.js LTS binary directly (super fast, zero apt memory)...${NC}"
+  curl -fsSL https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
 fi
-apt-get clean
 echo -e "${GREEN}✓ Node.js $(node -v) & npm $(npm -v) installed.${NC}"
 
 npm install -g pm2 -q --no-audit --no-fund
