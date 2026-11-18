@@ -29,13 +29,16 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+# Free up any stale apt archive downloads to preserve disk space
+apt-get clean >/dev/null 2>&1 || true
+
 # -----------------------------------------------------------------------------
 # 0. ENABLE SWAP MEMORY (CRITICAL FOR AWS EC2 t2/t3.micro 1GB RAM)
 # -----------------------------------------------------------------------------
 echo -e "${BLUE}[0/8] Checking and Enabling Swap Memory...${NC}"
 if [ $(swapon --show | wc -l) -le 1 ]; then
-  echo -e "${YELLOW}Configuring 2GB Swap Memory to prevent Out-Of-Memory (Killed) errors on EC2...${NC}"
-  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  echo -e "${YELLOW}Configuring 1GB Swap Memory to prevent Out-Of-Memory errors on EC2...${NC}"
+  fallocate -l 1G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=1024
   chmod 600 /swapfile
   mkswap /swapfile
   swapon /swapfile
@@ -43,28 +46,33 @@ if [ $(swapon --show | wc -l) -le 1 ]; then
     echo '/swapfile none swap sw 0 0' >> /etc/fstab
   fi
   sysctl vm.swappiness=10 >/dev/null 2>&1 || true
-  echo -e "${GREEN}✓ 2GB Swap Memory enabled successfully.${NC}"
+  echo -e "${GREEN}✓ 1GB Swap Memory enabled successfully.${NC}"
 else
   echo -e "${GREEN}✓ Swap memory is already active.${NC}"
 fi
 
-echo -e "${BLUE}[1/8] Updating Ubuntu system packages...${NC}"
+echo -e "${BLUE}[1/8] Updating Ubuntu system package lists...${NC}"
+apt-get clean
 apt-get update -y -q
-apt-get install -y -q curl wget git build-essential ufw software-properties-common
+apt-get install -y -q curl wget git ufw
 
 echo -e "${BLUE}[2/8] Installing Node.js LTS (v20.x) and PM2...${NC}"
 if ! command -v node >/dev/null 2>&1 || [[ "$(node -v)" != v2* ]]; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   apt-get install -y -q nodejs
 fi
+apt-get clean
 echo -e "${GREEN}✓ Node.js $(node -v) & npm $(npm -v) installed.${NC}"
 
-npm install -g pm2 -q
+npm install -g pm2 -q --no-audit --no-fund
 echo -e "${GREEN}✓ PM2 process manager installed.${NC}"
 
 echo -e "${BLUE}[3/8] Installing and Configuring MySQL Server 8.0...${NC}"
-apt-get install -y -q mysql-server
+if ! command -v mysql >/dev/null 2>&1; then
+  apt-get install -y -q mysql-server
+fi
 systemctl enable --now mysql
+apt-get clean
 
 # Generate random secure password for MySQL user
 DB_NAME="visit_studio_db"
