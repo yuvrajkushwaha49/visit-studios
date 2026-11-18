@@ -29,9 +29,27 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+# -----------------------------------------------------------------------------
+# 0. ENABLE SWAP MEMORY (CRITICAL FOR AWS EC2 t2/t3.micro 1GB RAM)
+# -----------------------------------------------------------------------------
+echo -e "${BLUE}[0/8] Checking and Enabling Swap Memory...${NC}"
+if [ $(swapon --show | wc -l) -le 1 ]; then
+  echo -e "${YELLOW}Configuring 2GB Swap Memory to prevent Out-Of-Memory (Killed) errors on EC2...${NC}"
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  if ! grep -q '/swapfile' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+  sysctl vm.swappiness=10 >/dev/null 2>&1 || true
+  echo -e "${GREEN}✓ 2GB Swap Memory enabled successfully.${NC}"
+else
+  echo -e "${GREEN}✓ Swap memory is already active.${NC}"
+fi
+
 echo -e "${BLUE}[1/8] Updating Ubuntu system packages...${NC}"
 apt-get update -y -q
-apt-get upgrade -y -q
 apt-get install -y -q curl wget git build-essential ufw software-properties-common
 
 echo -e "${BLUE}[2/8] Installing Node.js LTS (v20.x) and PM2...${NC}"
@@ -67,19 +85,25 @@ EOF
 
 echo -e "${GREEN}✓ MySQL database & permissions configured successfully.${NC}"
 
-echo -e "${BLUE}[4/8] Cloning Repository from GitHub...${NC}"
+echo -e "${BLUE}[4/8] Setting Up Application Directory...${NC}"
 APP_DIR="/var/www/visit-studio"
 REPO_URL="https://github.com/yuvrajkushwaha49/visit-studios.git"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+mkdir -p /var/www
 
 if [ -d "$APP_DIR/.git" ]; then
-  echo -e "${YELLOW}Existing repository found at ${APP_DIR}. Pulling latest code...${NC}"
+  echo -e "${YELLOW}Existing repository found at ${APP_DIR}. Updating latest code...${NC}"
   cd "$APP_DIR"
-  git fetch origin
-  git reset --hard origin/main
+  git fetch origin || true
+  git reset --hard origin/main || true
 else
-  echo -e "${YELLOW}Cloning fresh copy to ${APP_DIR}...${NC}"
-  mkdir -p /var/www
-  git clone "$REPO_URL" "$APP_DIR"
+  echo -e "${YELLOW}Copying / deploying to ${APP_DIR}...${NC}"
+  if [ -d "$SCRIPT_DIR/.git" ] && [ "$SCRIPT_DIR" != "$APP_DIR" ]; then
+    cp -r "$SCRIPT_DIR" "$APP_DIR"
+  else
+    git clone "$REPO_URL" "$APP_DIR"
+  fi
   cd "$APP_DIR"
 fi
 
