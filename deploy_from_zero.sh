@@ -34,8 +34,8 @@ grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fsta
 sysctl vm.swappiness=10 >/dev/null 2>&1 || true
 echo -e "${GREEN}✓ Swap memory enabled.${NC}"
 
-echo -e "${YELLOW}>>> [3/6] Installing Node.js LTS v22 (with built-in node:sqlite) & NPM...${NC}"
-curl -fsSL https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-x64.tar.gz -o /tmp/node.tar.gz
+echo -e "${YELLOW}>>> [3/6] Installing Node.js (with built-in native node:sqlite) & NPM...${NC}"
+curl -fsSL https://nodejs.org/dist/v23.9.0/node-v23.9.0-linux-x64.tar.gz -o /tmp/node.tar.gz
 tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1
 rm -f /tmp/node.tar.gz
 echo -e "${GREEN}✓ Node.js $(node -v) & npm $(npm -v) ready.${NC}"
@@ -56,14 +56,15 @@ fi
 
 echo -e "${YELLOW}>>> [5/6] Installing dependencies and populating projects & logos...${NC}"
 npm install --production --no-audit --no-fund
-node server/db/seed.js
+node --experimental-sqlite server/db/seed.js
 
 echo -e "${YELLOW}>>> [6/6] Setting up PM2 & forwarding Port 80 -> 3000...${NC}"
+export PATH=$PATH:/usr/local/bin
 npm install -g pm2 --no-audit --no-fund -q
-pm2 delete all >/dev/null 2>&1 || true
-pm2 start server/index.js --name "visit-studio"
-pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
-pm2 save >/dev/null 2>&1 || true
+npx pm2 delete all >/dev/null 2>&1 || true
+npx pm2 start ecosystem.config.cjs --env production
+npx pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+npx pm2 save >/dev/null 2>&1 || true
 
 # Port 80 direct redirect to 3000
 iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000 >/dev/null 2>&1 || true

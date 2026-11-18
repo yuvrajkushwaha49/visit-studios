@@ -3,6 +3,7 @@ module.exports = {
     {
       name: 'visit-studio',
       script: './server/index.js',
+      node_args: '--experimental-sqlite',
       instances: 1, // Single instance to preserve SQLite WAL in-memory locking
       autorestart: true,
       watch: false,
