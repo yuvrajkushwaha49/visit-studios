@@ -569,12 +569,23 @@ _(Personalized VIP Invitation Pass image attached)_`
       </div>
     </div>
 
+    <!-- Helpful Sharing Tip -->
+    <div style="background:#fef9c3; border:1px solid #fde047; border-radius:8px; padding:8px 12px; margin-bottom:12px; font-size:11.5px; color:#854d0e; line-height:1.45;">
+      <strong>💡 WhatsApp Sharing Note:</strong> Android WhatsApp me jab aap image file share karte hain toh WhatsApp caption auto-fill nahi karta. Isliye humne <strong>caption text auto-copy</strong> kar diya hai — WhatsApp me niche <strong>"Add a caption..."</strong> pe tap karke <strong>Paste</strong> kar dein!
+    </div>
+
     <!-- Primary Sharing Actions: Unified Single WhatsApp Share -->
     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 14px;">
       <!-- Single Unified WhatsApp Button -->
-      <button type="button" class="btn" onclick="App.smartWhatsAppShare('${waUrl}')" style="background:#25D366; color:#ffffff; border:none; justify-content:center; padding:13px 16px; font-size:14.5px; font-weight:700; width:100%; box-shadow:0 4px 16px rgba(37,211,102,0.38); border-radius:10px; display:flex; align-items:center; gap:9px; cursor:pointer;">
+      <button type="button" class="btn" onclick="App.smartWhatsAppShare('${waUrl}')" style="background:#25D366; color:#ffffff; border:none; justify-content:center; padding:13px 16px; font-size:14px; font-weight:700; width:100%; box-shadow:0 4px 16px rgba(37,211,102,0.38); border-radius:10px; display:flex; align-items:center; gap:9px; cursor:pointer;">
         ${waSvg}
-        <span>Share on WhatsApp (Image + Details) ↗</span>
+        <span>Share Pass Image (Auto-Copy Caption) ↗</span>
+      </button>
+
+      <!-- 1-Click WhatsApp Text & Link -->
+      <button type="button" class="btn soft" onclick="App.sendWhatsAppTextOnly('${waUrl}')" style="justify-content:center; padding:10px 14px; font-size:12px; font-weight:600; color:#15803d; border-color:#86efac; background:#f0fdf4;">
+        ${waSvg}
+        <span>Send WhatsApp Text & Live Pass (1-Click) ↗</span>
       </button>
 
       <!-- Button 2 & 3 Grid: Copy Text & Download Image -->
@@ -685,12 +696,16 @@ _(Personalized VIP Invitation Pass image attached)_`;
   // 1. Mobile Native Share API: Directly attaches the image file into WhatsApp!
   if (navigator.canShare && card && card.file && navigator.canShare({ files: [card.file] })) {
     try {
-      Utils.toast('✨ Pass Image attached! Caption text & link copy ho gaya — WhatsApp caption pe "Paste" karein!');
-      await navigator.share({
-        title: `VIP Invitation Pass · ${data.project_name}`,
-        text: waText,
-        files: [card.file]
-      });
+      Utils.toast('✨ Image attached & caption copy ho chuka hai! WhatsApp caption me "Paste" kar dein.');
+      const sharePayload = {
+        files: [card.file],
+        text: waText
+      };
+      if (navigator.canShare(sharePayload)) {
+        await navigator.share(sharePayload);
+      } else {
+        await navigator.share({ files: [card.file] });
+      }
       return;
     } catch (err) {
       if (err.name === 'AbortError') return; // User simply closed share sheet
@@ -713,6 +728,29 @@ _(Personalized VIP Invitation Pass image attached)_`;
   setTimeout(() => {
     window.open(directWaUrl, '_blank');
   }, 400);
+};
+
+App.sendWhatsAppTextOnly = function(waFallbackUrl) {
+  const data = App._activeCardData || {};
+  const cleanPhone = (data.customer_phone || '').replace(/[^\d]/g, '');
+  const waPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+  const shortUrl = data.shortUrl || window.location.origin;
+
+  const waText = 
+`*VIP PROPERTY VISIT INVITATION* ✨
+Dear ${data.customer_name || 'Guest'},
+
+You are cordially invited for an exclusive private walkthrough at *${data.project_name}* (${data.developer_name}).
+
+📅 *Date:* ${Utils.formatDate(data.visit_date)}
+⏰ *Time:* ${Utils.formatTime(data.visit_time)}
+📍 *Location:* ${data.location}
+
+🔗 *View Official Invitation & Live Pass:*
+${shortUrl}`;
+
+  const directWaUrl = waFallbackUrl || `https://wa.me/${waPhone}?text=${encodeURIComponent(waText)}`;
+  window.open(directWaUrl, '_blank');
 };
 
 App.copyShareUrl = function() {
