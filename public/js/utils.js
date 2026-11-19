@@ -139,18 +139,44 @@ const Utils = {
       overlay = document.createElement('div');
       overlay.id = 'globalModalOverlay';
       overlay.className = 'modal-overlay';
-      overlay.onclick = e => {
-        if (e.target === overlay) Utils.closeModal();
-      };
       document.body.appendChild(overlay);
     }
-    overlay.innerHTML = `<div class="modal-card">${htmlContent}</div>`;
+
+    // Direct outside backdrop click detection:
+    // If the mousedown starts on the overlay backdrop (and not inside the card),
+    // and mouseup/click finishes on the overlay backdrop, close modal immediately.
+    overlay.onmousedown = (e) => {
+      overlay._clickedBackdrop = (e.target === overlay);
+    };
+    overlay.onclick = (e) => {
+      if (overlay._clickedBackdrop && e.target === overlay) {
+        Utils.closeModal();
+      }
+      overlay._clickedBackdrop = false;
+    };
+
+    // Close / Cancel icon button placed at top-right corner of modal card
+    const closeBtnHtml = `
+      <button type="button" class="modal-close-btn" onclick="Utils.closeModal()" aria-label="Close popup" title="Close (Esc)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    `;
+
+    overlay.innerHTML = `<div class="modal-card">${closeBtnHtml}${htmlContent}</div>`;
     overlay.classList.remove('hidden');
+    document.body.classList.add('modal-open');
   },
 
   closeModal() {
     const overlay = document.getElementById('globalModalOverlay');
-    if (overlay) overlay.classList.add('hidden');
+    if (overlay) {
+      overlay.classList.add('hidden');
+      overlay.innerHTML = '';
+    }
+    document.body.classList.remove('modal-open');
   },
 
   searchableSelects: new Map(),
@@ -299,6 +325,13 @@ const Utils = {
       clearBtn.classList.add('hidden');
       renderOptions('');
       searchInput.focus();
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) {
+        closePanel();
+      }
     });
 
     Utils.searchableSelects.set(id, {
@@ -840,6 +873,12 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    // Close any open modals
+    const overlay = document.getElementById('globalModalOverlay');
+    if (overlay && !overlay.classList.contains('hidden')) {
+      Utils.closeModal();
+    }
+    // Close any open searchable dropdowns
     document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => p.classList.add('hidden'));
     document.querySelectorAll('.searchable-select-trigger.active').forEach(t => t.classList.remove('active'));
   }

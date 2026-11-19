@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap">
-  <link rel="stylesheet" href="/css/style.css?v=v9-arial-font">
+  <link rel="stylesheet" href="/css/style.css?v=v10-modal-close">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
   <script>
     (function() {
@@ -60,14 +60,14 @@
   <div id="publicViewContainer" class="hidden"></div>
 
   <!-- Global Modal Dialog Overlay -->
-  <div id="globalModalOverlay" class="modal-overlay hidden"></div>
+  <div id="globalModalOverlay" class="modal-overlay hidden" onclick="if(event.target === this) Utils.closeModal();"></div>
 
   <!-- Global Toast Notification Banner -->
   <div id="globalToast" class="toast hidden" role="status"></div>
 
   <!-- Core Scripts -->
   <script src="/js/api.js"></script>
-  <script src="/js/utils.js?v=v21-no-demo"></script>
+  <script src="/js/utils.js?v=v22-modal-close"></script>
   <script src="/js/app.js?v=v21-no-demo"></script>
 
   <!-- UI Components -->
