@@ -80,90 +80,97 @@ const App = {
           
           <!-- Left Showcase Panel -->
           <div class="auth-showcase-panel">
-            <div>
+            <div class="auth-showcase-content">
               <div class="auth-brand-lockup">
-                <div class="auth-brand-logo">V</div>
+                <div class="auth-brand-logo">
+                  <span>V</span>
+                </div>
                 <div>
                   <div class="auth-brand-title">VISIT STUDIO</div>
-                  <span class="auth-brand-subtitle">Luxury Realty Suite</span>
+                  <span class="auth-brand-subtitle">Private Realty Suite • Enterprise</span>
                 </div>
               </div>
 
-              <h2 class="auth-hero-heading">Elevate Site Visits Into Unforgettable Brand Experiences</h2>
+              <h2 class="auth-hero-heading">Elevate Site Visits Into Unforgettable VIP Experiences</h2>
               <p class="auth-hero-desc">
-                The enterprise standard for high-value real estate developers and sales networks. Curate digital VIP invitations, coordinate verified visits, and streamline client conversions.
+                The institutional standard for premier real estate developers, luxury brokerages, and private wealth networks. Curate bespoke digital passes, coordinate verified arrivals, and accelerate client conversions.
               </p>
 
               <div class="auth-features-list">
                 <div class="auth-feat-item">
                   <div class="auth-feat-icon">✦</div>
                   <div class="auth-feat-text">
-                    <strong>Concierge Digital Invitations</strong>
-                    <span>Ultra-luxury mobile passes with dynamic QR codes and property portfolios.</span>
+                    <strong>Bespoke VIP Digital Passes</strong>
+                    <span>Encrypted QR credentials, curated developer collateral, and contactless check-in.</span>
                   </div>
                 </div>
 
                 <div class="auth-feat-item">
-                  <div class="auth-feat-icon">⚡</div>
+                  <div class="auth-feat-icon">◈</div>
                   <div class="auth-feat-text">
-                    <strong>Zero-Latency Pipeline Execution</strong>
-                    <span>Live check-in verification, synchronized customer notes, and instant follow-ups.</span>
+                    <strong>Real-Time Arrival Telemetry</strong>
+                    <span>Instant host arrival alerts, live reception logs, and automated WhatsApp follow-ups.</span>
                   </div>
                 </div>
 
                 <div class="auth-feat-item">
-                  <div class="auth-feat-icon">🔒</div>
+                  <div class="auth-feat-icon">❖</div>
                   <div class="auth-feat-text">
-                    <strong>Role-Enforced Enterprise Security</strong>
-                    <span>Strict multi-tier data privacy from sales associates up to board-level analytics.</span>
+                    <strong>Institutional Multi-Tier Governance</strong>
+                    <span>Strict role-enforced data privacy from sales associates up to board-level analytics.</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="auth-quote-card">
-              “Visit Studio transformed our customer welcome experience. Our lead conversion on luxury villa walk-throughs surged by 42% in Q1.”
-              <span class="auth-quote-author">— AURA LUXE PRIVATE RESIDENCES</span>
+              <div class="auth-quote-badge">VERIFIED TESTIMONIAL</div>
+              “Visit Studio elevated our client welcoming experience to international 5-star hospitality standards. Site-visit-to-closing rates surged across our luxury portfolio.”
+              <span class="auth-quote-author">— DIRECTOR OF SALES, AURA LUXE RESIDENCES</span>
             </div>
           </div>
 
           <!-- Right Form Panel -->
           <div class="auth-form-panel">
-            <div>
-              <div class="auth-status-chip">
-                <span class="auth-pulse-dot"></span>
-                <span>ENTERPRISE PORTAL ACTIVE</span>
+            <div class="auth-form-inner">
+              <div class="auth-header-top">
+                <div class="auth-status-chip">
+                  <span class="auth-pulse-dot"></span>
+                  <span>ENTERPRISE PORTAL</span>
+                  <span class="auth-chip-divider">•</span>
+                  <span class="auth-chip-secure">SECURE ACCESS</span>
+                </div>
               </div>
 
               <h1 class="auth-form-title">Member Sign In</h1>
-              <p class="auth-form-subtitle">Enter your institutional credentials to access your organization workspace.</p>
+              <p class="auth-form-subtitle">Welcome back. Please authenticate with your corporate credentials to access your organization workspace.</p>
 
               <form id="loginForm" onsubmit="App.handleLoginSubmit(event)">
                 <div class="auth-input-group">
                   <label for="loginEmail">
                     <span>Work Email Address</span>
-                    <span style="font-size:10.5px; color:#2563eb; font-weight:600;">Required</span>
+                    <span class="auth-label-hint">Institutional ID</span>
                   </label>
                   <div class="auth-input-wrapper">
                     <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                       <polyline points="22,6 12,13 2,6"></polyline>
                     </svg>
-                    <input type="email" id="loginEmail" required placeholder="admin@auraluxe.com" autocomplete="email">
+                    <input type="email" id="loginEmail" required placeholder="corporate.email@domain.com" autocomplete="email">
                   </div>
                 </div>
 
                 <div class="auth-input-group">
                   <label for="loginPassword">
                     <span>Account Password</span>
-                    <span style="font-size:10.5px; color:#64748b; font-weight:400;">Default: Password@123</span>
+                    <a href="javascript:void(0)" onclick="Utils.toast('Please contact your Organization Administrator or Superadmin at support@visitstudio.com to reset credentials.')" class="auth-forgot-link">Forgot password?</a>
                   </label>
                   <div class="auth-input-wrapper">
                     <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>
-                    <input type="password" id="loginPassword" required placeholder="••••••••••••" autocomplete="current-password">
+                    <input type="password" id="loginPassword" required placeholder="Enter your password" autocomplete="current-password">
                     <button type="button" class="auth-pwd-toggle" onclick="App.toggleLoginPassword()" title="Show/Hide Password" aria-label="Toggle password visibility">
                       <svg id="pwdEyeIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -171,6 +178,13 @@ const App = {
                       </svg>
                     </button>
                   </div>
+                </div>
+
+                <div class="auth-options-row">
+                  <label class="auth-remember-checkbox">
+                    <input type="checkbox" id="loginRemember" checked>
+                    <span>Keep me signed in on this device</span>
+                  </label>
                 </div>
 
                 <button type="submit" id="loginSubmitBtn" class="auth-submit-btn">
@@ -182,53 +196,34 @@ const App = {
                 </button>
               </form>
 
-              <!-- Quick Demo Role Cards -->
-              <div class="auth-quick-header">
-                <span>Quick Demo Access (1-Click)</span>
-                <span style="color:#2563eb; font-weight:700;">INSTANT</span>
-              </div>
-
-              <div class="auth-quick-grid">
-                <div class="auth-role-card" onclick="App.quickLogin('superadmin@visitstudio.com', 'Password@123')">
-                  <div class="auth-role-top">
-                    <span class="auth-role-name">👑 Super Admin</span>
-                    <span class="auth-role-badge">Global</span>
-                  </div>
-                  <span class="auth-role-email">superadmin@visitstudio.com</span>
+              <!-- Enterprise Trust & Security Badges (Clean, Professional replacement of demo access links) -->
+              <div class="auth-trust-strip">
+                <div class="auth-trust-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                  <span>TLS 256-Bit SSL Encrypted</span>
                 </div>
-
-                <div class="auth-role-card" onclick="App.quickLogin('admin@auraluxe.com', 'Password@123')">
-                  <div class="auth-role-top">
-                    <span class="auth-role-name">🏢 Org Admin</span>
-                    <span class="auth-role-badge">Aura Luxe</span>
-                  </div>
-                  <span class="auth-role-email">admin@auraluxe.com</span>
+                <div class="auth-trust-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  <span>Role-Enforced Access</span>
                 </div>
-
-                <div class="auth-role-card" onclick="App.quickLogin('saleshead@auraluxe.com', 'Password@123')">
-                  <div class="auth-role-top">
-                    <span class="auth-role-name">👔 Sales Head</span>
-                    <span class="auth-role-badge">Team Lead</span>
-                  </div>
-                  <span class="auth-role-email">saleshead@auraluxe.com</span>
-                </div>
-
-                <div class="auth-role-card" onclick="App.quickLogin('associate@auraluxe.com', 'Password@123')">
-                  <div class="auth-role-top">
-                    <span class="auth-role-name">🤝 Sales Assoc.</span>
-                    <span class="auth-role-badge">Ground Rep</span>
-                  </div>
-                  <span class="auth-role-email">associate@auraluxe.com</span>
+                <div class="auth-trust-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>Audit Logged</span>
                 </div>
               </div>
             </div>
 
-            <div class="auth-security-footer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-              <span>TLS 256-Bit Encrypted • Role Enforced Access</span>
+            <div class="auth-footer-bottom">
+              <span>Authorized personnel only. Need help? Contact <a href="mailto:support@visitstudio.com" class="auth-support-link">support@visitstudio.com</a></span>
+              <div class="auth-copyright">© 2026 Visit Studio Technologies. All rights reserved.</div>
             </div>
           </div>
 
