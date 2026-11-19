@@ -87,37 +87,37 @@ const App = {
                 </div>
                 <div>
                   <div class="auth-brand-title">VISIT STUDIO</div>
-                  <span class="auth-brand-subtitle">Sales Team & Site Visit Management</span>
+                  <span class="auth-brand-subtitle">Invitation Meeting Portal</span>
                 </div>
               </div>
 
-              <h2 class="auth-hero-heading">Track Daily Site Visits & Sales Team Activity</h2>
+              <h2 class="auth-hero-heading">Track Property Invitations & Client Meetings</h2>
               <p class="auth-hero-desc">
-                Centralized management system to monitor sales employees, track daily client property visits, verify on-ground attendance with QR check-in, and manage follow-ups.
+                Centralized management system to coordinate client property invitations, schedule on-ground meetings, track daily visits, and record verified customer follow-ups.
               </p>
 
               <div class="auth-features-list">
                 <div class="auth-feat-item">
-                  <div class="auth-feat-icon">📊</div>
+                  <div class="auth-feat-icon">📅</div>
                   <div class="auth-feat-text">
-                    <strong>Daily Visit Tracking</strong>
-                    <span>Track how many site visits each sales executive is conducting every day in real-time.</span>
+                    <strong>Invitation & Meeting Scheduling</strong>
+                    <span>Generate digital meeting invitations and schedule client site visits seamlessly.</span>
                   </div>
                 </div>
 
                 <div class="auth-feat-item">
                   <div class="auth-feat-icon">📍</div>
                   <div class="auth-feat-text">
-                    <strong>Verified Site Check-in</strong>
-                    <span>QR-based client check-in at the project site to confirm completed client visits.</span>
+                    <strong>Meeting Attendance & Verification</strong>
+                    <span>Verify client arrival and completed property walkthroughs on-ground.</span>
                   </div>
                 </div>
 
                 <div class="auth-feat-item">
                   <div class="auth-feat-icon">👥</div>
                   <div class="auth-feat-text">
-                    <strong>Sales Performance & Reports</strong>
-                    <span>Complete management visibility into employee visit counts, pipeline, and customer follow-ups.</span>
+                    <strong>Team Coordination & Reports</strong>
+                    <span>Complete management visibility into scheduled meetings, visit counts, and customer pipeline.</span>
                   </div>
                 </div>
               </div>
@@ -132,12 +132,12 @@ const App = {
               <div class="auth-header-top">
                 <div class="auth-status-chip">
                   <span class="auth-pulse-dot"></span>
-                  <span>EMPLOYEE & MANAGEMENT PORTAL</span>
+                  <span>INVITATION MEETING PORTAL</span>
                 </div>
               </div>
 
-              <h1 class="auth-form-title">Employee Sign In</h1>
-              <p class="auth-form-subtitle">Enter your official credentials to access the sales and site visit tracking dashboard.</p>
+              <h1 class="auth-form-title">Member Sign In</h1>
+              <p class="auth-form-subtitle">Enter your official credentials to access the Invitation Meeting Portal.</p>
 
               <form id="loginForm" onsubmit="App.handleLoginSubmit(event)">
                 <div class="auth-input-group">

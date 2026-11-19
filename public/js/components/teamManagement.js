@@ -447,13 +447,13 @@ App.sendCredentialsToUser = function(userId, userName, userEmail, userPhone, use
     <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
       <span>✉ Send Login Credentials via Email</span>
     </h3>
-    <p class="modal-desc">Deliver account username, password, and portal access link directly to the employee's inbox.</p>
+    <p class="modal-desc">Deliver account username, password, and Invitation Meeting Portal link directly to the member's inbox.</p>
 
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #2563eb; border-radius:8px; padding:16px; margin-bottom:18px;">
       <div style="font-size:13px; font-weight:700; color:#1e293b; margin-bottom:8px;">Delivery Details:</div>
       <table style="width:100%; font-size:13px; line-height:1.7;">
         <tr>
-          <td style="color:#64748b; width:120px;">Employee:</td>
+          <td style="color:#64748b; width:120px;">Member:</td>
           <td style="font-weight:600; color:#0f172a;">${Utils.escapeHTML(userName)} (${userRole})</td>
         </tr>
         <tr>
@@ -469,7 +469,7 @@ App.sendCredentialsToUser = function(userId, userName, userEmail, userPhone, use
 
     <form onsubmit="App.handleSendSingleCredentialsSubmit(event, '${userId}')">
       <div style="margin-bottom:14px;">
-        <label>Portal Access Link (Included in Email)</label>
+        <label>Invitation Meeting Portal Link (Included in Email)</label>
         <input type="url" id="sendPortalUrl" required value="${currentUrl}">
         <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
           The employee will click this link to open the login page directly.
@@ -537,9 +537,9 @@ App.openBroadcastCredentialsModal = function() {
 
   const html = `
     <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
-      <span>✉ Broadcast Credentials to Sales Team</span>
+      <span>✉ Broadcast Credentials to Team</span>
     </h3>
-    <p class="modal-desc">Send personalized login credentials (User ID, password & portal link) to your sales team via email.</p>
+    <p class="modal-desc">Send personalized login credentials (User ID, password & Invitation Meeting Portal link) to your team via email.</p>
 
     <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:16px; margin-bottom:18px;">
       <div style="font-weight:700; color:#166534; font-size:14px; margin-bottom:6px;">
@@ -566,7 +566,7 @@ App.openBroadcastCredentialsModal = function() {
       </div>
 
       <div style="margin-bottom:18px;">
-        <label>Portal Access Link (Included in Email) *</label>
+        <label>Invitation Meeting Portal Link (Included in Email) *</label>
         <input type="url" id="broadcastPortalUrl" required value="${currentUrl}">
         <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
           This link will be clickable in each employee's email.

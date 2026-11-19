@@ -7,7 +7,7 @@ async function main() {
   const dryRun = args.includes('--dry-run');
 
   console.log('======================================================');
-  console.log('  WORKIANS REALTY - CREDENTIALS EMAIL DISPATCHER');
+  console.log('  WORKIANS REALTY - INVITATION MEETING PORTAL DISPATCHER');
   console.log('======================================================\n');
 
   const sajanUser = db.get("SELECT * FROM users WHERE email = 'sajanpatel@workians.com'");
