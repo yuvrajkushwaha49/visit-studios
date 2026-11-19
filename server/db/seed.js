@@ -179,11 +179,31 @@ async function seedDatabase() {
   );
 
   // Developers for Workians Realty (Sajan Patel)
+  const devM3mWId = 'dev-m3m-org-08a1da1a';
+  const devMaxWId = 'dev-max-org-08a1da1a';
+  const devGvWId = 'dev-greatvalue-org-08a1da1a';
+  const devPrestigeWId = 'dev-prestige-org-08a1da1a';
   const devSayaWId = 'dev-saya-org-08a1da1a';
   const devNcrWId = 'dev-ncr-org-08a1da1a';
   const devGulshanWId = 'dev-gulshan-org-08a1da1a';
   const devGodrejWId = 'dev-godrej-org-08a1da1a';
 
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devM3mWId, org3Id, 'M3M', 'Nitin Goel', '+91 124 4777000', 'crm@m3mindia.com', 'https://m3mindia.com', 'M3M Cosmopolitan, Sector 66, Gurugram', 'Leading visionary developer creating world-class residential masterpieces.', '/uploads/logos/logo-39f99d0e.png', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devMaxWId, org3Id, 'Max Estate', 'Saurabh Juneja', '+91 120 4000100', 'sales@maxestates.in', 'https://maxestates.in', 'Max Towers, Sector 16B, Noida', 'Pioneering wellness-integrated luxury living spaces.', '/uploads/logos/logo-9f7fe60c.jpg', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devGvWId, org3Id, 'Great Value', 'Manoj Goyal', '+91 120 4000800', 'sales@greatvalueindia.com', 'https://greatvaluerealty.com', 'Great Value Tower, Sector 18 / Sector 107, Noida', 'Renowned NCR real estate developer delivering premium, value-driven residential landmarks.', '/uploads/logos/logo-dev-greatvalue.png', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devPrestigeWId, org3Id, 'Prestige', 'Ramesh Rao', '+91 80 25591080', 'enquiry@prestigeconstructions.com', 'https://prestigeconstructions.com', 'The Falcon House, Bangalore & NCR Hub', 'Synonymous with innovation and luxury for over 35 years.', '/uploads/logos/logo-4bb771f4.png', 'active']
+  );
   db.run(
     `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [devSayaWId, org3Id, 'Saya Group', 'Vikas Sharma', '+91 120 4888000', 'info@sayahomes.in', 'https://sayahomes.in', 'Saya Homes HQ, Ghaziabad & Noida', 'Premier NCR luxury developer known for iconic architectural landmarks.', '/uploads/logos/logo-dev-saya.webp', 'active']
@@ -360,6 +380,128 @@ async function seedDatabase() {
   const projGulshanWId = 'proj-gulshan-hummingbird-org-08a1da1a';
   const projGodrejWId = 'proj-godrej-gbc-org-08a1da1a';
 
+  // Genspark projects for Workians
+  const projM3mJacobWId = 'proj-m3m-jacob-org-08a1da1a';
+  const projM3mElieWId = 'proj-m3m-eliesaab-org-08a1da1a';
+  const projM3mLineWId = 'proj-m3m-theline-org-08a1da1a';
+  const projM3mTrumpWId = 'proj-m3m-trump-org-08a1da1a';
+  const projM3mCullinanWId = 'proj-m3m-cullinan-org-08a1da1a';
+  const projMax105WId = 'proj-max105-org-08a1da1a';
+  const projGvEkanamWId = 'proj-gv-ekanam-org-08a1da1a';
+  const projPrestige150WId = 'proj-prestige-150-org-08a1da1a';
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projM3mJacobWId, org3Id, devM3mWId, 'Jacob&Co',
+      'Sector 65, Golf Course Extension Road, Gurugram',
+      'https://maps.google.com/?q=Sector+65+Golf+Course+Extension+Road+Gurgaon',
+      'Ultra-exclusive branded residences crafted in collaboration with world-renowned watchmaker & jeweler Jacob & Co. Features private sky infinity pools and Michelin-grade dining.',
+      '/uploads/logos/logo-11f5307a.jpg',
+      '1,850 sq. ft.', '2,200 sq. ft.', '2,400 sq. ft.', '₹4.80 Cr', '₹4.80 Cr - ₹9.50 Cr',
+      'Private Helipad, Infinity Sky Pool, Valet Concierge, Observatory Lounge, Cigar Bar',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projM3mElieWId, org3Id, devM3mWId, 'Elle Saab',
+      'Sector 111, Dwarka Expressway, Gurugram',
+      'https://maps.google.com/?q=M3M+Elie+Saab+Sector+111+Dwarka+Expressway+Gurgaon',
+      'Haute couture designer branded luxury residences by world-famous Parisian designer Elie Saab on Dwarka Expressway.',
+      '/uploads/logos/logo-proj-elie-saab.png',
+      '2,200 sq. ft.', '2,750 sq. ft.', '3,100 sq. ft.', '₹5.50 Cr', '₹5.50 Cr - ₹11.00 Cr',
+      'Elie Saab Styled Clubhouse, Private Plunge Pools, Haute Living Concierge, Italian Marble Finishes, Spa',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projM3mLineWId, org3Id, devM3mWId, 'The Line',
+      'Sector 72, Central Noida',
+      'https://maps.google.com/?q=M3M+The+Line+Sector+72+Noida',
+      'State-of-the-art commercial high-street retail suites and modern serviced studio residences in prime Sector 72 Noida.',
+      '/uploads/logos/logo-proj-the-line.jpg',
+      '550 sq. ft.', '700 sq. ft.', '850 sq. ft.', '₹95 Lakhs', '₹95 Lakhs - ₹1.80 Cr',
+      'Double Height High-Street Retail, Sky Club, Rooftop Infinity Pool, 24/7 Power Backup, Business Lounge',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projM3mTrumpWId, org3Id, devM3mWId, 'Trump',
+      'Sector 65, Golf Course Extension Road, Gurugram',
+      'https://maps.google.com/?q=Trump+Towers+Sector+65+Gurgaon',
+      'Iconic global super-luxury twin glass towers defining the pinnacle of elite luxury living in Gurugram.',
+      '/uploads/logos/logo-proj-trump-tower.svg',
+      '3,200 sq. ft.', '3,900 sq. ft.', '4,500 sq. ft.', '₹8.50 Cr', '₹8.50 Cr - ₹16.00 Cr',
+      '24/7 White Glove Valet & Concierge, Temperature-Controlled Glass Pool, Trump Signature Lounge, Private Elevators',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projM3mCullinanWId, org3Id, devM3mWId, 'Cullinan',
+      'Sector 94, Noida Expressway, Noida',
+      'https://maps.google.com/?q=M3M+The+Cullinan+Sector+94+Noida',
+      'Mixed-use high-street luxury development on the junction of South Delhi and Noida. 5.5-acre central green piazza with private elevators.',
+      '/uploads/logos/logo-2c6de208.png',
+      '2,450 sq. ft.', '3,100 sq. ft.', '3,600 sq. ft.', '₹5.80 Cr', '₹5.80 Cr - ₹12.00 Cr',
+      'Direct South Delhi Connectivity, 100,000 sq ft Clubhouse, 7-tier Security, Temperature Controlled Olympic Pool',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projMax105WId, org3Id, devMaxWId, 'Max 105 Estate',
+      'Sector 105, Noida Expressway, Noida',
+      'https://maps.google.com/?q=Sector+105+Noida+Expressway',
+      'Biophilic architectural marvel curated around wellness, nature and pristine air quality filtration for supreme family wellbeing.',
+      '/uploads/logos/logo-89943740.jpg',
+      '2,100 sq. ft.', '2,600 sq. ft.', '2,850 sq. ft.', '₹4.20 Cr', '₹4.20 Cr - ₹7.80 Cr',
+      'Forest Walkway, Organic Cafe, IGBC Platinum Pre-certified, Hydrotherapy Spa',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projGvEkanamWId, org3Id, devGvWId, 'Ekanam',
+      'Sector 107, Noida Expressway, Noida',
+      'https://maps.google.com/?q=Great+Value+Ekanam+Sector+107+Noida',
+      'Ultra-luxury low-density residential sanctuary in Sector 107 Noida with expansive green golf views and 3/4 BHK grand suites.',
+      '/uploads/logos/logo-proj-ekanam.png',
+      '1,650 sq. ft.', '2,050 sq. ft.', '2,350 sq. ft.', '₹2.85 Cr', '₹2.85 Cr - ₹4.50 Cr',
+      'Sky Lounge, Temperature Controlled Swimming Pool, Aerobics & Yoga Studio, Grand Club, 3-Tier Security',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projPrestige150WId, org3Id, devPrestigeWId, 'Prestige 150',
+      'Sector 150, Sports City, Noida',
+      'https://maps.google.com/?q=Sector+150+Noida+Sports+City',
+      'Low-density golf-centric residential paradise surrounded by 42 acres of curated sports amenities and verdant landscapes.',
+      '/uploads/logos/logo-a46a11c8.png',
+      '2,600 sq. ft.', '3,200 sq. ft.', '3,500 sq. ft.', '₹3.90 Cr', '₹3.90 Cr - ₹6.50 Cr',
+      '9-Hole Executive Golf Course, Olympic Gymnastics Arena, Tennis Academy',
+      'active'
+    ]
+  );
+
   db.run(
     `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -470,6 +612,72 @@ async function seedDatabase() {
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ['cfg-w10', projGodrejWId, '4 BHK Smart High-Rise', '1,550 sq. ft.', '1,850 sq. ft.', '₹2.65 Cr', 4, 4]
+  );
+
+  // Genspark Workians Project Configurations
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w11', projM3mJacobWId, '3 BHK Premium Sky Residence', '1,850 sq. ft.', '2,400 sq. ft.', '₹4.80 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w12', projM3mJacobWId, '4 BHK Royal Penthouse', '3,100 sq. ft.', '3,850 sq. ft.', '₹7.90 Cr', 4, 5]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w13', projM3mElieWId, '3.5 BHK Designer Residence', '2,200 sq. ft.', '2,750 sq. ft.', '₹5.50 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w14', projM3mElieWId, '4.5 BHK Luxury Penthouse', '3,100 sq. ft.', '3,900 sq. ft.', '₹8.50 Cr', 4, 5]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w15', projM3mLineWId, 'Smart Studio Suite', '550 sq. ft.', '700 sq. ft.', '₹95 Lakhs', 1, 1]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w16', projM3mLineWId, '1 BHK Executive Suite', '700 sq. ft.', '850 sq. ft.', '₹1.45 Cr', 1, 1]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w17', projM3mTrumpWId, '3 BHK Ultra Luxury Residence', '3,200 sq. ft.', '3,900 sq. ft.', '₹8.50 Cr', 3, 4]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w18', projM3mTrumpWId, '4 BHK Iconic Sky Villa', '4,500 sq. ft.', '5,600 sq. ft.', '₹14.50 Cr', 4, 5]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w19', projM3mCullinanWId, '3 BHK Luxury View Suite', '2,450 sq. ft.', '3,100 sq. ft.', '₹5.80 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w20', projM3mCullinanWId, '4 BHK Grand View Suite', '2,850 sq. ft.', '3,600 sq. ft.', '₹7.50 Cr', 4, 4]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w21', projMax105WId, '3 BHK Wellness Residence', '2,100 sq. ft.', '2,850 sq. ft.', '₹4.20 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w22', projMax105WId, '4 BHK Wellness Suite', '2,600 sq. ft.', '3,450 sq. ft.', '₹6.10 Cr', 4, 4]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w23', projGvEkanamWId, '3 BHK + Servant Luxury Suite', '1,650 sq. ft.', '2,350 sq. ft.', '₹2.85 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w24', projGvEkanamWId, '4 BHK + Servant Grand Sky Villa', '2,150 sq. ft.', '3,100 sq. ft.', '₹4.10 Cr', 4, 4]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w25', projPrestige150WId, '3 BHK Luxury Sports Residence', '2,200 sq. ft.', '2,800 sq. ft.', '₹3.90 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w26', projPrestige150WId, '4 BHK Grand Fairway Suite', '2,600 sq. ft.', '3,500 sq. ft.', '₹5.20 Cr', 4, 4]
   );
 
   // 5. Project Configurations
