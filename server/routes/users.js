@@ -272,7 +272,8 @@ router.post('/import-excel', authorizeRoles('super_admin', 'admin'), upload.sing
     function getField(row, keys) {
       const rKeys = Object.keys(row);
       for (const k of keys) {
-        const found = rKeys.find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+        const cleanKey = k.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        const found = rKeys.find(rk => rk.replace(/[^a-z0-9]/gi, '').toLowerCase() === cleanKey);
         if (found && row[found] !== undefined && row[found] !== null) {
           return String(row[found]).trim();
         }
@@ -300,7 +301,11 @@ router.post('/import-excel', authorizeRoles('super_admin', 'admin'), upload.sing
       return res.status(400).json({ error: 'No valid rows found with Name and Email' });
     }
 
-    // Step 1: Referenced heads
+    // Step 1: Referenced heads & admin keywords
+    const sajanUser = db.get("SELECT name FROM users WHERE email = 'sajanpatel@workians.com'");
+    const sajanName = sajanUser ? sajanUser.name.toLowerCase() : 'sajan patel';
+    const adminKeywords = [sajanName, 'sajan', 'sajan patel', 'admin', 'director', 'super admin', 'management'];
+
     const referencedHeads = new Set();
     parsedRows.forEach(r => {
       if (r.headName && !['self', 'na', 'n/a', 'none', '-'].includes(r.headName.toLowerCase())) {
@@ -311,8 +316,10 @@ router.post('/import-excel', authorizeRoles('super_admin', 'admin'), upload.sing
     const salesHeads = [];
     const salesAssociates = [];
     for (const r of parsedRows) {
-      const isHead = referencedHeads.has(r.name.toLowerCase()) || !r.headName || ['self', 'na', 'n/a', 'none', '-', r.name.toLowerCase()].includes(r.headName.toLowerCase());
-      if (isHead) salesHeads.push(r);
+      const headNorm = (r.headName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const isReportingToAdmin = adminKeywords.some(a => headNorm.includes(a.replace(/[^a-z0-9]/g, '')));
+      const hasNoHead = !r.headName || ['self', 'na', 'n/a', 'none', '-', r.name.toLowerCase()].includes(r.headName.toLowerCase());
+      if (isReportingToAdmin || hasNoHead) salesHeads.push(r);
       else salesAssociates.push(r);
     }
 
@@ -345,23 +352,64 @@ router.post('/import-excel', authorizeRoles('super_admin', 'admin'), upload.sing
 
       const existingTeam = db.get("SELECT id FROM teams WHERE sales_head_id = ?", [userId]);
       if (!existingTeam) {
+        const teamId = 'team-' + crypto.randomUUID().slice(0, 8);
         db.run(
           `INSERT INTO teams (id, organization_id, sales_head_id, name, description) VALUES (?, ?, ?, ?, ?)`,
-          ['team-' + crypto.randomUUID().slice(0, 8), orgId, userId, `${h.name}'s Advisory Team`, `Managed by ${h.name}`]
+          [teamId, orgId, userId, `${h.name}'s Advisory Team`, `Managed by ${h.name}`]
         );
       }
+    }
+
+    // Auto-create any referenced head that isn't in sheet (e.g. Akshansh)
+    for (const rawRef of referencedHeads) {
+      const cleanRef = rawRef.replace(/[^a-z0-9]/g, '');
+      const alreadyMapped = Object.keys(headNameToId).some(k => {
+        const ck = k.replace(/[^a-z0-9]/g, '');
+        return ck === cleanRef || ck.includes(cleanRef) || cleanRef.includes(ck);
+      });
+      const isAdminRef = adminKeywords.some(a => cleanRef.includes(a.replace(/[^a-z0-9]/g, '')));
+
+      if (!alreadyMapped && !isAdminRef) {
+        const sampleRow = parsedRows.find(r => r.headName && r.headName.toLowerCase() === rawRef);
+        const properName = sampleRow ? sampleRow.headName : rawRef;
+        const placeholderEmail = `${cleanRef}@workians.com`;
+        const placeholderPhone = '9999900000';
+        const existingRefUser = db.get("SELECT id, name FROM users WHERE email = ? OR name LIKE ?", [placeholderEmail, `%${properName}%`]);
+        let refHeadId;
+        if (existingRefUser) {
+          refHeadId = existingRefUser.id;
+          db.run("UPDATE users SET role='sales_head', organization_id=? WHERE id=?", [orgId, refHeadId]);
+        } else {
+          refHeadId = 'usr-head-' + crypto.randomUUID().slice(0, 8);
+          const hash = await bcrypt.hash(placeholderPhone, 10);
+          db.run(
+            `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, status)
+             VALUES (?, ?, 'sales_head', ?, ?, ?, ?, 'active')`,
+            [refHeadId, orgId, properName, placeholderEmail, placeholderPhone, hash]
+          );
+          createdHeads++;
+        }
+        headNameToId[properName.toLowerCase()] = refHeadId;
+      }
+    }
+
+    function findHeadId(headNameStr) {
+      if (!headNameStr) return null;
+      const cleanTarget = headNameStr.toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const [hName, hId] of Object.entries(headNameToId)) {
+        const cleanH = hName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanH === cleanTarget || cleanH.includes(cleanTarget) || cleanTarget.includes(cleanH)) {
+          return hId;
+        }
+      }
+      return null;
     }
 
     let createdAssociates = 0, updatedAssociates = 0;
     for (const a of salesAssociates) {
       const password = a.phone || '12345678';
       const passwordHash = await bcrypt.hash(password, 10);
-
-      let assignedHeadId = null;
-      if (a.headName) {
-        const lower = a.headName.toLowerCase();
-        assignedHeadId = headNameToId[lower] || (Object.keys(headNameToId).find(k => k.includes(lower) || lower.includes(k)) ? headNameToId[Object.keys(headNameToId).find(k => k.includes(lower) || lower.includes(k))] : null);
-      }
+      const assignedHeadId = findHeadId(a.headName);
 
       const existing = db.get("SELECT id FROM users WHERE email = ?", [a.email]);
       if (existing) {

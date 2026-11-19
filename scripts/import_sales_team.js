@@ -46,11 +46,12 @@ async function importSalesTeamFromExcel(filePath) {
     return;
   }
 
-  // Helper to extract field case-insensitively
+  // Helper to extract field case-insensitively and ignore punctuation/spaces
   function getField(row, possibleKeys) {
     const rowKeys = Object.keys(row);
     for (const key of possibleKeys) {
-      const found = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase());
+      const cleanKey = key.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      const found = rowKeys.find(k => k.replace(/[^a-z0-9]/gi, '').toLowerCase() === cleanKey);
       if (found && row[found] !== undefined && row[found] !== null) {
         return String(row[found]).trim();
       }
@@ -81,7 +82,10 @@ async function importSalesTeamFromExcel(filePath) {
 
   console.log(`Valid employee rows to process: ${parsedRows.length}`);
 
-  // Step 1: Identify all unique Head Names mentioned in the sheet
+  // Step 1: Identify admin names & referenced heads
+  const sajanName = sajanUser ? sajanUser.name.toLowerCase() : 'sajan patel';
+  const adminKeywords = [sajanName, 'sajan', 'sajan patel', 'admin', 'director', 'super admin', 'management'];
+
   const referencedHeads = new Set();
   parsedRows.forEach(r => {
     if (r.headName && !['self', 'na', 'n/a', 'none', '-'].includes(r.headName.toLowerCase())) {
@@ -91,16 +95,17 @@ async function importSalesTeamFromExcel(filePath) {
 
   // Step 2: Categorize into Sales Heads and Sales Associates
   // A person is a Sales Head if:
-  // - Their Head Name is empty, self, '-', or matches their own name, OR
-  // - Their name is referenced as Head Name by someone else
+  // - Their Head Name indicates reporting to Admin/Sajan Patel, OR
+  // - Their Head Name is empty, self, or matches their own name
   const salesHeadsToCreate = [];
   const salesAssociatesToCreate = [];
 
   for (const r of parsedRows) {
-    const isHeadByName = referencedHeads.has(r.name.toLowerCase());
+    const headNorm = (r.headName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isReportingToAdmin = adminKeywords.some(a => headNorm.includes(a.replace(/[^a-z0-9]/g, '')));
     const hasNoHead = !r.headName || ['self', 'na', 'n/a', 'none', '-', r.name.toLowerCase()].includes(r.headName.toLowerCase());
 
-    if (isHeadByName || hasNoHead) {
+    if (isReportingToAdmin || hasNoHead) {
       salesHeadsToCreate.push(r);
     } else {
       salesAssociatesToCreate.push(r);
@@ -159,6 +164,53 @@ async function importSalesTeamFromExcel(filePath) {
     }
   }
 
+  // Ensure any referenced head who wasn't in salesHeadsToCreate is also available as Sales Head (e.g. Akshansh)
+  for (const rawRef of referencedHeads) {
+    const cleanRef = rawRef.replace(/[^a-z0-9]/g, '');
+    const alreadyMapped = Object.keys(headNameToId).some(k => {
+      const ck = k.replace(/[^a-z0-9]/g, '');
+      return ck === cleanRef || ck.includes(cleanRef) || cleanRef.includes(ck);
+    });
+    const isAdminRef = adminKeywords.some(a => cleanRef.includes(a.replace(/[^a-z0-9]/g, '')));
+
+    if (!alreadyMapped && !isAdminRef) {
+      // Find proper capitalization from raw rows
+      const sampleRow = parsedRows.find(r => r.headName && r.headName.toLowerCase() === rawRef);
+      const properName = sampleRow ? sampleRow.headName : rawRef;
+      const placeholderEmail = `${cleanRef}@workians.com`;
+      const placeholderPhone = '9999900000';
+      const existingRefUser = db.get("SELECT id, name FROM users WHERE email = ? OR name LIKE ?", [placeholderEmail, `%${properName}%`]);
+      let refHeadId;
+      if (existingRefUser) {
+        refHeadId = existingRefUser.id;
+        db.run("UPDATE users SET role='sales_head', organization_id=? WHERE id=?", [orgId, refHeadId]);
+      } else {
+        refHeadId = 'usr-head-' + crypto.randomUUID().slice(0, 8);
+        const hash = await bcrypt.hash(placeholderPhone, 10);
+        db.run(
+          `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, status)
+           VALUES (?, ?, 'sales_head', ?, ?, ?, ?, 'active')`,
+          [refHeadId, orgId, properName, placeholderEmail, placeholderPhone, hash]
+        );
+        console.log(`+ Auto-created referenced Sales Head: ${properName} (${placeholderEmail})`);
+      }
+      headNameToId[properName.toLowerCase()] = refHeadId;
+    }
+  }
+
+  // Helper to find Head ID
+  function findHeadId(headNameStr) {
+    if (!headNameStr) return null;
+    const cleanTarget = headNameStr.toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const [hName, hId] of Object.entries(headNameToId)) {
+      const cleanH = hName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanH === cleanTarget || cleanH.includes(cleanTarget) || cleanTarget.includes(cleanH)) {
+        return hId;
+      }
+    }
+    return null;
+  }
+
   // Step 4: Insert or update Sales Associates linked to their Sales Head
   console.log('\n--- Creating / Updating Sales Associates ---');
   for (const a of salesAssociatesToCreate) {
@@ -167,15 +219,7 @@ async function importSalesTeamFromExcel(filePath) {
       console.warn(`[WARNING] No phone number for Sales Associate ${a.name} (${a.email}), password will default to '12345678'`);
     }
     const passwordHash = await bcrypt.hash(password || '12345678', 10);
-
-    // Find assigned sales head ID
-    let assignedHeadId = null;
-    if (a.headName) {
-      const lowerHead = a.headName.toLowerCase();
-      // Exact match or partial match
-      assignedHeadId = headNameToId[lowerHead] ||
-        Object.keys(headNameToId).find(k => k.includes(lowerHead) || lowerHead.includes(k)) ? headNameToId[Object.keys(headNameToId).find(k => k.includes(lowerHead) || lowerHead.includes(k))] : null;
-    }
+    const assignedHeadId = findHeadId(a.headName);
 
     const existing = db.get("SELECT id FROM users WHERE email = ?", [a.email]);
 
