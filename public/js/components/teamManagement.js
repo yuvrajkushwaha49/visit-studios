@@ -23,6 +23,9 @@ App.renderTeamManagement = async function(container) {
             <button class="btn primary" onclick="App.openAddUserModal('sales_head')">
               + Add Sales Head
             </button>
+            <button class="btn soft" onclick="App.openImportTeamModal()" style="color:#2563eb; font-weight:600; border-color:#93c5fd; background:#eff6ff;">
+              📊 Import Team (Excel)
+            </button>
           ` : ''}
           <button class="btn soft" onclick="App.openAddUserModal('sales_associate')">
             + Add Sales Associate
@@ -364,5 +367,66 @@ App.handleAssignHeadSubmit = async function(e, userId) {
     App.renderTeamManagement(document.getElementById('pageContent'));
   } catch (err) {
     Utils.toast('Error: ' + err.message);
+  }
+};
+
+// Import Sales Team from Excel Modal
+App.openImportTeamModal = function() {
+  const html = `
+    <h3 class="modal-title">Import Sales Team from Excel</h3>
+    <p class="modal-desc">Upload an Excel (.xlsx, .xls) or CSV file with columns: <strong>Name</strong>, <strong>Email</strong>, <strong>Phone</strong>, and <strong>(Head Name)</strong>.</p>
+
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; font-size:12px; line-height:1.6;">
+      <div style="font-weight:700; color:#1e293b; margin-bottom:4px;">📋 Excel Rules & Auto-Credentials:</div>
+      <ul style="margin:0; padding-left:18px; color:#475569;">
+        <li><strong>Username:</strong> Will be set to the user's <strong>Email</strong>.</li>
+        <li><strong>Password:</strong> Will be automatically set to the user's <strong>Phone Number</strong>.</li>
+        <li><strong>Sales Head vs Associate:</strong> Employees with no Head Name (or where Head matches themselves) become <strong>Sales Heads</strong>. Others become <strong>Sales Associates</strong> mapped to their designated Head.</li>
+      </ul>
+    </div>
+
+    <form onsubmit="App.handleImportTeamSubmit(event)">
+      <div style="margin-bottom:18px;">
+        <label>Select Excel / CSV File *</label>
+        <input type="file" id="teamExcelFile" accept=".xlsx, .xls, .csv" required style="padding:8px; border:1px dashed #cbd5e1; border-radius:8px; width:100%; background:#ffffff;">
+      </div>
+
+      <div id="importTeamProgress" class="hidden" style="margin-bottom:14px; padding:10px; background:#eff6ff; border-radius:8px; color:#1d4ed8; font-size:12px; text-align:center;">
+        Processing sheet and generating encrypted employee credentials...
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn" onclick="Utils.closeModal()">Cancel</button>
+        <button type="submit" id="btnSubmitTeamImport" class="btn primary">Upload & Create Team</button>
+      </div>
+    </form>
+  `;
+  Utils.showModal(html);
+};
+
+App.handleImportTeamSubmit = async function(e) {
+  e.preventDefault();
+  const fileInput = document.getElementById('teamExcelFile');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    return Utils.toast('Please select an Excel file');
+  }
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  const btn = document.getElementById('btnSubmitTeamImport');
+  const progress = document.getElementById('importTeamProgress');
+  if (btn) btn.disabled = true;
+  if (progress) progress.classList.remove('hidden');
+
+  try {
+    const res = await API.upload('/users/import-excel', formData);
+    Utils.toast(res.message || 'Team imported successfully!');
+    Utils.closeModal();
+    App.renderTeamManagement(document.getElementById('pageContent'));
+  } catch (err) {
+    Utils.toast('Import failed: ' + err.message);
+    if (btn) btn.disabled = false;
+    if (progress) progress.classList.add('hidden');
   }
 };

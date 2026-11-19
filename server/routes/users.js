@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const upload = multer({ limits: { fileSize: 15 * 1024 * 1024 } });
+const xlsx = require('xlsx');
 const db = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 const { logActivity } = require('../middleware/audit');
@@ -239,6 +242,156 @@ router.delete('/:id', authorizeRoles('super_admin', 'admin'), (req, res) => {
     db.run('DELETE FROM users WHERE id = ?', [req.params.id]);
     logActivity(req, 'DELETE_USER', 'users', req.params.id, `Deleted user ${user.name}`);
     return res.json({ success: true, message: `User ${user.name} deleted successfully` });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/import-excel - Import Sales Heads & Associates from Excel or JSON
+router.post('/import-excel', authorizeRoles('super_admin', 'admin'), upload.single('file'), async (req, res) => {
+  try {
+    const actor = req.user;
+    const orgId = actor.role === 'super_admin' ? (req.body.organization_id || actor.organization_id) : actor.organization_id;
+
+    let rawRows = [];
+
+    if (req.file) {
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      rawRows = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+    } else if (req.body.rows && Array.isArray(req.body.rows)) {
+      rawRows = req.body.rows;
+    } else {
+      return res.status(400).json({ error: 'Please upload an Excel file (.xlsx, .xls, .csv) or provide rows array' });
+    }
+
+    if (!rawRows || rawRows.length === 0) {
+      return res.status(400).json({ error: 'No data rows found in uploaded sheet' });
+    }
+
+    function getField(row, keys) {
+      const rKeys = Object.keys(row);
+      for (const k of keys) {
+        const found = rKeys.find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+        if (found && row[found] !== undefined && row[found] !== null) {
+          return String(row[found]).trim();
+        }
+      }
+      return '';
+    }
+
+    function cleanPhone(raw) {
+      if (!raw) return '';
+      let p = String(raw).replace(/\.0$/, '').trim();
+      let digits = p.replace(/[^\d+]/g, '');
+      return digits || p;
+    }
+
+    const parsedRows = rawRows.map(row => {
+      const name = getField(row, ['name', 'full name', 'employee name', 'associate name']);
+      const email = getField(row, ['email', 'email id', 'email address', 'username', 'mail']).toLowerCase();
+      const rawPhone = getField(row, ['phone', 'mobile', 'phone number', 'contact', 'contact number']);
+      const phone = cleanPhone(rawPhone);
+      const headName = getField(row, ['head name', 'head', 'sales head', 'reporting head', 'team head', 'manager']);
+      return { name, email, phone, headName };
+    }).filter(r => r.name && r.email);
+
+    if (parsedRows.length === 0) {
+      return res.status(400).json({ error: 'No valid rows found with Name and Email' });
+    }
+
+    // Step 1: Referenced heads
+    const referencedHeads = new Set();
+    parsedRows.forEach(r => {
+      if (r.headName && !['self', 'na', 'n/a', 'none', '-'].includes(r.headName.toLowerCase())) {
+        referencedHeads.add(r.headName.toLowerCase());
+      }
+    });
+
+    const salesHeads = [];
+    const salesAssociates = [];
+    for (const r of parsedRows) {
+      const isHead = referencedHeads.has(r.name.toLowerCase()) || !r.headName || ['self', 'na', 'n/a', 'none', '-', r.name.toLowerCase()].includes(r.headName.toLowerCase());
+      if (isHead) salesHeads.push(r);
+      else salesAssociates.push(r);
+    }
+
+    const headNameToId = {};
+    const existingHeads = db.all("SELECT id, name FROM users WHERE organization_id = ? AND role = 'sales_head'", [orgId]);
+    existingHeads.forEach(h => { headNameToId[h.name.toLowerCase()] = h.id; });
+
+    let createdHeads = 0, updatedHeads = 0;
+    for (const h of salesHeads) {
+      const password = h.phone || '12345678';
+      const passwordHash = await bcrypt.hash(password, 10);
+      const existing = db.get("SELECT id FROM users WHERE email = ?", [h.email]);
+      let userId;
+      if (existing) {
+        userId = existing.id;
+        db.run(
+          `UPDATE users SET name=?, phone=?, role='sales_head', password_hash=?, organization_id=?, status='active' WHERE id=?`,
+          [h.name, h.phone, passwordHash, orgId, userId]
+        );
+        updatedHeads++;
+      } else {
+        userId = 'usr-head-' + crypto.randomUUID().slice(0, 8);
+        db.run(
+          `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, sales_head_id, status) VALUES (?, ?, 'sales_head', ?, ?, ?, ?, NULL, 'active')`,
+          [userId, orgId, h.name, h.email, h.phone, passwordHash]
+        );
+        createdHeads++;
+      }
+      headNameToId[h.name.toLowerCase()] = userId;
+
+      const existingTeam = db.get("SELECT id FROM teams WHERE sales_head_id = ?", [userId]);
+      if (!existingTeam) {
+        db.run(
+          `INSERT INTO teams (id, organization_id, sales_head_id, name, description) VALUES (?, ?, ?, ?, ?)`,
+          ['team-' + crypto.randomUUID().slice(0, 8), orgId, userId, `${h.name}'s Advisory Team`, `Managed by ${h.name}`]
+        );
+      }
+    }
+
+    let createdAssociates = 0, updatedAssociates = 0;
+    for (const a of salesAssociates) {
+      const password = a.phone || '12345678';
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      let assignedHeadId = null;
+      if (a.headName) {
+        const lower = a.headName.toLowerCase();
+        assignedHeadId = headNameToId[lower] || (Object.keys(headNameToId).find(k => k.includes(lower) || lower.includes(k)) ? headNameToId[Object.keys(headNameToId).find(k => k.includes(lower) || lower.includes(k))] : null);
+      }
+
+      const existing = db.get("SELECT id FROM users WHERE email = ?", [a.email]);
+      if (existing) {
+        db.run(
+          `UPDATE users SET name=?, phone=?, role='sales_associate', password_hash=?, sales_head_id=?, organization_id=?, status='active' WHERE id=?`,
+          [a.name, a.phone, passwordHash, assignedHeadId, orgId, existing.id]
+        );
+        updatedAssociates++;
+      } else {
+        const userId = 'usr-assoc-' + crypto.randomUUID().slice(0, 8);
+        db.run(
+          `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, sales_head_id, status) VALUES (?, ?, 'sales_associate', ?, ?, ?, ?, ?, 'active')`,
+          [userId, orgId, a.name, a.email, a.phone, passwordHash, assignedHeadId]
+        );
+        createdAssociates++;
+      }
+    }
+
+    logActivity(req, 'IMPORT_USERS', 'users', null, `Imported ${salesHeads.length} Sales Heads and ${salesAssociates.length} Associates`);
+
+    return res.json({
+      success: true,
+      message: `Successfully processed ${parsedRows.length} team members!`,
+      summary: {
+        total: parsedRows.length,
+        salesHeads: { total: salesHeads.length, created: createdHeads, updated: updatedHeads },
+        salesAssociates: { total: salesAssociates.length, created: createdAssociates, updated: updatedAssociates },
+        credentialsInfo: 'Username = Email | Password = Phone Number'
+      }
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

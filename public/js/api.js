@@ -33,6 +33,10 @@ const API = {
       ...options.headers
     };
 
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
     const token = this.getToken();
     if (token && !headers['Authorization']) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -97,6 +101,13 @@ const API = {
 
   delete(endpoint) {
     return this.request(endpoint, { method: 'DELETE' });
+  },
+
+  upload(endpoint, formData) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: formData
+    });
   }
 };
 
