@@ -43,7 +43,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   background-color: var(--bg);
   color: var(--ink);
   font-size: 13.5px;
@@ -55,7 +55,7 @@ body {
   position: relative;
 }
 
-button, input, select, textarea { font-family: inherit; font-size: inherit; }
+button, input, select, textarea { font-family: Arial, Helvetica, sans-serif; font-size: inherit; }
 button { cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 
@@ -104,7 +104,7 @@ a { color: inherit; text-decoration: none; }
   color: #fff;
   display: grid;
   place-items: center;
-  font: 700 22px 'Playfair Display', Georgia, serif;
+  font: 700 22px Arial, Helvetica, sans-serif;
   box-shadow: 0 3px 10px rgba(108, 84, 160, 0.25);
   border: 1px solid rgba(245, 158, 11, 0.4);
 }
@@ -323,7 +323,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .page-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.6px;
@@ -716,7 +716,7 @@ textarea {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 10px 40px rgba(31, 27, 59, 0.08);
-  font-family: 'Inter', sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .inv-inner {
@@ -772,7 +772,7 @@ textarea {
 }
 
 .inv-hero h2 {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 28px;
   line-height: 1.2;
   letter-spacing: -0.6px;
@@ -804,7 +804,7 @@ textarea {
 }
 
 .inv-property-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 22px;
   letter-spacing: -0.4px;
   color: var(--ink);
@@ -858,7 +858,7 @@ textarea {
 
 .inv-date-day {
   display: block;
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 24px;
   font-weight: 700;
   padding: 2px 0 4px;
@@ -974,7 +974,7 @@ textarea {
 }
 
 .modal-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 24px;
   font-weight: 600;
   color: var(--ink);
@@ -1705,7 +1705,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cinzel', serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 26px;
   font-weight: 700;
   color: #f5d77f;
@@ -1715,11 +1715,11 @@ textarea {
 }
 
 .auth-brand-title {
-  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: #ffffff;
-  letter-spacing: 2.2px;
+  letter-spacing: 2px;
   line-height: 1.1;
 }
 
@@ -1734,9 +1734,9 @@ textarea {
 }
 
 .auth-hero-heading {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 31px;
-  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
   color: #ffffff;
   line-height: 1.28;
   margin-bottom: 16px;
@@ -1868,9 +1868,9 @@ textarea {
 }
 
 .auth-form-title {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 28px;
-  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 26px;
+  font-weight: 700;
   color: #0f172a;
   margin-bottom: 6px;
   letter-spacing: -0.3px;
@@ -1940,7 +1940,7 @@ textarea {
   font-size: 13.5px;
   color: #0f172a;
   transition: all 0.2s ease;
-  font-family: 'Inter', sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .auth-input-wrapper input:focus {
