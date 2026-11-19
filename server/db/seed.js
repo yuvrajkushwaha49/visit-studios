@@ -30,6 +30,7 @@ async function seedDatabase() {
   // 1. Organizations
   const org1Id = 'org-aura-001';
   const org2Id = 'org-prestige-002';
+  const org3Id = 'org-08a1da1a';
 
   db.run(
     `INSERT INTO organizations (id, name, slug, phone, email, address, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -41,10 +42,20 @@ async function seedDatabase() {
     [org2Id, 'Skyline Urban Advisory', 'skyline-urban', '+91 98200 98765', 'hello@skylineadvisory.in', 'BKC, Bandra East, Mumbai', 'active']
   );
 
+  db.run(
+    `INSERT INTO organizations (id, name, slug, phone, email, address, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [org3Id, 'Workians Realty', 'workians-realty', '+91 99999 12345', 'info@workians.com', 'Noida / Greater Noida NCR', 'active']
+  );
+
   // Organization settings
   db.run(
     `INSERT INTO organization_settings (id, organization_id, agency_name, agency_subtitle, brand_color, accent_color, whatsapp_phone_number_id, whatsapp_access_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ['sett-aura-001', org1Id, 'Aura Luxe Realty', 'Private Viewings & Luxury Portfolio', '#1e1b4b', '#f59e0b', '109847289172345', 'EAABwzL_mock_token_cloud_api_visit_studio']
+  );
+
+  db.run(
+    `INSERT INTO organization_settings (id, organization_id, agency_name, agency_subtitle, brand_color, accent_color, whatsapp_phone_number_id, whatsapp_access_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['sett-workians-001', org3Id, 'Workians Realty', 'Site Visit Management & Tracking', '#1e1b4b', '#2563eb', '109847289172345', 'EAABwzL_mock_token_cloud_api_visit_studio']
   );
 
   // 2. Users (Hierarchical: Super Admin -> Admin -> Sales Head -> Sales Associates)
@@ -95,10 +106,26 @@ async function seedDatabase() {
     [associate3Id, org1Id, 'sales_associate', 'Amit Saxena', 'associate3@auraluxe.com', '+91 98333 44556', passwordHash, salesHead2Id, 'active']
   );
 
+  // Users for Workians Realty
+  db.run(
+    `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['usr-admin-55d7e83d', org3Id, 'admin', 'Sajan Rajnikant Patel', 'sajanpatel@workians.com', '+91 99999 11111', passwordHash, 'active']
+  );
+
+  db.run(
+    `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['usr-sales-1cb1b7d6', org3Id, 'sales_head', 'Kaushal Pant', 'kaushalpant@workians.com', '+91 99999 22222', passwordHash, 'active']
+  );
+
   // Teams
   db.run(
     `INSERT INTO teams (id, organization_id, sales_head_id, name, description) VALUES (?, ?, ?, ?, ?)`,
     ['team-ncr-001', org1Id, salesHead1Id, 'NCR Luxury Advisory Squad', 'Primary focus on Gurgaon Golf Course Ext. and Noida Expressway high-value residences']
+  );
+
+  db.run(
+    `INSERT INTO teams (id, organization_id, sales_head_id, name, description) VALUES (?, ?, ?, ?, ?)`,
+    ['team-workians-001', org3Id, 'usr-sales-1cb1b7d6', 'Workians Core Sales Team', 'Focus on NCR residential & commercial site visits']
   );
 
   // 3. Developers
@@ -149,6 +176,29 @@ async function seedDatabase() {
   db.run(
     `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [dev8Id, org1Id, 'Godrej Properties', 'Mohit Malhotra', '+91 22 61664444', 'sales@godrejproperties.com', 'https://godrejproperties.com', 'Godrej One, Pirojshanagar, Eastern Express Highway, Mumbai & NCR Hub', "India's most trusted developer bringing sustainability and innovation to NCR.", '/uploads/logos/logo-dev-godrej.png', 'active']
+  );
+
+  // Developers for Workians Realty (Sajan Patel)
+  const devSayaWId = 'dev-saya-org-08a1da1a';
+  const devNcrWId = 'dev-ncr-org-08a1da1a';
+  const devGulshanWId = 'dev-gulshan-org-08a1da1a';
+  const devGodrejWId = 'dev-godrej-org-08a1da1a';
+
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devSayaWId, org3Id, 'Saya Group', 'Vikas Sharma', '+91 120 4888000', 'info@sayahomes.in', 'https://sayahomes.in', 'Saya Homes HQ, Ghaziabad & Noida', 'Premier NCR luxury developer known for iconic architectural landmarks.', '/uploads/logos/logo-dev-saya.webp', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devNcrWId, org3Id, 'NCR Group', 'Ajay Kumar', '+91 120 6777100', 'contact@ncrmonarch.in', 'https://ncrmonarch.in', 'Plot No GH-02, Sector 1, Greater Noida West', 'Leading real estate developer delivering quality residential and commercial hubs.', '/uploads/logos/logo-dev-ncr.png', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devGulshanWId, org3Id, 'Gulshan Homz', 'Deepak Kapoor', '+91 120 4777500', 'care@gulshangroup.com', 'https://gulshangroup.com', 'Gulshan One29, Sector 129, Noida', 'Pioneers of grand luxury living and bespoke residential communities in Delhi NCR.', '/uploads/logos/logo-dev-gulshan.png', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devGodrejWId, org3Id, 'Godrej Properties', 'Mohit Malhotra', '+91 22 61664444', 'sales@godrejproperties.com', 'https://godrejproperties.com', 'Godrej One, Pirojshanagar, Eastern Express Highway, Mumbai & NCR Hub', "India's most trusted developer bringing sustainability and innovation to NCR.", '/uploads/logos/logo-dev-godrej.png', 'active']
   );
 
   // 4. Projects
@@ -301,6 +351,125 @@ async function seedDatabase() {
       'Golf-Themed Living, Smart Home Automation, Olympic-Sized Pool, Multipurpose Sports Complex, Grand Club',
       'active'
     ]
+  );
+
+  // Projects for Workians Realty (Sajan Patel)
+  const projSayaWId = 'proj-saya-rajnagar-org-08a1da1a';
+  const projNcrMonarchWId = 'proj-ncr-monarch-org-08a1da1a';
+  const projNcrStudiosWId = 'proj-ncr-studios-org-08a1da1a';
+  const projGulshanWId = 'proj-gulshan-hummingbird-org-08a1da1a';
+  const projGodrejWId = 'proj-godrej-gbc-org-08a1da1a';
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projSayaWId, org3Id, devSayaWId, 'Saya - Rajnagar',
+      'Rajnagar Extension, Ghaziabad',
+      'https://maps.google.com/?q=Saya+Rajnagar+Extension+Ghaziabad',
+      'Ultra-luxury residential enclave in the heart of Rajnagar Extension featuring signature clubhouse and green central gardens.',
+      '/uploads/logos/logo-proj-saya-rajnagar.webp',
+      '1,100 sq. ft.', '1,450 sq. ft.', '1,750 sq. ft.', '₹85 Lakhs', '₹85 Lakhs - ₹1.65 Cr',
+      'Grand Clubhouse, Infinity Pool, Sky Deck, Sports Arena, 24/7 Multi-Tier Security',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projNcrMonarchWId, org3Id, devNcrWId, 'NCR Monarch',
+      'Sector 1, Greater Noida West',
+      'https://maps.google.com/?q=NCR+Monarch+Sector+1+Greater+Noida+West',
+      'Government SWAMIH-backed luxury residential towers featuring 2 & 3 BHK ready-to-move homes with high-end club amenities.',
+      '/uploads/logos/logo-proj-ncr-monarch.png',
+      '950 sq. ft.', '1,250 sq. ft.', '1,550 sq. ft.', '₹75 Lakhs', '₹75 Lakhs - ₹1.40 Cr',
+      'Clubhouse, Swimming Pool, Gymnasium, Jogging Track, Children Play Area, Landscaped Gardens',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projNcrStudiosWId, org3Id, devNcrWId, 'NCR Studios',
+      'Sector 1, Greater Noida West',
+      'https://maps.google.com/?q=NCR+Monarch+Greater+Noida+West',
+      'Modern smart studio suites & serviced residences with high rental yields in Greater Noida West.',
+      '/uploads/logos/logo-proj-ncr-studios.png',
+      '450 sq. ft.', '650 sq. ft.', '850 sq. ft.', '₹42 Lakhs', '₹42 Lakhs - ₹68 Lakhs',
+      'Business Lounge, Concierge, High-Speed Elevators, Cafe, 24/7 Power Backup',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projGulshanWId, org3Id, devGulshanWId, 'Gulshan - Hummingbird',
+      'Madhuban Bapudham, Ghaziabad',
+      'https://maps.google.com/?q=Gulshan+Hummingbird+Madhuban+Bapudham+Ghaziabad',
+      'Boutique luxury residences featuring private work pods, temperature-controlled pool, and lush themed gardens.',
+      '/uploads/logos/logo-proj-gulshan-hummingbird.png',
+      '1,250 sq. ft.', '1,650 sq. ft.', '2,050 sq. ft.', '₹1.25 Cr', '₹1.25 Cr - ₹2.20 Cr',
+      'Private Work Pods, Heated Pool, Spa & Wellness, Banquet Hall, Indoor Games, Kids Play Zone',
+      'active'
+    ]
+  );
+
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projGodrejWId, org3Id, devGodrejWId, 'Godrej - GBC',
+      'DMIC Integrated Industrial Township, Greater Noida',
+      'https://maps.google.com/?q=Godrej+Global+Business+City+Greater+Noida',
+      'Flagship global integrated township featuring smart high-rise residences along the DMIC economic corridor.',
+      '/uploads/logos/logo-proj-godrej-gbc.png',
+      '1,050 sq. ft.', '1,450 sq. ft.', '1,850 sq. ft.', '₹1.35 Cr', '₹1.35 Cr - ₹2.65 Cr',
+      'Golf-Themed Living, Smart Home Automation, Olympic-Sized Pool, Multipurpose Sports Complex, Grand Club',
+      'active'
+    ]
+  );
+
+  // Workians Project Configurations
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w1', projSayaWId, '2 BHK Comfort Home', '850 sq. ft.', '1,100 sq. ft.', '₹85 Lakhs', 2, 2]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w2', projSayaWId, '3 BHK Luxury Residence', '1,200 sq. ft.', '1,450 sq. ft.', '₹1.25 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w3', projNcrMonarchWId, '2 BHK Premium Apartment', '750 sq. ft.', '950 sq. ft.', '₹75 Lakhs', 2, 2]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w4', projNcrMonarchWId, '3 BHK Executive Apartment', '950 sq. ft.', '1,250 sq. ft.', '₹1.10 Cr', 3, 2]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w5', projNcrStudiosWId, 'Studio Suite', '350 sq. ft.', '450 sq. ft.', '₹42 Lakhs', 1, 1]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w6', projNcrStudiosWId, '1 BHK Serviced Apartment', '550 sq. ft.', '650 sq. ft.', '₹55 Lakhs', 1, 1]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w7', projGulshanWId, '3 BHK Boutique Residence', '1,100 sq. ft.', '1,450 sq. ft.', '₹1.25 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w8', projGulshanWId, '4 BHK Luxury Penthouse', '1,650 sq. ft.', '2,050 sq. ft.', '₹2.20 Cr', 4, 4]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w9', projGodrejWId, '3 BHK Golf View Suite', '1,050 sq. ft.', '1,450 sq. ft.', '₹1.35 Cr', 3, 3]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w10', projGodrejWId, '4 BHK Smart High-Rise', '1,550 sq. ft.', '1,850 sq. ft.', '₹2.65 Cr', 4, 4]
   );
 
   // 5. Project Configurations
