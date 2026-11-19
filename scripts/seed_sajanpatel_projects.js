@@ -241,4 +241,8 @@ function seedProjectsForSajanPatel() {
   console.log('--- Seeding Complete for Sajan Patel! ---');
 }
 
-seedProjectsForSajanPatel();
+if (require.main === module) {
+  seedProjectsForSajanPatel();
+}
+
+module.exports = { seedProjectsForSajanPatel };

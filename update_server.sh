@@ -24,8 +24,8 @@ git pull origin main
 echo -e "${CYAN}>>> [3/5] Updating dependencies if needed...${NC}"
 npm install --production --no-audit --no-fund >/dev/null 2>&1 || true
 
-echo -e "${CYAN}>>> [4/5] Running seed & database sync (logos & projects)...${NC}"
-node server/db/seed.js || true
+echo -e "${CYAN}>>> [4/5] Checking database tables & running migrations...${NC}"
+node -e "require('./server/db'); console.log('Database schema verified.');" || true
 
 echo -e "${CYAN}>>> [5/5] Restarting PM2 backend & Nginx web server...${NC}"
 if command -v pm2 >/dev/null 2>&1; then

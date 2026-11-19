@@ -925,6 +925,14 @@ async function seedDatabase() {
     ['act-002', org1Id, associate1Id, 'Karan Verma', 'sales_associate', 'CHECK_IN_QR', 'site_visits', visit2Id, 'Scanned customer QR code for Priya Mehta at M3M The Cullinan Signature Lounge', '127.0.0.1']
   );
 
+  // 15. Seed Sajan Patel Projects (Workians Realty)
+  try {
+    const { seedProjectsForSajanPatel } = require('../../scripts/seed_sajanpatel_projects');
+    seedProjectsForSajanPatel();
+  } catch (err) {
+    console.warn('Seed Workians projects notice:', err.message);
+  }
+
   console.log('Database seeded successfully with all 4 hierarchical roles, projects, customers, invitations and visits!');
 }
 
