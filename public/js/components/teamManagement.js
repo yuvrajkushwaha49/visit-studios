@@ -26,6 +26,9 @@ App.renderTeamManagement = async function(container) {
             <button class="btn soft" onclick="App.openImportTeamModal()" style="color:#2563eb; font-weight:600; border-color:#93c5fd; background:#eff6ff;">
               📊 Import Team (Excel)
             </button>
+            <button class="btn soft" onclick="App.openBroadcastCredentialsModal()" style="color:#059669; font-weight:600; border-color:#a7f3d0; background:#ecfdf5;">
+              ✉ Email Credentials (Bulk)
+            </button>
           ` : ''}
           <button class="btn soft" onclick="App.openAddUserModal('sales_associate')">
             + Add Sales Associate
@@ -70,6 +73,9 @@ App.renderTeamManagement = async function(container) {
                       </td>
                       <td>
                         <div class="actions">
+                          <button class="btn small soft" onclick="App.sendCredentialsToUser('${sh.id}', '${Utils.escapeHTML(sh.name)}', '${Utils.escapeHTML(sh.email)}', '${Utils.escapeHTML(sh.phone || '')}', 'Sales Head')" title="Send Login ID & Password via Email" style="color:#059669; border-color:#a7f3d0; background:#f0fdf4;">
+                            ✉ Send Login
+                          </button>
                           <button class="btn small soft" onclick="App.openEditUserModal('${sh.id}')">
                             Edit
                           </button>
@@ -125,6 +131,9 @@ App.renderTeamManagement = async function(container) {
                   </td>
                   <td>
                     <div class="actions">
+                      <button class="btn small soft" onclick="App.sendCredentialsToUser('${a.id}', '${Utils.escapeHTML(a.name)}', '${Utils.escapeHTML(a.email)}', '${Utils.escapeHTML(a.phone || '')}', 'Sales Associate')" title="Send Login ID & Password via Email" style="color:#059669; border-color:#a7f3d0; background:#f0fdf4;">
+                        ✉ Send Login
+                      </button>
                       <button class="btn small soft" onclick="App.openEditUserModal('${a.id}')">
                         Edit
                       </button>
@@ -428,5 +437,187 @@ App.handleImportTeamSubmit = async function(e) {
     Utils.toast('Import failed: ' + err.message);
     if (btn) btn.disabled = false;
     if (progress) progress.classList.add('hidden');
+  }
+};
+
+// Send Credentials to a Single User Modal
+App.sendCredentialsToUser = function(userId, userName, userEmail, userPhone, userRole) {
+  const currentUrl = window.location.origin;
+  const html = `
+    <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
+      <span>✉ Send Login Credentials via Email</span>
+    </h3>
+    <p class="modal-desc">Deliver account username, password, and portal access link directly to the employee's inbox.</p>
+
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #2563eb; border-radius:8px; padding:16px; margin-bottom:18px;">
+      <div style="font-size:13px; font-weight:700; color:#1e293b; margin-bottom:8px;">Delivery Details:</div>
+      <table style="width:100%; font-size:13px; line-height:1.7;">
+        <tr>
+          <td style="color:#64748b; width:120px;">Employee:</td>
+          <td style="font-weight:600; color:#0f172a;">${Utils.escapeHTML(userName)} (${userRole})</td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Recipient Email:</td>
+          <td style="font-weight:700; color:#2563eb;">${Utils.escapeHTML(userEmail)}</td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Login Password:</td>
+          <td style="font-weight:700; color:#0f172a; font-family:monospace;">${Utils.escapeHTML(userPhone || '12345678')}</td>
+        </tr>
+      </table>
+    </div>
+
+    <form onsubmit="App.handleSendSingleCredentialsSubmit(event, '${userId}')">
+      <div style="margin-bottom:14px;">
+        <label>Portal Access Link (Included in Email)</label>
+        <input type="url" id="sendPortalUrl" required value="${currentUrl}">
+        <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
+          The employee will click this link to open the login page directly.
+        </small>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label>Override Password (Optional)</label>
+        <input type="text" id="sendCustomPassword" placeholder="Default is employee phone: ${Utils.escapeHTML(userPhone || '')}" value="">
+        <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
+          Leave empty to automatically send their registered phone number as the password.
+        </small>
+      </div>
+
+      <div id="sendCredStatus" class="hidden" style="margin-bottom:14px; padding:10px; background:#eff6ff; border-radius:6px; color:#1e40af; font-size:12px; text-align:center;">
+        Connecting to SMTP mail server and sending credentials email...
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn" onclick="Utils.closeModal()">Cancel</button>
+        <button type="submit" id="btnSubmitSendCred" class="btn primary">
+          ✉ Send Credentials Now
+        </button>
+      </div>
+    </form>
+  `;
+  Utils.showModal(html);
+};
+
+App.handleSendSingleCredentialsSubmit = async function(e, userId) {
+  e.preventDefault();
+  const portalUrl = document.getElementById('sendPortalUrl').value.trim();
+  const customPassword = document.getElementById('sendCustomPassword').value.trim();
+  const btn = document.getElementById('btnSubmitSendCred');
+  const status = document.getElementById('sendCredStatus');
+
+  if (btn) btn.disabled = true;
+  if (status) status.classList.remove('hidden');
+
+  try {
+    const res = await API.post(`/users/${userId}/send-credentials`, {
+      portal_url: portalUrl,
+      custom_password: customPassword || undefined
+    });
+    Utils.toast(res.message || 'Credentials email sent successfully!');
+    Utils.closeModal();
+  } catch (err) {
+    if (err.data && err.data.notConfigured) {
+      Utils.toast('SMTP Not Set Up: Please configure SMTP in Settings first');
+    } else {
+      Utils.toast('Failed to send email: ' + err.message);
+    }
+    if (btn) btn.disabled = false;
+    if (status) status.classList.add('hidden');
+  }
+};
+
+// Broadcast Credentials to Entire Team Modal
+App.openBroadcastCredentialsModal = function() {
+  const currentUrl = window.location.origin;
+  const users = App.cache.users || [];
+  const eligible = users.filter(u => ['sales_head', 'sales_associate'].includes(u.role) && u.status === 'active');
+  const heads = eligible.filter(u => u.role === 'sales_head');
+  const associates = eligible.filter(u => u.role === 'sales_associate');
+
+  const html = `
+    <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
+      <span>✉ Broadcast Credentials to Sales Team</span>
+    </h3>
+    <p class="modal-desc">Send personalized login credentials (User ID, password & portal link) to your sales team via email.</p>
+
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:16px; margin-bottom:18px;">
+      <div style="font-weight:700; color:#166534; font-size:14px; margin-bottom:6px;">
+        👥 Recipients Summary:
+      </div>
+      <div style="display:flex; gap:16px; font-size:13px; color:#15803d;">
+        <div><strong>Total Eligible:</strong> ${eligible.length} members</div>
+        <div><strong>Sales Heads:</strong> ${heads.length}</div>
+        <div><strong>Sales Associates:</strong> ${associates.length}</div>
+      </div>
+      <div style="margin-top:8px; font-size:12px; color:#166534; line-height:1.5;">
+        Each member receives a personalized email with their unique <strong>Username (Email)</strong> and <strong>Password (Phone Number)</strong>.
+      </div>
+    </div>
+
+    <form onsubmit="App.handleBroadcastCredentialsSubmit(event)">
+      <div style="margin-bottom:14px;">
+        <label>Recipient Filter *</label>
+        <select id="broadcastRoleFilter" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;">
+          <option value="">All Team Members (Heads + Associates - ${eligible.length})</option>
+          <option value="sales_head">Sales Heads Only (${heads.length})</option>
+          <option value="sales_associate">Sales Associates Only (${associates.length})</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label>Portal Access Link (Included in Email) *</label>
+        <input type="url" id="broadcastPortalUrl" required value="${currentUrl}">
+        <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
+          This link will be clickable in each employee's email.
+        </small>
+      </div>
+
+      <div id="broadcastStatus" class="hidden" style="margin-bottom:16px; padding:14px; background:#eff6ff; border-radius:8px; color:#1e40af; font-size:13px; text-align:center;">
+        <div style="font-weight:700; margin-bottom:4px;">Dispatches in progress...</div>
+        <div>Please wait while credentials are sent to each employee inbox.</div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn" onclick="Utils.closeModal()">Cancel</button>
+        <button type="submit" id="btnSubmitBroadcast" class="btn primary" style="background:#059669; border-color:#059669;">
+          🚀 Dispatch Credentials to Team
+        </button>
+      </div>
+    </form>
+  `;
+  Utils.showModal(html);
+};
+
+App.handleBroadcastCredentialsSubmit = async function(e) {
+  e.preventDefault();
+  const roleFilter = document.getElementById('broadcastRoleFilter').value;
+  const portalUrl = document.getElementById('broadcastPortalUrl').value.trim();
+  const btn = document.getElementById('btnSubmitBroadcast');
+  const status = document.getElementById('broadcastStatus');
+
+  if (btn) btn.disabled = true;
+  if (status) status.classList.remove('hidden');
+
+  try {
+    const res = await API.post('/users/broadcast-credentials', {
+      role_filter: roleFilter || undefined,
+      portal_url: portalUrl
+    });
+
+    Utils.toast(res.message || 'Credentials broadcast completed successfully!');
+    Utils.closeModal();
+
+    if (res.summary && res.summary.failed > 0) {
+      alert(`Sent: ${res.summary.sent}\nFailed: ${res.summary.failed}\nCheck email addresses for failed members.`);
+    }
+  } catch (err) {
+    if (err.data && err.data.notConfigured) {
+      Utils.toast('SMTP Not Set Up: Please configure SMTP in Settings first');
+    } else {
+      Utils.toast('Broadcast failed: ' + err.message);
+    }
+    if (btn) btn.disabled = false;
+    if (status) status.classList.add('hidden');
   }
 };
