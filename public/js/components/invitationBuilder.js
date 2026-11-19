@@ -1,5 +1,5 @@
 // Digital Invitation Builder Component
-App.renderInvitationBuilder = async function(container) {
+App.renderInvitationBuilder = async function (container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading invitation creator...</div>`;
 
   try {
@@ -228,14 +228,14 @@ App.renderInvitationBuilder = async function(container) {
   }
 };
 
-App.onBuilderCustomerSelect = function(custId) {
+App.onBuilderCustomerSelect = function (custId) {
   if (!custId) return;
   const select = document.getElementById('inviteCustomerSelect');
   const opt = select.options[select.selectedIndex];
   if (!opt) return;
 
   document.getElementById('inviteCustomerName').value = opt.getAttribute('data-name') || '';
-  
+
   let rawPhone = (opt.getAttribute('data-phone') || '').trim();
   if (rawPhone) {
     const codeSelect = document.getElementById('inviteCountryCode');
@@ -266,7 +266,7 @@ App.onBuilderCustomerSelect = function(custId) {
   this.updateLivePreview();
 };
 
-App.onBuilderDeveloperChange = function(devId, selectProjId = null) {
+App.onBuilderDeveloperChange = function (devId, selectProjId = null) {
   const filtered = this.cache.projects.filter(p => p.developer_id === devId);
   const projSelect = document.getElementById('inviteProjectSelect');
 
@@ -287,7 +287,7 @@ App.onBuilderDeveloperChange = function(devId, selectProjId = null) {
   }
 };
 
-App.onBuilderProjectChange = function(projId) {
+App.onBuilderProjectChange = function (projId) {
   const proj = this.cache.projects.find(p => p.id === projId);
   if (!proj) return;
 
@@ -297,7 +297,7 @@ App.onBuilderProjectChange = function(projId) {
 
   document.getElementById('inviteLocation').value = proj.location || '';
   document.getElementById('inviteMaps').value = proj.google_maps_url || '';
-  
+
   // Intelligent populate for size and unit
   if (proj.super_built_up_area) {
     const areaStr = proj.super_built_up_area.trim();
@@ -336,14 +336,14 @@ App.onBuilderProjectChange = function(projId) {
 };
 
 App._previewRaf = null;
-App.updateLivePreview = function() {
+App.updateLivePreview = function () {
   if (this._previewRaf) cancelAnimationFrame(this._previewRaf);
   this._previewRaf = requestAnimationFrame(() => {
     this._renderLivePreviewImmediate();
   });
 };
 
-App._renderLivePreviewImmediate = function() {
+App._renderLivePreviewImmediate = function () {
   const container = document.getElementById('livePreviewContainer');
   if (!container) return;
 
@@ -394,7 +394,7 @@ App._renderLivePreviewImmediate = function() {
         <div class="inv-top">
           <div>
             <div class="inv-agency">${Utils.escapeHTML(this.currentUser.organization_name || 'Visit Studio Realty')}</div>
-            <div class="inv-agency-sub">Private Viewings & Luxury Portfolio</div>
+            <div class="inv-agency-sub">Site Visit & Property Tour Schedule</div>
           </div>
           <div class="inv-dev-badge" style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
             <div style="text-align:right;">
@@ -415,17 +415,17 @@ App._renderLivePreviewImmediate = function() {
 
         <!-- Hero Greeting -->
         <div class="inv-hero">
-          <div class="eyebrow">YOU'RE PERSONALLY INVITED</div>
-          <h2>Your next address.<br>A closer look.</h2>
-          <p>Dear ${Utils.escapeHTML(customerName)}, we look forward to welcoming you.</p>
-          <span class="inv-badge-pill">Site Visit Invitation</span>
+          <div class="eyebrow">PROPERTY SITE VISIT SCHEDULE</div>
+          <h2>Property Walkthrough & Consultation</h2>
+          <p>Client Visit Appointment: ${Utils.escapeHTML(customerName)}</p>
+          <span class="inv-badge-pill">Verified Site Visit</span>
         </div>
 
         <!-- Property Specs -->
         <div class="inv-property-box" style="position:relative; overflow:hidden;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
             <div style="flex:1;">
-              <div class="eyebrow" style="color:var(--muted); margin-bottom:4px;">YOUR SELECTED RESIDENCE</div>
+              <div class="eyebrow" style="color:var(--muted); margin-bottom:4px;">SELECTED PROPERTY</div>
               <h3 class="inv-property-title" style="margin-bottom:4px;">${Utils.escapeHTML(projName)}</h3>
               <div style="font-size:12px; color:var(--purple); font-weight:600; margin-bottom:12px;">
                 BY ${Utils.escapeHTML(devName)}
@@ -477,7 +477,7 @@ App._renderLivePreviewImmediate = function() {
         <!-- Sales Host Advisor -->
         <div class="inv-advisor-row">
           <div>
-            <span>YOUR PROPERTY ADVISOR</span>
+            <span>ASSIGNED SALES EXECUTIVE</span>
             <b>${Utils.escapeHTML(advisorName)}</b>
           </div>
           <div>
@@ -488,19 +488,19 @@ App._renderLivePreviewImmediate = function() {
 
         <!-- Disclaimer -->
         <div class="inv-disclaimer">
-          Issued as a site visit invitation, not an official developer allocation or purchase agreement. Area and pricing are as discussed and subject to verification and terms.
+          Issued as a scheduled property site visit pass. Area and pricing are as discussed and subject to developer terms.
         </div>
       </div>
 
       <div class="inv-footer">
-        PERSONALLY ARRANGED · ${Utils.escapeHTML(this.currentUser.organization_name || 'VISIT STUDIO')} · SECURE QR PASS ENABLED
+        SITE VISIT SCHEDULE · ${Utils.escapeHTML(this.currentUser.organization_name || 'VISIT STUDIO')} · QR CHECK-IN VERIFIED
       </div>
     </article>
   `;
 };
 
 // Handle Create Invitation Form Submission
-App.handleCreateInvitation = async function(e) {
+App.handleCreateInvitation = async function (e) {
   e.preventDefault();
   const btn = document.getElementById('btnSubmitInvite');
   btn.disabled = true;
@@ -510,7 +510,7 @@ App.handleCreateInvitation = async function(e) {
     const custSelect = document.getElementById('inviteCustomerSelect');
     const customerId = custSelect.value || null;
     const customerName = document.getElementById('inviteCustomerName').value.trim();
-    
+
     const countryCode = document.getElementById('inviteCountryCode')?.value || '+91';
     let rawPhone = document.getElementById('inviteCustomerPhone').value.trim();
     const customerPhone = rawPhone.startsWith('+') ? rawPhone : `${countryCode} ${rawPhone}`;
@@ -567,7 +567,7 @@ App.handleCreateInvitation = async function(e) {
 };
 
 // Show Share Modal with Generated Card Image, Short Link, WhatsApp & QR
-App.showShareModal = async function(invitation, customerName, customerPhone) {
+App.showShareModal = async function (invitation, customerName, customerPhone) {
   const custName = customerName || invitation.customer_name || 'Valued Client';
   const custPhone = customerPhone || invitation.customer_phone || '';
   const currentBase = window.location.origin;
@@ -580,8 +580,8 @@ App.showShareModal = async function(invitation, customerName, customerPhone) {
   Utils.showModal(`
     <div style="text-align:center; padding: 40px 20px;">
       <div class="monogram" style="margin: 0 auto 16px;">V</div>
-      <h3 style="font-family:'Playfair Display', serif; font-size:22px; color:var(--ink); margin-bottom:8px;">Crafting VIP Invitation Pass...</h3>
-      <p style="font-size:12.5px; color:var(--muted);">Rendering high-resolution personalized pass image with contactless check-in QR & short link.</p>
+      <h3 style="font-family:Arial, sans-serif; font-size:20px; color:var(--ink); margin-bottom:8px;">Generating Site Visit Pass & QR...</h3>
+      <p style="font-size:12.5px; color:var(--muted);">Generating site visit pass image with check-in verification QR code and tracking link.</p>
     </div>
   `);
 
@@ -595,8 +595,8 @@ App.showShareModal = async function(invitation, customerName, customerPhone) {
     agency_name: invitation.agency_name || App.currentUser?.organization_name || 'VISIT STUDIO',
     customer_name: custName,
     customer_phone: custPhone,
-    project_name: invitation.project_name || document.getElementById('inviteProjectSelect')?.options[document.getElementById('inviteProjectSelect')?.selectedIndex]?.text || 'Luxury Residence',
-    developer_name: invitation.developer_name || document.getElementById('inviteDeveloperSelect')?.options[document.getElementById('inviteDeveloperSelect')?.selectedIndex]?.text || 'Premier Developer',
+    project_name: invitation.project_name || document.getElementById('inviteProjectSelect')?.options[document.getElementById('inviteProjectSelect')?.selectedIndex]?.text || 'Property Project',
+    developer_name: invitation.developer_name || document.getElementById('inviteDeveloperSelect')?.options[document.getElementById('inviteDeveloperSelect')?.selectedIndex]?.text || 'Developer',
     developer_logo: invitation.developer_logo || matchedDev?.company_logo || null,
     project_logo: invitation.project_logo || matchedProj?.project_logo || null,
     visit_date: invitation.scheduled_date || invitation.visit_date || document.getElementById('inviteDate')?.value || new Date().toISOString(),
@@ -604,8 +604,8 @@ App.showShareModal = async function(invitation, customerName, customerPhone) {
     duration: invitation.duration || document.getElementById('inviteDuration')?.value || 60,
     size: invitation.size || document.getElementById('inviteSize')?.value || '',
     price: invitation.price || document.getElementById('invitePrice')?.value || '',
-    location: invitation.location || invitation.project_location || document.getElementById('inviteLocation')?.value || 'Experience Gallery',
-    advisor_name: invitation.advisor_name || document.getElementById('inviteAdvisorName')?.value || App.currentUser?.name || 'Amit Verma',
+    location: invitation.location || invitation.project_location || document.getElementById('inviteLocation')?.value || 'Site Experience Gallery',
+    advisor_name: invitation.advisor_name || document.getElementById('inviteAdvisorName')?.value || App.currentUser?.name || 'Sales Executive',
     advisor_phone: invitation.advisor_phone || document.getElementById('inviteAdvisorPhone')?.value || App.currentUser?.phone || '+91 98765 43210',
     shortUrl: shortUrl,
     short_code: shortCode,
@@ -626,19 +626,20 @@ App.showShareModal = async function(invitation, customerName, customerPhone) {
   const cleanPhone = custPhone.replace(/[^\d]/g, '');
   const waPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
   const waMessage = encodeURIComponent(
-`*VIP PROPERTY VISIT INVITATION* ✨
+    `*PROPERTY SITE VISIT SCHEDULE*
 Dear ${custName},
 
-You are cordially invited for an exclusive private walkthrough at *${cardData.project_name}* (${cardData.developer_name}).
+Your property site visit has been scheduled with our sales team at *${cardData.project_name}* (${cardData.developer_name}).
 
 📅 *Date:* ${Utils.formatDate(cardData.visit_date)}
 ⏰ *Time:* ${Utils.formatTime(cardData.visit_time)}
 📍 *Location:* ${cardData.location}
+👤 *Sales Host:* ${cardData.advisor_name} (${cardData.advisor_phone})
 
-🔗 *View Official Invitation & Live Pass:*
+🔗 *View Visit Schedule & Location Details:*
 ${shortUrl}
 
-_(Personalized VIP Invitation Pass image attached)_`
+_(Site Visit Pass attached)_`
   );
   const waUrl = `https://wa.me/${waPhone}?text=${waMessage}`;
 
@@ -646,16 +647,16 @@ _(Personalized VIP Invitation Pass image attached)_`
 
   const modalHtml = `
     <div style="text-align:center; margin-bottom: 14px;">
-      <div class="eyebrow" style="color:#2563eb;">VIP PASS & SHORT LINK READY</div>
-      <h2 class="modal-title" style="margin-bottom:4px; font-size:20px;">Invitation Pass Generated!</h2>
-      <p class="modal-desc" style="margin-bottom:0; font-size:12.5px;">Personalized VIP pass card with contactless QR & short link.</p>
+      <div class="eyebrow" style="color:#2563eb;">SITE VISIT PASS & TRACKING LINK READY</div>
+      <h2 class="modal-title" style="margin-bottom:4px; font-size:20px;">Site Visit Pass Generated!</h2>
+      <p class="modal-desc" style="margin-bottom:0; font-size:12.5px;">Client visit pass card with QR verification code and tracking link.</p>
     </div>
 
     <!-- Pass Card Image Preview -->
     <div style="text-align:center; margin: 10px 0 14px; background:#080e1e; padding:12px; border-radius:14px; border:1px solid #bfdbfe;">
-      <img src="${card.dataUrl}" alt="Invitation Pass Card" style="max-height:240px; max-width:100%; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.4); border:1px solid #60a5fa; cursor:pointer;" onclick="App.downloadActiveCard()" title="Click to download high-res PNG">
+      <img src="${card.dataUrl}" alt="Site Visit Pass Card" style="max-height:240px; max-width:100%; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.4); border:1px solid #60a5fa; cursor:pointer;" onclick="App.downloadActiveCard()" title="Click to download PNG">
       <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:8px;">
-        <span style="font-size:11px; color:#93c5fd; font-weight:600;">✨ 1080×1440 HD VIP Pass Image</span>
+        <span style="font-size:11px; color:#93c5fd; font-weight:600;">Site Visit Pass Card</span>
         <button type="button" class="btn small soft" onclick="App.downloadActiveCard()" style="font-size:11px; padding:3px 10px; color:#60a5fa; border-color:#3b82f6;">
           📥 Download Image
         </button>
@@ -720,15 +721,15 @@ _(Personalized VIP Invitation Pass image attached)_`
   Utils.showModal(modalHtml);
 };
 
-App.downloadActiveCard = function() {
+App.downloadActiveCard = function () {
   if (App._activeCard && App._activeCard.dataUrl) {
     const custName = (App._activeCardData?.customer_name || 'guest').replace(/\s+/g, '_');
-    Utils.downloadDataUrl(App._activeCard.dataUrl, `VIP-Pass-${custName}.png`);
-    Utils.toast('Invitation Card Image downloaded!');
+    Utils.downloadDataUrl(App._activeCard.dataUrl, `Site-Visit-Pass-${custName}.png`);
+    Utils.toast('Site Visit Pass Image downloaded!');
   }
 };
 
-App.copyCardImage = async function() {
+App.copyCardImage = async function () {
   if (App._activeCard && App._activeCard.blob) {
     const success = await Utils.copyImageToClipboard(App._activeCard.blob);
     if (!success) {
@@ -737,37 +738,38 @@ App.copyCardImage = async function() {
   }
 };
 
-App.copyInvitationMessage = async function() {
+App.copyInvitationMessage = async function () {
   const data = App._activeCardData || {};
   const shortUrl = data.shortUrl || window.location.origin;
-  const waText = 
-`*VIP PROPERTY VISIT INVITATION* ✨
-Dear ${data.customer_name || 'Guest'},
+  const waText =
+    `*PROPERTY SITE VISIT SCHEDULE*
+Dear ${data.customer_name || 'Customer'},
 
-You are cordially invited for an exclusive private walkthrough at *${data.project_name}* (${data.developer_name}).
+Your property site visit has been scheduled with our sales team at *${data.project_name}* (${data.developer_name}).
 
 📅 *Date:* ${Utils.formatDate(data.visit_date)}
 ⏰ *Time:* ${Utils.formatTime(data.visit_time)}
 📍 *Location:* ${data.location}
+👤 *Sales Host:* ${data.advisor_name} (${data.advisor_phone})
 
-🔗 *View Official Invitation & Live Pass:*
+🔗 *View Visit Schedule & Location Details:*
 ${shortUrl}
 
-_(Personalized VIP Invitation Pass image attached)_`;
+_(Site Visit Pass attached)_`;
 
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(waText);
-      Utils.toast('✨ Invitation text & live link copied to clipboard!');
+      Utils.toast('Visit schedule & link copied to clipboard!');
     } else {
-      prompt('Copy invitation text:', waText);
+      prompt('Copy visit details:', waText);
     }
   } catch (err) {
-    prompt('Copy invitation text:', waText);
+    prompt('Copy visit details:', waText);
   }
 };
 
-App.smartWhatsAppShare = async function(waFallbackUrl) {
+App.smartWhatsAppShare = async function (waFallbackUrl) {
   const card = App._activeCard;
   const data = App._activeCardData || {};
 
@@ -775,20 +777,21 @@ App.smartWhatsAppShare = async function(waFallbackUrl) {
   const waPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
   const shortUrl = data.shortUrl || window.location.origin;
 
-  const waText = 
-`*VIP PROPERTY VISIT INVITATION* ✨
-Dear ${data.customer_name || 'Guest'},
+  const waText =
+    `*PROPERTY SITE VISIT SCHEDULE*
+Dear ${data.customer_name || 'Customer'},
 
-You are cordially invited for an exclusive private walkthrough at *${data.project_name}* (${data.developer_name}).
+Your property site visit has been scheduled with our sales team at *${data.project_name}* (${data.developer_name}).
 
 📅 *Date:* ${Utils.formatDate(data.visit_date)}
 ⏰ *Time:* ${Utils.formatTime(data.visit_time)}
 📍 *Location:* ${data.location}
+👤 *Sales Host:* ${data.advisor_name} (${data.advisor_phone})
 
-🔗 *View Official Invitation & Live Pass:*
+🔗 *View Visit Schedule & Location Details:*
 ${shortUrl}
 
-_(Personalized VIP Invitation Pass image attached)_`;
+_(Site Visit Pass attached)_`;
 
   // Always copy caption text to clipboard first so user can paste into WhatsApp caption!
   try {
@@ -802,7 +805,7 @@ _(Personalized VIP Invitation Pass image attached)_`;
   // 1. Mobile Native Share API: Directly attaches the image file into WhatsApp!
   if (navigator.canShare && card && card.file && navigator.canShare({ files: [card.file] })) {
     try {
-      Utils.toast('✨ Image attached & caption copy ho chuka hai! WhatsApp caption me "Paste" kar dein.');
+      Utils.toast('Image attached! WhatsApp caption me "Paste" kar dein.');
       const sharePayload = {
         files: [card.file],
         text: waText
@@ -823,10 +826,10 @@ _(Personalized VIP Invitation Pass image attached)_`;
   if (card && card.blob) {
     try {
       await Utils.copyImageToClipboard(card.blob);
-      Utils.toast('✨ VIP Pass image copied! Opening WhatsApp... Just press Ctrl+V to paste.');
+      Utils.toast('Site Visit Pass image copied! Opening WhatsApp... Press Ctrl+V to paste.');
     } catch (e) {
       App.downloadActiveCard();
-      Utils.toast('VIP Pass image downloaded! Opening WhatsApp...');
+      Utils.toast('Site Visit Pass downloaded! Opening WhatsApp...');
     }
   }
 
@@ -836,30 +839,31 @@ _(Personalized VIP Invitation Pass image attached)_`;
   }, 400);
 };
 
-App.sendWhatsAppTextOnly = function(waFallbackUrl) {
+App.sendWhatsAppTextOnly = function (waFallbackUrl) {
   const data = App._activeCardData || {};
   const cleanPhone = (data.customer_phone || '').replace(/[^\d]/g, '');
   const waPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
   const shortUrl = data.shortUrl || window.location.origin;
 
-  const waText = 
-`*VIP PROPERTY VISIT INVITATION* ✨
-Dear ${data.customer_name || 'Guest'},
+  const waText =
+    `*PROPERTY SITE VISIT SCHEDULE*
+Dear ${data.customer_name || 'Customer'},
 
-You are cordially invited for an exclusive private walkthrough at *${data.project_name}* (${data.developer_name}).
+Your property site visit has been scheduled with our sales team at *${data.project_name}* (${data.developer_name}).
 
 📅 *Date:* ${Utils.formatDate(data.visit_date)}
 ⏰ *Time:* ${Utils.formatTime(data.visit_time)}
 📍 *Location:* ${data.location}
+👤 *Sales Host:* ${data.advisor_name} (${data.advisor_phone})
 
-🔗 *View Official Invitation & Live Pass:*
+🔗 *View Visit Schedule & Details:*
 ${shortUrl}`;
 
   const directWaUrl = waFallbackUrl || `https://wa.me/${waPhone}?text=${encodeURIComponent(waText)}`;
   window.open(directWaUrl, '_blank');
 };
 
-App.copyShareUrl = function() {
+App.copyShareUrl = function () {
   const input = document.getElementById('shareModalInput');
   if (input) {
     navigator.clipboard.writeText(input.value).then(() => {

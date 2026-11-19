@@ -11,7 +11,7 @@ App.renderSettings = async function(container) {
         <div>
           <div class="eyebrow">IDENTITY & BRANDING</div>
           <h1 class="page-title">Organization Settings</h1>
-          <p class="page-desc">Brand aesthetics, agency title, luxury invitation header, and color palette.</p>
+          <p class="page-desc">Brand aesthetics, agency title, visit pass header, and organization details.</p>
         </div>
       </div>
 
@@ -28,7 +28,7 @@ App.renderSettings = async function(container) {
 
             <div style="margin-bottom:16px;">
               <label>Subtitle / Tagline</label>
-              <input id="setAgencySubtitle" value="${Utils.escapeHTML(s.agency_subtitle || 'Luxury Real Estate Advisory')}">
+              <input id="setAgencySubtitle" value="${Utils.escapeHTML(s.agency_subtitle || 'Real Estate Advisory & Site Visits')}">
               <small style="color:var(--muted); font-size:11px; display:block; margin-top:4px;">
                 Displayed on the top header of all client-facing digital invitations.
               </small>

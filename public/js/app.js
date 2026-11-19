@@ -87,47 +87,43 @@ const App = {
                 </div>
                 <div>
                   <div class="auth-brand-title">VISIT STUDIO</div>
-                  <span class="auth-brand-subtitle">Private Realty Suite • Enterprise</span>
+                  <span class="auth-brand-subtitle">Sales Team & Site Visit Management</span>
                 </div>
               </div>
 
-              <h2 class="auth-hero-heading">Elevate Site Visits Into Unforgettable VIP Experiences</h2>
+              <h2 class="auth-hero-heading">Track Daily Site Visits & Sales Team Activity</h2>
               <p class="auth-hero-desc">
-                The institutional standard for premier real estate developers, luxury brokerages, and private wealth networks. Curate bespoke digital passes, coordinate verified arrivals, and accelerate client conversions.
+                Centralized management system to monitor sales employees, track daily client property visits, verify on-ground attendance with QR check-in, and manage follow-ups.
               </p>
 
               <div class="auth-features-list">
                 <div class="auth-feat-item">
-                  <div class="auth-feat-icon">✦</div>
+                  <div class="auth-feat-icon">📊</div>
                   <div class="auth-feat-text">
-                    <strong>Bespoke VIP Digital Passes</strong>
-                    <span>Encrypted QR credentials, curated developer collateral, and contactless check-in.</span>
+                    <strong>Daily Visit Tracking</strong>
+                    <span>Track how many site visits each sales executive is conducting every day in real-time.</span>
                   </div>
                 </div>
 
                 <div class="auth-feat-item">
-                  <div class="auth-feat-icon">◈</div>
+                  <div class="auth-feat-icon">📍</div>
                   <div class="auth-feat-text">
-                    <strong>Real-Time Arrival Telemetry</strong>
-                    <span>Instant host arrival alerts, live reception logs, and automated WhatsApp follow-ups.</span>
+                    <strong>Verified Site Check-in</strong>
+                    <span>QR-based client check-in at the project site to confirm completed client visits.</span>
                   </div>
                 </div>
 
                 <div class="auth-feat-item">
-                  <div class="auth-feat-icon">❖</div>
+                  <div class="auth-feat-icon">👥</div>
                   <div class="auth-feat-text">
-                    <strong>Institutional Multi-Tier Governance</strong>
-                    <span>Strict role-enforced data privacy from sales associates up to board-level analytics.</span>
+                    <strong>Sales Performance & Reports</strong>
+                    <span>Complete management visibility into employee visit counts, pipeline, and customer follow-ups.</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="auth-quote-card">
-              <div class="auth-quote-badge">VERIFIED TESTIMONIAL</div>
-              “Visit Studio elevated our client welcoming experience to international 5-star hospitality standards. Site-visit-to-closing rates surged across our luxury portfolio.”
-              <span class="auth-quote-author">— DIRECTOR OF SALES, AURA LUXE RESIDENCES</span>
-            </div>
+            
           </div>
 
           <!-- Right Form Panel -->
@@ -136,34 +132,31 @@ const App = {
               <div class="auth-header-top">
                 <div class="auth-status-chip">
                   <span class="auth-pulse-dot"></span>
-                  <span>ENTERPRISE PORTAL</span>
-                  <span class="auth-chip-divider">•</span>
-                  <span class="auth-chip-secure">SECURE ACCESS</span>
+                  <span>EMPLOYEE & MANAGEMENT PORTAL</span>
                 </div>
               </div>
 
-              <h1 class="auth-form-title">Member Sign In</h1>
-              <p class="auth-form-subtitle">Welcome back. Please authenticate with your corporate credentials to access your organization workspace.</p>
+              <h1 class="auth-form-title">Employee Sign In</h1>
+              <p class="auth-form-subtitle">Enter your official credentials to access the sales and site visit tracking dashboard.</p>
 
               <form id="loginForm" onsubmit="App.handleLoginSubmit(event)">
                 <div class="auth-input-group">
                   <label for="loginEmail">
                     <span>Work Email Address</span>
-                    <span class="auth-label-hint">Institutional ID</span>
                   </label>
                   <div class="auth-input-wrapper">
                     <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                       <polyline points="22,6 12,13 2,6"></polyline>
                     </svg>
-                    <input type="email" id="loginEmail" required placeholder="corporate.email@domain.com" autocomplete="email">
+                    <input type="email" id="loginEmail" required placeholder="name@company.com" autocomplete="email">
                   </div>
                 </div>
 
                 <div class="auth-input-group">
                   <label for="loginPassword">
                     <span>Account Password</span>
-                    <a href="javascript:void(0)" onclick="Utils.toast('Please contact your Organization Administrator or Superadmin at support@visitstudio.com to reset credentials.')" class="auth-forgot-link">Forgot password?</a>
+                    <a href="javascript:void(0)" onclick="Utils.toast('Please contact your Organization Administrator to reset credentials.')" class="auth-forgot-link">Forgot password?</a>
                   </label>
                   <div class="auth-input-wrapper">
                     <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -188,7 +181,7 @@ const App = {
                 </div>
 
                 <button type="submit" id="loginSubmitBtn" class="auth-submit-btn">
-                  <span>Sign In to Workspace</span>
+                  <span>Sign In to Dashboard</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
@@ -196,34 +189,34 @@ const App = {
                 </button>
               </form>
 
-              <!-- Enterprise Trust & Security Badges (Clean, Professional replacement of demo access links) -->
+              <!-- Enterprise Trust & Security Badges -->
               <div class="auth-trust-strip">
                 <div class="auth-trust-item">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                   </svg>
-                  <span>TLS 256-Bit SSL Encrypted</span>
+                  <span>Daily Visit Logs</span>
                 </div>
                 <div class="auth-trust-item">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
-                  <span>Role-Enforced Access</span>
+                  <span>Role-Based Access</span>
                 </div>
                 <div class="auth-trust-item">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
                   </svg>
-                  <span>Audit Logged</span>
+                  <span>Activity Reports</span>
                 </div>
               </div>
             </div>
 
             <div class="auth-footer-bottom">
-              <span>Authorized personnel only. Need help? Contact <a href="mailto:support@visitstudio.com" class="auth-support-link">support@visitstudio.com</a></span>
-              <div class="auth-copyright">© 2026 Visit Studio Technologies. All rights reserved.</div>
+              <span>Authorized sales & management personnel only. Need help? Contact <a href="mailto:support@visitstudio.com" class="auth-support-link">support@visitstudio.com</a></span>
+              <div class="auth-copyright">© 2026 Visit Studio. All rights reserved.</div>
             </div>
           </div>
 

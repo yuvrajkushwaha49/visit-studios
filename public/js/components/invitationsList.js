@@ -132,7 +132,7 @@ App.copyInviteLink = function(token, shortCode) {
 
 App.openShareModalForId = async function(id) {
   try {
-    Utils.toast('Preparing VIP pass card & short link...');
+    Utils.toast('Preparing site visit card & tracking link...');
     const res = await API.get(`/invitations/${id}`);
     const inv = res.invitation;
     if (inv) {

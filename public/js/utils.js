@@ -731,11 +731,11 @@ const Utils = {
           const qrY = qrBoxY + (qrBoxH - qrSize) / 2;
           ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-          // VIP Entry caption below QR
+          // Visit Verification caption below QR
           ctx.textAlign = 'center';
           ctx.fillStyle = '#102a45';
-          ctx.font = '800 15px "Inter", sans-serif';
-          ctx.fillText('SCAN FOR VIP ENTRY PASS', 540, qrBoxY + qrBoxH + 32);
+          ctx.font = '800 15px Arial, sans-serif';
+          ctx.fillText('SCAN TO VERIFY SITE VISIT', 540, qrBoxY + qrBoxH + 32);
 
           ctx.fillStyle = '#64748b';
           ctx.font = '600 12.5px "Inter", sans-serif';

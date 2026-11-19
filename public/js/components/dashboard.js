@@ -170,7 +170,7 @@ App.renderDashboard = async function(container) {
             </div>
             <div style="padding: 20px;">
               <p style="color:var(--muted); font-size:12px; margin-bottom:16px;">
-                Deliver personalized luxury digital invitations directly via WhatsApp with auto-generated directions and contactless QR check-in.
+                Schedule client property visits, share verified visit passes via WhatsApp, and track employee field visits in real-time.
               </p>
               <div style="display:flex; flex-direction:column; gap:10px;">
                 <button class="btn primary" style="justify-content:flex-start;" onclick="App.navigate('create_invitation')">
