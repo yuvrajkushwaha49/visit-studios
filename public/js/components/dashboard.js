@@ -258,9 +258,6 @@ App.renderSuperAdminDashboard = async function(container) {
           <button class="btn soft" onclick="App.navigate('activity_logs')">
             View Global Security & Audit Logs
           </button>
-          <button class="btn" onclick="App.resetSeed()">
-            Reset Demo Database to Initial State
-          </button>
         </div>
       </div>
     `;

@@ -379,18 +379,6 @@ const App = {
         </nav>
 
         <div class="sidebar-footer">
-          <!-- Mobile Role Switcher in Drawer -->
-          <div class="sidebar-mobile-actions">
-            <div class="mobile-role-header">DEMO ROLE ACCESS</div>
-            <select class="role-switcher-select mobile-role-select" onchange="App.switchRole(this.value)">
-              <option value="super_admin" ${role === 'super_admin' ? 'selected' : ''}>👑 Super Admin (Global)</option>
-              <option value="admin" ${role === 'admin' ? 'selected' : ''}>🏢 Admin (Aura Luxe)</option>
-              <option value="sales_head" ${role === 'sales_head' ? 'selected' : ''}>👔 Sales Head (NCR)</option>
-              <option value="sales_associate" ${role === 'sales_associate' ? 'selected' : ''}>💼 Sales Associate (Karan)</option>
-            </select>
-            <button class="btn small soft mobile-reset-btn" onclick="App.resetSeed()">🔄 Reset Demo Seed</button>
-          </div>
-
           <div class="sidebar-note">
             <strong>Role-Based Access</strong>
             Active role: <span style="color: var(--purple); font-weight:600;">${role.replace('_', ' ').toUpperCase()}</span>
@@ -415,21 +403,6 @@ const App = {
           </div>
 
           <div class="topbar-right">
-            <!-- 1-Click Role Switcher for demonstration (Desktop) -->
-            <div class="desktop-topbar-controls" style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:11px; color:var(--muted); font-weight:600;">DEMO ROLE:</span>
-              <select class="role-switcher-select" onchange="App.switchRole(this.value)">
-                <option value="super_admin" ${role === 'super_admin' ? 'selected' : ''}>Super Admin (Global)</option>
-                <option value="admin" ${role === 'admin' ? 'selected' : ''}>Admin (Aura Luxe)</option>
-                <option value="sales_head" ${role === 'sales_head' ? 'selected' : ''}>Sales Head (NCR Team)</option>
-                <option value="sales_associate" ${role === 'sales_associate' ? 'selected' : ''}>Sales Associate (Karan)</option>
-              </select>
-            </div>
-
-            <button class="btn small soft desktop-topbar-controls" onclick="App.resetSeed()" title="Reset demo seed data">
-              Reset Demo
-            </button>
-
             <div class="user-profile">
               <div class="avatar">${(user.name || 'VS').slice(0, 2).toUpperCase()}</div>
               <div class="user-meta">
