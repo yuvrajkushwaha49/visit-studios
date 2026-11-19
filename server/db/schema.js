@@ -274,6 +274,22 @@ CREATE TABLE IF NOT EXISTS organization_settings (
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS smtp_settings (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT UNIQUE,
+  host TEXT DEFAULT 'smtp.gmail.com',
+  port INTEGER DEFAULT 587,
+  secure INTEGER DEFAULT 0,
+  username TEXT,
+  password TEXT,
+  from_name TEXT DEFAULT 'Workians Realty',
+  from_email TEXT,
+  public_url TEXT,
+  is_active INTEGER DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indices for rapid querying and indexing
 CREATE INDEX IF NOT EXISTS idx_users_org ON users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
