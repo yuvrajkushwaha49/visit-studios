@@ -445,4 +445,126 @@ router.post('/import-excel', authorizeRoles('super_admin', 'admin'), upload.sing
   }
 });
 
+// POST /api/users/:id/send-credentials - Send credentials email to a single user
+router.post('/:id/send-credentials', authorizeRoles('super_admin', 'admin'), async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const user = db.get('SELECT * FROM users WHERE id = ?', [targetUserId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { custom_password, portal_url } = req.body;
+    const { sendUserCredentialsEmail, getSmtpConfig } = require('../services/emailService');
+
+    const smtpConf = getSmtpConfig(user.organization_id);
+    if (!smtpConf.isConfigured) {
+      return res.status(400).json({
+        success: false,
+        notConfigured: true,
+        error: 'SMTP credentials are not configured yet. Please configure SMTP in Settings first.'
+      });
+    }
+
+    // Default password is phone number
+    const plainPassword = custom_password || user.phone || '12345678';
+    const result = await sendUserCredentialsEmail({
+      user,
+      plainPassword,
+      customPortalUrl: portal_url
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to send credentials email'
+      });
+    }
+
+    logActivity(req, 'SEND_CREDENTIALS', 'users', user.id, `Sent login credentials email to ${user.name} (${user.email})`);
+
+    return res.json({
+      success: true,
+      message: `Credentials email sent successfully to ${user.name} (${user.email})!`
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/broadcast-credentials - Bulk send credentials to sales team
+router.post('/broadcast-credentials', authorizeRoles('super_admin', 'admin'), async (req, res) => {
+  try {
+    const orgId = req.user.role === 'super_admin' ? (req.body.organization_id || req.user.organization_id) : req.user.organization_id;
+    const { user_ids, role_filter, portal_url } = req.body;
+    const { sendUserCredentialsEmail, getSmtpConfig } = require('../services/emailService');
+
+    const smtpConf = getSmtpConfig(orgId);
+    if (!smtpConf.isConfigured) {
+      return res.status(400).json({
+        success: false,
+        notConfigured: true,
+        error: 'SMTP credentials are not configured yet. Please configure your SMTP Host, Username and Password in Settings.'
+      });
+    }
+
+    let targetUsers = [];
+    if (user_ids && Array.isArray(user_ids) && user_ids.length > 0) {
+      const placeholders = user_ids.map(() => '?').join(',');
+      targetUsers = db.all(`SELECT * FROM users WHERE id IN (${placeholders}) AND status = 'active'`, user_ids);
+    } else {
+      let queryStr = `SELECT * FROM users WHERE organization_id = ? AND status = 'active'`;
+      const queryParams = [orgId];
+      if (role_filter) {
+        queryStr += ` AND role = ?`;
+        queryParams.push(role_filter);
+      } else {
+        queryStr += ` AND role IN ('sales_head', 'sales_associate')`;
+      }
+      targetUsers = db.all(queryStr, queryParams);
+    }
+
+    if (targetUsers.length === 0) {
+      return res.status(400).json({ error: 'No eligible team members found to send credentials to.' });
+    }
+
+    let sentCount = 0;
+    const failedList = [];
+
+    for (const u of targetUsers) {
+      try {
+        const plainPassword = u.phone || '12345678';
+        const resEmail = await sendUserCredentialsEmail({
+          user: u,
+          plainPassword,
+          orgId,
+          customPortalUrl: portal_url
+        });
+        if (resEmail.success) {
+          sentCount++;
+        } else {
+          failedList.push({ name: u.name, email: u.email, error: resEmail.error });
+        }
+      } catch (sendErr) {
+        failedList.push({ name: u.name, email: u.email, error: sendErr.message });
+      }
+    }
+
+    logActivity(req, 'BROADCAST_CREDENTIALS', 'users', null, `Broadcast credentials: sent ${sentCount}/${targetUsers.length}`);
+
+    return res.json({
+      success: true,
+      message: `Dispatched credentials to ${sentCount} out of ${targetUsers.length} team members.`,
+      summary: {
+        total: targetUsers.length,
+        sent: sentCount,
+        failed: failedList.length,
+        failures: failedList
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
