@@ -442,6 +442,10 @@ const App = {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9v2m6-2v2m-6 3v2m6-2v2m-5 5v-3h4v3"/></svg>
           <span>Organizations</span>
         </button>
+        <button class="nav-item ${this.activePage === 'reports' ? 'active' : ''}" onclick="App.navigate('reports')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+          <span>Global Reports</span>
+        </button>
         <button class="nav-item ${this.activePage === 'activity_logs' ? 'active' : ''}" onclick="App.navigate('activity_logs')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span>System Audit Logs</span>
@@ -565,6 +569,10 @@ const App = {
       <button class="nav-item ${this.activePage === 'followups' ? 'active' : ''}" onclick="App.navigate('followups')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         <span>My Follow-ups</span>
+      </button>
+      <button class="nav-item ${this.activePage === 'reports' ? 'active' : ''}" onclick="App.navigate('reports')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        <span>My Performance</span>
       </button>
     `;
   },

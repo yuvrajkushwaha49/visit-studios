@@ -143,29 +143,28 @@ const Utils = {
     }
 
     // Direct outside backdrop click detection:
-    // If the mousedown starts on the overlay backdrop (and not inside the card),
-    // and mouseup/click finishes on the overlay backdrop, close modal immediately.
+    // If user clicks on the backdrop overlay, close modal immediately.
     overlay.onmousedown = (e) => {
       overlay._clickedBackdrop = (e.target === overlay);
     };
     overlay.onclick = (e) => {
-      if (overlay._clickedBackdrop && e.target === overlay) {
+      if (e.target === overlay || overlay._clickedBackdrop) {
         Utils.closeModal();
       }
       overlay._clickedBackdrop = false;
     };
 
-    // Close / Cancel icon button placed at top-right corner of modal card
+    // Close / Cancel icon button pinned at top-right corner of modal card
     const closeBtnHtml = `
       <button type="button" class="modal-close-btn" onclick="Utils.closeModal()" aria-label="Close popup" title="Close (Esc)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
     `;
 
-    overlay.innerHTML = `<div class="modal-card">${closeBtnHtml}${htmlContent}</div>`;
+    overlay.innerHTML = `<div class="modal-card">${closeBtnHtml}<div class="modal-scroll-body">${htmlContent}</div></div>`;
     overlay.classList.remove('hidden');
     document.body.classList.add('modal-open');
   },
