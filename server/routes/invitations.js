@@ -41,10 +41,10 @@ router.get('/public/:token', async (req, res) => {
         sv.id as site_visit_id,
         sv.status as visit_status
       FROM invitations i
-      JOIN customers c ON i.customer_id = c.id
-      JOIN projects p ON i.project_id = p.id
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN projects p ON i.project_id = p.id
       LEFT JOIN developers d ON i.developer_id = d.id
-      JOIN users u ON i.associate_id = u.id
+      LEFT JOIN users u ON i.associate_id = u.id
       LEFT JOIN organization_settings os ON i.organization_id = os.organization_id
       LEFT JOIN site_visits sv ON sv.invitation_id = i.id
       WHERE i.token = ?
@@ -273,10 +273,10 @@ router.get('/', (req, res) => {
         u.name as associate_name,
         sv.status as visit_status
       FROM invitations i
-      JOIN customers c ON i.customer_id = c.id
-      JOIN projects p ON i.project_id = p.id
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN projects p ON i.project_id = p.id
       LEFT JOIN developers d ON i.developer_id = d.id
-      JOIN users u ON i.associate_id = u.id
+      LEFT JOIN users u ON i.associate_id = u.id
       LEFT JOIN site_visits sv ON sv.invitation_id = i.id
       WHERE 1=1
     `;
@@ -536,10 +536,10 @@ router.get('/:id', (req, res) => {
         d.company_logo as developer_logo,
         u.name as associate_name
       FROM invitations i
-      JOIN customers c ON i.customer_id = c.id
-      JOIN projects p ON i.project_id = p.id
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN projects p ON i.project_id = p.id
       LEFT JOIN developers d ON i.developer_id = d.id
-      JOIN users u ON i.associate_id = u.id
+      LEFT JOIN users u ON i.associate_id = u.id
       WHERE i.id = ?
     `, [req.params.id]);
 

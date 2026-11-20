@@ -114,7 +114,7 @@ app.get('/i/:code', publicRateLimiter, (req, res) => {
        LEFT JOIN projects p ON i.project_id = p.id 
        LEFT JOIN customers c ON i.customer_id = c.id 
        LEFT JOIN developers d ON i.developer_id = d.id 
-       WHERE i.short_code = ? OR i.id = ? OR i.token = ? LIMIT 1`,
+       WHERE LOWER(i.short_code) = LOWER(?) OR LOWER(i.id) = LOWER(?) OR i.token = ? LIMIT 1`,
       [code, code, code]
     );
     if (inv && inv.token) {
@@ -147,9 +147,33 @@ app.get('/i/:code', publicRateLimiter, (req, res) => {
 
       return res.redirect(302, inviteUrl);
     }
-    return res.redirect(302, '/');
+
+    // Do NOT redirect to '/' if not found, as unauthenticated visitors would see the Staff Login screen!
+    return res.status(404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP Site Visit Pass · Visit Studio</title>
+  <style>
+    body { margin: 0; background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+    .card { max-width: 440px; width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 36px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .icon { font-size: 42px; margin-bottom: 14px; }
+    h2 { font-size: 20px; margin: 0 0 10px; color: #ffffff; }
+    p { font-size: 13.5px; line-height: 1.6; color: #94a3b8; margin: 0 0 24px; }
+    .btn { display: inline-block; background: #3b82f6; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 13.5px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🎟️</div>
+    <h2>Site Visit Pass Not Found</h2>
+    <p>This invitation link may have expired, or the visit code is no longer active. Please contact your property advisor to share a fresh invitation link.</p>
+  </div>
+</body>
+</html>`);
   } catch (err) {
-    return res.redirect(302, '/');
+    return res.status(500).send('Error loading invitation pass');
   }
 });
 
