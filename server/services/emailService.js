@@ -316,11 +316,170 @@ async function sendUserCredentialsEmail({ user, plainPassword, orgId, customPort
   });
 }
 
+/**
+ * Generate Password Reset Email HTML Template (Arial font, clean, professional)
+ */
+function buildPasswordResetEmailHtml({ name, email, tempPassword, resetUrl, portalUrl, orgName }) {
+  const safePortalUrl = portalUrl || DEFAULT_PORTAL_URL;
+  const safeOrgName = orgName || 'Workians Realty';
+  const actionUrl = resetUrl || safePortalUrl;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Reset — Invitation Meeting Portal</title>
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; font-family: Arial, Helvetica, sans-serif; background-color: #f1f5f9; color: #1e293b; }
+  </style>
+</head>
+<body style="margin: 0; padding: 30px 10px; background-color: #f1f5f9; font-family: Arial, Helvetica, sans-serif;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <!-- HEADER -->
+    <tr>
+      <td style="padding: 28px 32px; background: linear-gradient(135deg, #1e1b4b 0%, #29244d 100%); text-align: left;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td>
+              <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; font-family: Arial, sans-serif;">
+                ${safeOrgName}
+              </h1>
+              <p style="margin: 4px 0 0; font-size: 13px; color: #cbd5e1; font-family: Arial, sans-serif;">
+                Invitation Meeting Portal
+              </p>
+            </td>
+            <td align="right" style="vertical-align: middle;">
+              <span style="display: inline-block; padding: 5px 12px; background-color: rgba(239,68,68,0.2); color: #fca5a5; font-size: 11px; font-weight: 600; text-transform: uppercase; border-radius: 20px; letter-spacing: 0.5px;">
+                Password Reset
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- BODY CONTENT -->
+    <tr>
+      <td style="padding: 32px 32px 24px; font-family: Arial, Helvetica, sans-serif;">
+        <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #0f172a;">
+          Hello <strong>${name}</strong>,
+        </p>
+        <p style="margin: 0 0 24px; font-size: 14px; line-height: 22px; color: #475569;">
+          We received a request to reset your password for your <strong>Invitation Meeting Portal</strong> account. You can log in immediately using the temporary password below, or click the button to set a new password directly.
+        </p>
+
+        <!-- CREDENTIALS BOX -->
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #ef4444; border-radius: 8px; padding: 20px 24px; margin-bottom: 28px;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-family: Arial, sans-serif; font-size: 14px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 150px; font-weight: 600;">Account Email:</td>
+              <td style="padding: 6px 0; color: #0f172a; font-weight: 700; font-family: monospace; font-size: 15px;">
+                ${email}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Temporary Password:</td>
+              <td style="padding: 6px 0; color: #dc2626; font-weight: 700; font-family: monospace; font-size: 17px; letter-spacing: 1px;">
+                ${tempPassword}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Validity:</td>
+              <td style="padding: 6px 0; color: #64748b; font-size: 13px;">
+                Active immediately (Direct reset link valid for 60 minutes)
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- ACTION BUTTON -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+          <tr>
+            <td align="center">
+              <a href="${actionUrl}" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 36px; border-radius: 6px; font-family: Arial, sans-serif; box-shadow: 0 4px 10px rgba(37,99,235,0.25);">
+                Set New Password / Log In &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <!-- SECURITY ADVISORY -->
+        <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px;">
+          <p style="margin: 0; font-size: 12.5px; line-height: 19px; color: #92400e; font-family: Arial, sans-serif;">
+            <strong>Security Notice:</strong> You can use the temporary password to log in right away, and update your password anytime from your profile. If you did not request this, please notify your system administrator immediately.
+          </p>
+        </div>
+
+        <p style="margin: 0; font-size: 13px; line-height: 20px; color: #64748b; font-family: Arial, sans-serif;">
+          Direct Portal URL: <a href="${safePortalUrl}" target="_blank" style="color: #2563eb; word-break: break-all;">${safePortalUrl}</a>
+        </p>
+      </td>
+    </tr>
+
+    <!-- FOOTER -->
+    <tr>
+      <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+        <p style="margin: 0; font-size: 12px; color: #94a3b8; font-family: Arial, sans-serif;">
+          &copy; ${new Date().getFullYear()} ${safeOrgName} &bull; Invitation Meeting Portal
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Send password reset email
+ */
+async function sendPasswordResetEmail({ user, tempPassword, resetToken, orgId, customPortalUrl }) {
+  if (!user || !user.email) {
+    return { success: false, error: 'User or email address is missing' };
+  }
+
+  const conf = getSmtpConfig(orgId || user.organization_id);
+  const portalUrl = customPortalUrl || conf.publicUrl || DEFAULT_PORTAL_URL;
+  const resetUrl = resetToken ? `${portalUrl}/?reset_token=${resetToken}` : portalUrl;
+
+  let orgName = 'Workians Realty';
+  if (user.organization_id) {
+    const org = db.get('SELECT name FROM organizations WHERE id = ?', [user.organization_id]);
+    if (org && org.name) orgName = org.name;
+  }
+
+  const html = buildPasswordResetEmailHtml({
+    name: user.name,
+    email: user.email,
+    tempPassword,
+    resetUrl,
+    portalUrl,
+    orgName
+  });
+
+  const text = `Hello ${user.name},\n\nYour password reset request for the Invitation Meeting Portal has been processed.\n\nAccount Email: ${user.email}\nTemporary Password: ${tempPassword}\nSet New Password Link: ${resetUrl}\n\nIf you did not request this, please contact your administrator.\n\nRegards,\n${orgName}`;
+
+  const subject = `${orgName} — Your Password Reset Instructions & Temporary Key`;
+
+  return await sendMail({
+    to: user.email,
+    subject,
+    html,
+    text,
+    orgId: user.organization_id || orgId
+  });
+}
+
 module.exports = {
   getSmtpConfig,
   verifySmtp,
   sendMail,
   sendUserCredentialsEmail,
   buildCredentialsEmailHtml,
+  sendPasswordResetEmail,
+  buildPasswordResetEmailHtml,
   DEFAULT_PORTAL_URL
 };

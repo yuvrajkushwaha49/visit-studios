@@ -31,7 +31,17 @@ const App = {
       return this.renderPublicFeedback(feedbackId);
     }
 
-    // 3. Authenticate staff user session
+    // 3. Check if password reset token exists in query (?reset_token=token) or hash (#reset_token=token)
+    const queryReset = urlParams.get('reset_token');
+    const hashReset = window.location.hash.startsWith('#reset_token=') ? window.location.hash.replace('#reset_token=', '').trim() : null;
+    const resetToken = queryReset || hashReset;
+
+    if (resetToken) {
+      document.body.classList.add('public-mode');
+      return this.renderResetPasswordScreen(resetToken);
+    }
+
+    // 4. Authenticate staff user session
     document.body.classList.remove('public-mode');
     const user = API.getUser();
     const token = API.getToken();
@@ -156,7 +166,7 @@ const App = {
                 <div class="auth-input-group">
                   <label for="loginPassword">
                     <span>Account Password</span>
-                    <a href="javascript:void(0)" onclick="Utils.toast('Please contact your Organization Administrator to reset credentials.')" class="auth-forgot-link">Forgot password?</a>
+                    <a href="javascript:void(0)" onclick="App.showForgotPasswordModal()" class="auth-forgot-link">Forgot password?</a>
                   </label>
                   <div class="auth-input-wrapper">
                     <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -239,6 +249,219 @@ const App = {
       if (eye) {
         eye.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
       }
+    }
+  },
+
+  showForgotPasswordModal() {
+    const currentTypedEmail = document.getElementById('loginEmail')?.value || '';
+
+    const html = `
+      <div style="text-align: left; padding: 4px 0;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+          <div style="width:42px; height:42px; border-radius:10px; background:rgba(37,99,235,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px;">
+            🔑
+          </div>
+          <div>
+            <h3 style="font-size:18px; font-weight:700; color:var(--ink); margin:0;">Forgot Password</h3>
+            <p style="font-size:12.5px; color:var(--muted); margin:3px 0 0;">Receive temporary login key & reset link by email</p>
+          </div>
+        </div>
+
+        <p style="font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:18px;">
+          Enter your registered work email address (or mobile number). We will immediately dispatch a password reset link and a temporary login password directly to your inbox.
+        </p>
+
+        <form id="forgotPasswordForm" onsubmit="App.handleForgotPasswordSubmit(event)">
+          <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--ink); margin-bottom:6px;">Registered Work Email / Phone</label>
+            <div style="position:relative;">
+              <input type="text" id="forgotInputEmail" required value="${Utils.escapeHTML(currentTypedEmail)}" placeholder="e.g. name@company.com or 10-digit mobile" style="width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid var(--border); border-radius:8px; font-size:13.5px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+          </div>
+
+          <div id="forgotStatusBox" class="hidden" style="margin-bottom:16px; padding:12px 14px; border-radius:8px; font-size:12.5px; line-height:1.5;"></div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn soft" onclick="Utils.closeModal()">Cancel</button>
+            <button type="submit" id="forgotSubmitBtn" class="btn primary" style="background:#2563eb; display:inline-flex; align-items:center; gap:8px;">
+              <span>Send Password to Email</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    Utils.showModal(html);
+  },
+
+  async handleForgotPasswordSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById('forgotInputEmail');
+    const btn = document.getElementById('forgotSubmitBtn');
+    const statusBox = document.getElementById('forgotStatusBox');
+    if (!input || !btn) return;
+
+    const email = input.value.trim();
+    if (!email) {
+      Utils.toast('Please enter your email or registered phone number.');
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.innerHTML = `<span>Sending email...</span>`;
+      statusBox.classList.add('hidden');
+
+      const res = await API.post('/auth/forgot-password', { email });
+
+      statusBox.className = 'status-box-success';
+      statusBox.style.background = 'rgba(16, 185, 129, 0.1)';
+      statusBox.style.color = '#065f46';
+      statusBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+      statusBox.innerHTML = `
+        <div style="font-weight:700; margin-bottom:4px; font-size:13px;">✓ Email Dispatched Successfully!</div>
+        <div>${Utils.escapeHTML(res.message || 'Check your email inbox and spam folder for your login password.')}</div>
+      `;
+      statusBox.classList.remove('hidden');
+
+      btn.style.display = 'none';
+
+      // Update the main login email field if open
+      const loginEmailField = document.getElementById('loginEmail');
+      if (loginEmailField && email.includes('@')) {
+        loginEmailField.value = email;
+      }
+
+      Utils.toast('Password reset email sent successfully!');
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>Send Password to Email</span>`;
+      statusBox.className = 'status-box-error';
+      statusBox.style.background = 'rgba(239, 68, 68, 0.1)';
+      statusBox.style.color = '#991b1b';
+      statusBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      statusBox.innerHTML = `
+        <div style="font-weight:700; margin-bottom:2px;">⚠️ Request Failed</div>
+        <div>${Utils.escapeHTML(err.message || 'Unable to send reset email. Please try again.')}</div>
+      `;
+      statusBox.classList.remove('hidden');
+    }
+  },
+
+  async renderResetPasswordScreen(token) {
+    const appShell = document.getElementById('appShell');
+    if (appShell) appShell.classList.add('hidden');
+    const publicContainer = document.getElementById('publicViewContainer');
+    if (publicContainer) {
+      publicContainer.classList.remove('hidden');
+      publicContainer.innerHTML = `
+        <div class="auth-root" style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0f172a; padding:20px;">
+          <div style="max-width:440px; width:100%; background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:36px 30px; box-shadow:0 20px 40px rgba(0,0,0,0.5); text-align:center;">
+            <div style="width:48px; height:48px; border-radius:12px; background:rgba(37,99,235,0.2); color:#60a5fa; display:flex; align-items:center; justify-content:center; font-size:24px; margin:0 auto 16px;">
+              🔐
+            </div>
+            <h2 style="font-size:21px; color:#ffffff; margin:0 0 8px; font-weight:700;">Set New Account Password</h2>
+            <p id="resetSubTitle" style="font-size:13px; color:#94a3b8; margin:0 0 24px;">Verifying your reset link...</p>
+
+            <div id="resetLoadingSpinner" class="inv-loader-spinner" style="margin: 20px auto;"></div>
+
+            <div id="resetErrorBox" class="hidden" style="text-align:center; padding:16px 0;">
+              <p id="resetErrorText" style="color:#f87171; font-size:13.5px; line-height:1.5; margin-bottom:20px;"></p>
+              <a href="/" class="btn primary" style="background:#2563eb; color:#fff; text-decoration:none; padding:10px 22px; border-radius:8px; font-weight:600; font-size:13px;">Return to Sign In</a>
+            </div>
+
+            <form id="resetPasswordForm" class="hidden" onsubmit="App.handleResetPasswordSubmit(event, '${token}')" style="text-align:left;">
+              <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:12px; font-weight:600; color:#cbd5e1; margin-bottom:6px;">New Password</label>
+                <input type="password" id="newPasswordInput" required minlength="6" placeholder="At least 6 characters" style="width:100%; box-sizing:border-box; padding:12px 14px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#ffffff; font-size:14px;">
+              </div>
+
+              <div style="margin-bottom:24px;">
+                <label style="display:block; font-size:12px; font-weight:600; color:#cbd5e1; margin-bottom:6px;">Confirm New Password</label>
+                <input type="password" id="confirmPasswordInput" required minlength="6" placeholder="Repeat your new password" style="width:100%; box-sizing:border-box; padding:12px 14px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#ffffff; font-size:14px;">
+              </div>
+
+              <button type="submit" id="resetSubmitBtn" style="width:100%; background:#2563eb; color:#ffffff; border:none; padding:13px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer;">
+                Update Password & Sign In
+              </button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    try {
+      const res = await API.get(`/auth/verify-reset-token/${token}`);
+      const spinner = document.getElementById('resetLoadingSpinner');
+      if (spinner) spinner.style.display = 'none';
+
+      const subTitle = document.getElementById('resetSubTitle');
+      if (subTitle) subTitle.textContent = `Hello ${res.name || 'Member'}, enter your new password for ${res.email}.`;
+
+      const form = document.getElementById('resetPasswordForm');
+      if (form) form.classList.remove('hidden');
+    } catch (err) {
+      const spinner = document.getElementById('resetLoadingSpinner');
+      if (spinner) spinner.style.display = 'none';
+
+      const subTitle = document.getElementById('resetSubTitle');
+      if (subTitle) subTitle.style.display = 'none';
+
+      const errorBox = document.getElementById('resetErrorBox');
+      const errorText = document.getElementById('resetErrorText');
+      if (errorBox && errorText) {
+        errorText.textContent = err.message || 'This password reset link is invalid or has expired.';
+        errorBox.classList.remove('hidden');
+      }
+    }
+  },
+
+  async handleResetPasswordSubmit(e, token) {
+    e.preventDefault();
+    const newPass = document.getElementById('newPasswordInput')?.value || '';
+    const confirmPass = document.getElementById('confirmPasswordInput')?.value || '';
+    const btn = document.getElementById('resetSubmitBtn');
+
+    if (newPass.length < 6) {
+      Utils.toast('Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      Utils.toast('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Updating password...';
+      }
+
+      const res = await API.post('/auth/reset-password', {
+        token,
+        new_password: newPass
+      });
+
+      API.setAuth(res.token, res.user);
+      this.currentUser = res.user;
+      Utils.toast(res.message || 'Password reset successfully! Welcome.');
+
+      // Clear query string or hash from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Render main dashboard shell
+      const publicContainer = document.getElementById('publicViewContainer');
+      if (publicContainer) publicContainer.classList.add('hidden');
+      document.body.classList.remove('public-mode');
+      this.renderShell();
+      this.navigate('dashboard');
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Update Password & Sign In';
+      }
+      Utils.toast('Error: ' + err.message);
     }
   },
 
