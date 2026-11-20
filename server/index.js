@@ -104,25 +104,80 @@ app.get('/api/qr', async (req, res) => {
 });
 
 // Short Invitation Link Redirect (/i/:code) protected by rate limiter
-app.get('/i/:code', publicRateLimiter, (req, res) => {
+app.get('/i/:code', publicRateLimiter, async (req, res) => {
   try {
     const { code } = req.params;
+    const cleanCode = (code || '').trim();
     const db = require('./db');
-    const inv = db.get(
-      `SELECT i.*, p.name as project_name, c.full_name as customer_name, d.name as developer_name 
-       FROM invitations i 
-       LEFT JOIN projects p ON i.project_id = p.id 
-       LEFT JOIN customers c ON i.customer_id = c.id 
-       LEFT JOIN developers d ON i.developer_id = d.id 
-       WHERE LOWER(i.short_code) = LOWER(?) OR LOWER(i.id) = LOWER(?) OR i.token = ? LIMIT 1`,
-      [code, code, code]
-    );
-    if (inv && inv.token) {
+
+    let inv = null;
+
+    // 1. Check SQLite database (with case-insensitive matching across short_code, id, inv-id, and token)
+    try {
+      inv = db.get(
+        `SELECT i.*, p.name as project_name, c.full_name as customer_name, d.name as developer_name 
+         FROM invitations i 
+         LEFT JOIN projects p ON i.project_id = p.id 
+         LEFT JOIN customers c ON i.customer_id = c.id 
+         LEFT JOIN developers d ON i.developer_id = d.id 
+         WHERE LOWER(i.short_code) = LOWER(?)
+            OR LOWER(i.id) = LOWER(?)
+            OR LOWER(i.id) = LOWER('inv-' || ?)
+            OR LOWER(i.id) LIKE LOWER('%' || ?)
+            OR i.token = ?
+         LIMIT 1`,
+        [cleanCode, cleanCode, cleanCode, cleanCode, cleanCode]
+      );
+    } catch (sqlErr) {
+      // Fallback if short_code column is not in legacy schema
+      try {
+        inv = db.get(
+          `SELECT i.*, p.name as project_name, c.full_name as customer_name, d.name as developer_name 
+           FROM invitations i 
+           LEFT JOIN projects p ON i.project_id = p.id 
+           LEFT JOIN customers c ON i.customer_id = c.id 
+           LEFT JOIN developers d ON i.developer_id = d.id 
+           WHERE LOWER(i.id) = LOWER(?)
+              OR LOWER(i.id) = LOWER('inv-' || ?)
+              OR LOWER(i.id) LIKE LOWER('%' || ?)
+              OR i.token = ?
+           LIMIT 1`,
+          [cleanCode, cleanCode, cleanCode, cleanCode]
+        );
+      } catch (e2) {}
+    }
+
+    // 2. Fallback: Check MySQL database if configured and not found in SQLite
+    if (!inv) {
+      try {
+        const { getPool } = require('./db/mysql');
+        const pool = getPool();
+        const [rows] = await pool.query(
+          `SELECT i.*, p.name as project_name, c.full_name as customer_name, d.name as developer_name 
+           FROM invitations i 
+           LEFT JOIN projects p ON i.project_id = p.id 
+           LEFT JOIN customers c ON i.customer_id = c.id 
+           LEFT JOIN developers d ON i.developer_id = d.id 
+           WHERE LOWER(i.id) = LOWER(?)
+              OR LOWER(i.id) = LOWER(CONCAT('inv-', ?))
+              OR LOWER(i.id) LIKE LOWER(CONCAT('%', ?))
+              OR i.token = ?
+           LIMIT 1`,
+          [cleanCode, cleanCode, cleanCode, cleanCode]
+        );
+        if (rows && rows.length > 0) {
+          inv = rows[0];
+        }
+      } catch (myErr) {}
+    }
+
+    if (inv && (inv.token || inv.id)) {
+      const targetToken = inv.token || inv.id;
       const ua = req.headers['user-agent'] || '';
       const isBot = /WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Slackbot|LinkedInBot/i.test(ua);
       const baseUrl = config.getBaseUrl(req);
       const cardImageUrl = `${baseUrl}/cards/${inv.id}.png`;
-      const inviteUrl = `${baseUrl}/?invite=${inv.token}`;
+      const inviteUrl = `${baseUrl}/?invite=${targetToken}`;
 
       if (isBot) {
         return res.send(`<!DOCTYPE html>
@@ -138,7 +193,7 @@ app.get('/i/:code', publicRateLimiter, (req, res) => {
   <meta property="og:image:width" content="1080">
   <meta property="og:image:height" content="1440">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/i/${code}">
+  <meta property="og:url" content="${baseUrl}/i/${cleanCode}">
   <meta http-equiv="refresh" content="0;url=${inviteUrl}">
 </head>
 <body><script>location.replace(${JSON.stringify(inviteUrl)});</script></body>
@@ -168,7 +223,7 @@ app.get('/i/:code', publicRateLimiter, (req, res) => {
   <div class="card">
     <div class="icon">🎟️</div>
     <h2>Site Visit Pass Not Found</h2>
-    <p>This invitation link may have expired, or the visit code is no longer active. Please contact your property advisor to share a fresh invitation link.</p>
+    <p>This invitation link may have expired, or the visit code (${cleanCode}) is no longer active. Please contact your property advisor to share a fresh invitation link.</p>
   </div>
 </body>
 </html>`);

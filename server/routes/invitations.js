@@ -48,7 +48,11 @@ router.get('/public/:token', async (req, res) => {
       LEFT JOIN organization_settings os ON i.organization_id = os.organization_id
       LEFT JOIN site_visits sv ON sv.invitation_id = i.id
       WHERE i.token = ?
-    `, [token]);
+         OR LOWER(i.short_code) = LOWER(?)
+         OR LOWER(i.id) = LOWER(?)
+         OR LOWER(i.id) = LOWER('inv-' || ?)
+      LIMIT 1
+    `, [token, token, token, token]);
 
     if (!inv) {
       return res.status(404).json({ error: 'This invitation link is invalid or has expired.' });
