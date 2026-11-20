@@ -191,43 +191,87 @@ router.patch('/:id/assign-head', authorizeRoles('super_admin', 'admin'), (req, r
   }
 });
 
-// PUT /api/users/:id - Update user details
-router.put('/:id', authorizeRoles('super_admin', 'admin'), async (req, res) => {
+// PUT /api/users/:id - Update user details (automatically syncs password to phone)
+router.put('/:id', async (req, res) => {
   try {
-    const { name, email, phone, role, password, sales_head_id, status } = req.body;
+    const actor = req.user;
     const targetUser = db.get('SELECT * FROM users WHERE id = ?', [req.params.id]);
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
-    let passwordHash = targetUser.password_hash;
-    if (password && password.trim()) {
-      passwordHash = await bcrypt.hash(password.trim(), 10);
+    // Authorization checks
+    if (actor.role === 'sales_associate') {
+      return res.status(403).json({ error: 'Sales Associates cannot modify team members' });
     }
+    if (actor.role === 'sales_head' && targetUser.sales_head_id !== actor.id) {
+      return res.status(403).json({ error: 'Sales Heads can only update their assigned team members' });
+    }
+    if (actor.role === 'admin' && targetUser.organization_id !== actor.organization_id) {
+      return res.status(403).json({ error: 'Cannot modify users belonging to another organization' });
+    }
+
+    const { name, email, phone, role, password, sales_head_id, status } = req.body;
+
+    // Normalize phone number
+    const newPhone = (phone !== undefined && phone !== null) ? String(phone).trim() : targetUser.phone;
+    const cleanPhoneDigits = newPhone ? newPhone.replace(/[^\d+]/g, '') : '';
+
+    let passwordHash = targetUser.password_hash;
+
+    // Password Update Logic:
+    // 1. If explicit custom password provided, hash it
+    if (password && String(password).trim()) {
+      passwordHash = await bcrypt.hash(String(password).trim(), 10);
+    }
+    // 2. If phone is updated or set, automatically sync password to the new mobile number!
+    else if (cleanPhoneDigits && (newPhone !== targetUser.phone || !targetUser.password_hash)) {
+      const coreDigits = cleanPhoneDigits.replace(/\D/g, '');
+      const passwordPhone = coreDigits.length >= 10 ? coreDigits.slice(-10) : cleanPhoneDigits;
+      passwordHash = await bcrypt.hash(passwordPhone, 10);
+    }
+
+    const updatedName = (name !== undefined && name !== null && String(name).trim()) ? String(name).trim() : targetUser.name;
+    const updatedEmail = (email !== undefined && email !== null && String(email).trim()) ? String(email).trim().toLowerCase() : targetUser.email;
+    const updatedRole = (role !== undefined && role !== null) ? role : targetUser.role;
+    const updatedStatus = (status !== undefined && status !== null) ? status : targetUser.status;
+    const updatedSalesHead = (sales_head_id !== undefined) ? (sales_head_id || null) : targetUser.sales_head_id;
 
     db.run(
       `UPDATE users SET
-        name = COALESCE(?, name),
-        email = COALESCE(?, email),
-        phone = COALESCE(?, phone),
-        role = COALESCE(?, role),
+        name = ?,
+        email = ?,
+        phone = ?,
+        role = ?,
         password_hash = ?,
         sales_head_id = ?,
-        status = COALESCE(?, status),
+        status = ?,
         updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [
-        name ?? null,
-        email ?? null,
-        phone ?? null,
-        role ?? null,
+        updatedName,
+        updatedEmail,
+        newPhone,
+        updatedRole,
         passwordHash,
-        sales_head_id || targetUser.sales_head_id,
-        status ?? null,
+        updatedSalesHead,
+        updatedStatus,
         req.params.id
       ]
     );
 
-    logActivity(req, 'UPDATE_USER', 'users', req.params.id, `Updated user details for ${name || targetUser.name}`);
-    return res.json({ success: true, message: 'User updated successfully' });
+    // If sales_head_id changed, update related records
+    if (updatedSalesHead && updatedSalesHead !== targetUser.sales_head_id) {
+      db.run('UPDATE customers SET assigned_sales_head_id = ? WHERE assigned_associate_id = ?', [updatedSalesHead, req.params.id]);
+      db.run('UPDATE invitations SET sales_head_id = ? WHERE associate_id = ?', [updatedSalesHead, req.params.id]);
+      db.run('UPDATE site_visits SET sales_head_id = ? WHERE associate_id = ?', [updatedSalesHead, req.params.id]);
+      db.run('UPDATE followups SET sales_head_id = ? WHERE associate_id = ?', [updatedSalesHead, req.params.id]);
+    }
+
+    logActivity(req, 'UPDATE_USER', 'users', req.params.id, `Updated user details for ${updatedName} (Phone: ${newPhone})`);
+    return res.json({
+      success: true,
+      message: 'User updated successfully. Mobile number and login password synchronized.',
+      phone: newPhone
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -468,6 +512,11 @@ router.post('/:id/send-credentials', authorizeRoles('super_admin', 'admin'), asy
 
     // Default password is phone number
     const plainPassword = custom_password || user.phone || '12345678';
+
+    // Synchronize database password hash with the dispatched plainPassword
+    const newHash = await bcrypt.hash(plainPassword.trim(), 10);
+    db.run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newHash, user.id]);
+
     const result = await sendUserCredentialsEmail({
       user,
       plainPassword,

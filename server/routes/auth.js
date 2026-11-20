@@ -36,7 +36,26 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Your organization account is inactive.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    let isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch && user.phone) {
+      // Smart Fallback for Employees:
+      // If the password matches their registered mobile number (exact, digits, or 10-digit core),
+      // accept it and automatically update password_hash in the database!
+      const userPhoneDigits = String(user.phone).trim().replace(/[^\d]/g, '');
+      const inputPassDigits = String(password).trim().replace(/[^\d]/g, '');
+
+      const isPhoneMatch =
+        (userPhoneDigits && inputPassDigits && userPhoneDigits === inputPassDigits) ||
+        (userPhoneDigits.length >= 10 && inputPassDigits.length >= 10 && userPhoneDigits.slice(-10) === inputPassDigits.slice(-10)) ||
+        (String(user.phone).trim() === String(password).trim());
+
+      if (isPhoneMatch) {
+        const updatedHash = await bcrypt.hash(password.trim(), 10);
+        db.run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [updatedHash, user.id]);
+        isMatch = true;
+      }
+    }
+
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }

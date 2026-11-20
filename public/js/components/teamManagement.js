@@ -5,8 +5,12 @@ App.renderTeamManagement = async function(container) {
   try {
     const data = await API.get('/users');
     const users = data.users || [];
-    const role = this.currentUser.role;
+    if (!this.currentUser) {
+      this.currentUser = (typeof API !== 'undefined' && API.getUser ? API.getUser() : null) || {};
+    }
+    const role = this.currentUser.role || 'admin';
 
+    this.cache = this.cache || {};
     this.cache.users = users;
     const salesHeads = users.filter(u => u.role === 'sales_head');
     const associates = users.filter(u => u.role === 'sales_associate');
@@ -244,8 +248,19 @@ App.handleAddUserSubmit = async function(e) {
 
 // Edit User Modal
 App.openEditUserModal = async function(userId) {
-  const user = (this.cache.users || []).find(u => u.id === userId);
-  if (!user) return;
+  let user = (App.cache?.users || []).find(u => u.id === userId);
+  if (!user) {
+    try {
+      const data = await API.get('/users');
+      App.cache = App.cache || {};
+      App.cache.users = data.users || [];
+      user = App.cache.users.find(u => u.id === userId);
+    } catch (e) {}
+  }
+  if (!user) {
+    Utils.toast('Employee record not found');
+    return;
+  }
 
   const headsRes = await API.get('/users/sales-heads');
   const salesHeads = headsRes.salesHeads || [];
@@ -263,8 +278,11 @@ App.openEditUserModal = async function(userId) {
           <input id="editUserEmail" type="email" required value="${Utils.escapeHTML(user.email)}">
         </div>
         <div>
-          <label>Mobile Number</label>
-          <input id="editUserPhone" type="tel" value="${Utils.escapeHTML(user.phone || '')}">
+          <label>Mobile Number *</label>
+          <input id="editUserPhone" type="tel" required placeholder="e.g. 9876543210" value="${Utils.escapeHTML(user.phone || '')}">
+          <small style="color:#059669; font-size:11px; display:block; margin-top:3px; font-weight:600;">
+            🔑 Mobile number automatically syncs as the login password.
+          </small>
         </div>
         <div>
           <label>Account Status</label>
@@ -277,8 +295,11 @@ App.openEditUserModal = async function(userId) {
       </div>
 
       <div style="margin-bottom:14px;">
-        <label>Reset Password (leave empty to keep current)</label>
-        <input id="editUserPassword" type="password" placeholder="New password...">
+        <label>Custom Password Override (Optional)</label>
+        <input id="editUserPassword" type="text" placeholder="Leave empty to use mobile number as password">
+        <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
+          Leave empty to automatically set password to the mobile number above.
+        </small>
       </div>
 
       ${user.role === 'sales_associate' ? `
@@ -307,10 +328,11 @@ App.openEditUserModal = async function(userId) {
 App.handleEditUserSubmit = async function(e, userId) {
   e.preventDefault();
   const password = document.getElementById('editUserPassword').value;
+  const phone = document.getElementById('editUserPhone').value.trim();
   const payload = {
     name: document.getElementById('editUserName').value.trim(),
     email: document.getElementById('editUserEmail').value.trim(),
-    phone: document.getElementById('editUserPhone').value.trim(),
+    phone: phone,
     status: document.getElementById('editUserStatus').value,
     sales_head_id: document.getElementById('editUserHeadSelect')?.value || null
   };
@@ -320,9 +342,13 @@ App.handleEditUserSubmit = async function(e, userId) {
 
   try {
     const res = await API.put(`/users/${userId}`, payload);
-    Utils.toast(res.message);
+    Utils.toast(res.message || 'User updated successfully');
     Utils.closeModal();
-    App.renderTeamManagement(document.getElementById('pageContent'));
+
+    const container = document.getElementById('pageContent');
+    if (container && typeof App.renderTeamManagement === 'function') {
+      await App.renderTeamManagement(container);
+    }
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }
