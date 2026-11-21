@@ -454,11 +454,6 @@ App._renderLivePreviewImmediate = function () {
                 BUILDER / DEVELOPER
               </div>
             </div>
-            ${devLogo ? `
-              <div style="width:42px; height:42px; border-radius:8px; background:#ffffff; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                <img src="${devLogo}" alt="${Utils.escapeHTML(devName)}" style="max-width:100%; max-height:100%; object-fit:contain;">
-              </div>
-            ` : ''}
           </div>
         </div>
 
@@ -480,11 +475,6 @@ App._renderLivePreviewImmediate = function () {
                 BY ${Utils.escapeHTML(devName)}
               </div>
             </div>
-            ${projLogo ? `
-              <div style="width:52px; height:52px; border-radius:10px; background:#ffffff; border:1.5px solid #e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
-                <img src="${projLogo}" alt="${Utils.escapeHTML(projName)}" style="max-width:100%; max-height:100%; object-fit:contain;">
-              </div>
-            ` : ''}
           </div>
           <div class="inv-prop-specs">
             <div>
