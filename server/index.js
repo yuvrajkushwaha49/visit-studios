@@ -49,9 +49,44 @@ app.use(compression({ level: 6 }));
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// Serve static frontend assets with responsive cache headers & ETags
+// Dynamic Build Version for automatic cache busting across all browsers
+const BUILD_VERSION = Date.now().toString(36);
+
+function sendFreshIndexHtml(res) {
+  const indexPath = path.join(__dirname, '..', 'public', 'index.html');
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    if (err) return res.sendFile(indexPath);
+
+    // Dynamically inject unique build hash into all assets
+    const freshHtml = html.replace(/\?v=[^"'\s>]+/g, `?v=b-${BUILD_VERSION}`);
+    res.type('html').send(freshHtml);
+  });
+}
+
+// Root SPA Route with zero-cache guarantee
+app.get('/', (req, res) => {
+  sendFreshIndexHtml(res);
+});
+
+// Serve static frontend assets with automatic revalidation and zero stale caching
 app.use(express.static(path.join(__dirname, '..', 'public'), {
-  maxAge: config.ENV === 'production' ? '1d' : 0,
+  index: false, // Root handled by sendFreshIndexHtml with dynamic cache-buster
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      // Must revalidate with server on every request
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  },
   etag: true,
   lastModified: true
 }));
@@ -232,10 +267,10 @@ app.get('/i/:code', publicRateLimiter, async (req, res) => {
   }
 });
 
-// Fallback: route any direct SPA request to index.html
+// Fallback: route any direct SPA request to fresh index.html
 app.use((req, res) => {
   if (!req.path.startsWith('/api/')) {
-    return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    return sendFreshIndexHtml(res);
   }
   res.status(404).json({ error: 'API endpoint not found' });
 });
