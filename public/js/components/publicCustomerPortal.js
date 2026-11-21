@@ -80,10 +80,10 @@ App.renderPublicInvitation = async function(token) {
               <!-- Top Branding Header -->
               <div class="inv-top">
                 <div>
-                  <div class="inv-agency" style="color: ${inv.brand_color || '#6c54a0'};">
-                    ${Utils.escapeHTML(inv.agency_name || 'Visit Studio Realty')}
+                  <div class="inv-agency" style="color: var(--gold-dark, #b45309); font-size:11px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase;">
+                    PRIVATE INVITATION
                   </div>
-                  <div class="inv-agency-sub">${Utils.escapeHTML(inv.agency_subtitle || 'A personal property invitation')}</div>
+                  <div class="inv-agency-sub">Exclusive Property Walkthrough</div>
                 </div>
                 <div class="inv-dev-badge" style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
                   <div style="text-align:right;">
@@ -187,7 +187,7 @@ App.renderPublicInvitation = async function(token) {
             </div>
 
             <div class="inv-footer">
-              PERSONALLY ARRANGED · ${Utils.escapeHTML(inv.agency_name || 'VISIT STUDIO')} · REF ${inv.id.slice(0, 8).toUpperCase()}
+              SITE VISIT SCHEDULE · VERIFIED CHECK-IN PASS · REF ${inv.id.slice(0, 8).toUpperCase()}
             </div>
           </article>
 
@@ -371,7 +371,6 @@ App.renderDynamicLuxuryCardFallback = async function(imgElem, token) {
     if (!inv) return;
 
     const cardData = {
-      agency_name: inv.agency_name || 'NCR',
       customer_name: inv.customer_name || 'Valued Client',
       project_name: inv.project_name || 'MONARCH',
       developer_name: inv.developer_name || 'M3M INDIA',

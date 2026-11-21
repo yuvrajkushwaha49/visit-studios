@@ -601,7 +601,7 @@ const Utils = {
 
       const customerName = data.customer_name || 'Valued Client';
       const rawProject = data.project_name || theme.projectDefault;
-      const rawDeveloper = data.developer_name || data.agency_name || theme.brandDefault;
+      const rawDeveloper = data.developer_name || theme.brandDefault;
 
       const brandText = Utils.cleanBrandName(rawDeveloper, theme.brandDefault);
       const projectTitle = Utils.cleanProjectTitle(rawProject, theme.projectDefault);

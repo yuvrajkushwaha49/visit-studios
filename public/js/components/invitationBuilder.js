@@ -442,7 +442,7 @@ App._renderLivePreviewImmediate = function () {
         <!-- Top Agency & Developer Header -->
         <div class="inv-top">
           <div>
-            <div class="inv-agency">${Utils.escapeHTML(this.currentUser.organization_name || 'Visit Studio Realty')}</div>
+            <div class="inv-agency" style="color:var(--gold-dark, #b45309); font-size:11px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase;">PRIVATE INVITATION</div>
             <div class="inv-agency-sub">Site Visit & Property Tour Schedule</div>
           </div>
           <div class="inv-dev-badge" style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
@@ -532,7 +532,7 @@ App._renderLivePreviewImmediate = function () {
       </div>
 
       <div class="inv-footer">
-        SITE VISIT SCHEDULE · ${Utils.escapeHTML(this.currentUser.organization_name || 'VISIT STUDIO')} · QR CHECK-IN VERIFIED
+        SITE VISIT SCHEDULE · VERIFIED CHECK-IN PASS
       </div>
     </article>
   `;
@@ -632,7 +632,6 @@ App.showShareModal = async function (invitation, customerName, customerPhone) {
 
   // Gather full invitation parameters for the card
   const cardData = {
-    agency_name: invitation.agency_name || App.currentUser?.organization_name || 'VISIT STUDIO',
     customer_name: custName,
     customer_phone: custPhone,
     project_name: invitation.project_name || document.getElementById('inviteProjectSelect')?.options[document.getElementById('inviteProjectSelect')?.selectedIndex]?.text || 'Property Project',
