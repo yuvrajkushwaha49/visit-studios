@@ -394,7 +394,8 @@ App.renderDynamicLuxuryCardFallback = async function(imgElem, token) {
       advisor_phone: inv.advisor_phone || '+91 98111 22334',
       shortUrl: `${window.location.origin}/i/${inv.short_code || inv.id?.replace('inv-', '') || ''}`,
       short_code: inv.short_code,
-      qr_code_data: inv.qr_code_data
+      qr_code_data: inv.qr_code_data,
+      theme_id: inv.theme || 'auto'
     };
 
     const card = await Utils.generateInvitationCard(cardData);

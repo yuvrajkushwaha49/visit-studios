@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS invitations (
   notes TEXT,
   qr_code_data TEXT,
   short_code TEXT,
+  theme TEXT,
   status TEXT DEFAULT 'sent' CHECK(status IN ('draft', 'sent', 'opened', 'confirmed', 'reschedule_requested', 'cancelled', 'expired')),
   expires_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

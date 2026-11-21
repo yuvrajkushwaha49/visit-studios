@@ -338,7 +338,7 @@ router.post('/', async (req, res) => {
     const {
       customer_id, customer_name, customer_phone,
       project_id, developer_id, size, price,
-      visit_date, visit_time, duration, location, maps_url, notes
+      visit_date, visit_time, duration, location, maps_url, notes, theme
     } = req.body;
 
     if (!project_id || !visit_date || !visit_time) {
@@ -391,13 +391,13 @@ router.post('/', async (req, res) => {
     db.run(
       `INSERT INTO invitations (
         id, organization_id, token, short_code, customer_id, project_id, developer_id, associate_id, sales_head_id,
-        visit_date, visit_time, duration, location, maps_url, size, price, notes, qr_code_data, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`,
+        visit_date, visit_time, duration, location, maps_url, size, price, notes, qr_code_data, theme, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`,
       [
         invId, orgId, token, shortCode, targetCustomerId, project_id, developer_id || proj.developer_id,
         user.id, user.sales_head_id || null, visit_date, visit_time, duration || 60,
         visitLocation, mapsLink, size || proj.super_built_up_area || '', price || proj.starting_price || '',
-        notes || '', qrCodeData
+        notes || '', qrCodeData, theme || null
       ]
     );
 

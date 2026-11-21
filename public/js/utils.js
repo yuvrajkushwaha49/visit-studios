@@ -357,7 +357,238 @@ const Utils = {
     renderOptions('');
   },
 
-  // Generates high-res personalized invitation pass card image matching Reference Design 1 (Background) & Reference Design 2 (Content)
+  // 6 Luxury Project Themes matching Reference Images 1-12
+  INVITATION_THEMES: {
+    purple_elie_saab: {
+      id: 'purple_elie_saab',
+      name: 'Royal Purple (Smart World · Elie Saab)',
+      bgImage: '/images/templates/theme_purple_elie_saab.jpg',
+      isDark: true,
+      brandDefault: 'SMART WORLD',
+      projectDefault: 'ELIE SAAB',
+      footerDefault: 'BY SMART WORLD INDIA',
+      brandColor: '#dfba73',
+      titleColor: '#dfba73',
+      titleGrad: ['#e2c079', '#faebd0', '#dfba73'],
+      subtitleColor: '#bfa36f',
+      guestColor: '#faebd0',
+      inviteTextColor: '#dfcaa0',
+      projectHighlightColor: '#faebd0',
+      dateColor: '#faebd0',
+      timeColor: '#faebd0',
+      locationColor: '#faebd0',
+      advisorLabelColor: '#b8a176',
+      advisorNameColor: '#faebd0',
+      advisorPhoneColor: '#e5ce9f',
+      footerColor: '#9e875e',
+      shadowColor: 'rgba(223, 186, 115, 0.45)',
+      cardBorderCss: '#3a103c',
+      keywords: ['elie', 'saab', 'elle saab', 'smart world', 'purple', 'plum']
+    },
+    green_monarch: {
+      id: 'green_monarch',
+      name: 'Emerald Green (NCR · Monarch)',
+      bgImage: '/images/templates/theme_green_monarch.jpg',
+      isDark: true,
+      brandDefault: 'NCR',
+      projectDefault: 'MONARCH',
+      footerDefault: 'BY M3M INDIA',
+      brandColor: '#dfba73',
+      titleColor: '#dfba73',
+      titleGrad: ['#e2c079', '#faebd0', '#dfba73'],
+      subtitleColor: '#bfa36f',
+      guestColor: '#faebd0',
+      inviteTextColor: '#dfcaa0',
+      projectHighlightColor: '#faebd0',
+      dateColor: '#faebd0',
+      timeColor: '#faebd0',
+      locationColor: '#faebd0',
+      advisorLabelColor: '#b8a176',
+      advisorNameColor: '#faebd0',
+      advisorPhoneColor: '#e5ce9f',
+      footerColor: '#9e875e',
+      shadowColor: 'rgba(223, 186, 115, 0.45)',
+      cardBorderCss: '#1b4332',
+      keywords: ['monarch', 'cullinan', 'green', 'emerald', 'ncr']
+    },
+    blue_hummingbird: {
+      id: 'blue_hummingbird',
+      name: 'Royal Navy Blue (Gulshan · Hummingbird)',
+      bgImage: '/images/templates/theme_blue_hummingbird.jpg',
+      isDark: true,
+      brandDefault: 'GULSHAN',
+      projectDefault: 'HUMMINGBIRD',
+      footerDefault: 'BY GULSHAN INDIA',
+      brandColor: '#dfba73',
+      titleColor: '#dfba73',
+      titleGrad: ['#e2c079', '#faebd0', '#dfba73'],
+      subtitleColor: '#bfa36f',
+      guestColor: '#faebd0',
+      inviteTextColor: '#dfcaa0',
+      projectHighlightColor: '#faebd0',
+      dateColor: '#faebd0',
+      timeColor: '#faebd0',
+      locationColor: '#faebd0',
+      advisorLabelColor: '#b8a176',
+      advisorNameColor: '#faebd0',
+      advisorPhoneColor: '#e5ce9f',
+      footerColor: '#9e875e',
+      shadowColor: 'rgba(223, 186, 115, 0.45)',
+      cardBorderCss: '#0b2545',
+      keywords: ['hummingbird', 'gulshan', 'blue', 'navy', 'sapphire']
+    },
+    ivory_trump: {
+      id: 'ivory_trump',
+      name: 'Champagne Ivory Silk (M3M · Trump)',
+      bgImage: '/images/templates/theme_ivory_trump.jpg',
+      isDark: false, // Light silk background with luxury rich mocha espresso typography
+      brandDefault: 'M3M',
+      projectDefault: 'TRUMP',
+      footerDefault: 'BY M3M INDIA',
+      brandColor: '#4a3319',
+      titleColor: '#4a3319',
+      titleGrad: ['#634524', '#3d2813', '#634524'],
+      subtitleColor: '#7b5a34',
+      guestColor: '#3d2813',
+      inviteTextColor: '#5c4022',
+      projectHighlightColor: '#3d2813',
+      dateColor: '#442f17',
+      timeColor: '#442f17',
+      locationColor: '#442f17',
+      advisorLabelColor: '#7b5a34',
+      advisorNameColor: '#3d2813',
+      advisorPhoneColor: '#5c4022',
+      footerColor: '#7b5a34',
+      shadowColor: 'rgba(74, 51, 25, 0.20)',
+      cardBorderCss: '#d4af37',
+      keywords: ['trump', 'ivory', 'silk', 'champagne', 'cream']
+    },
+    black_ekanam: {
+      id: 'black_ekanam',
+      name: 'Midnight Onyx (Great Value · Ekanam)',
+      bgImage: '/images/templates/theme_black_ekanam.jpg',
+      isDark: true,
+      brandDefault: 'GREAT VALUE',
+      projectDefault: 'EKANAM',
+      footerDefault: 'BY GREAT VALUE INDIA',
+      brandColor: '#dfba73',
+      titleColor: '#dfba73',
+      titleGrad: ['#e2c079', '#faebd0', '#dfba73'],
+      subtitleColor: '#bfa36f',
+      guestColor: '#faebd0',
+      inviteTextColor: '#dfcaa0',
+      projectHighlightColor: '#faebd0',
+      dateColor: '#faebd0',
+      timeColor: '#faebd0',
+      locationColor: '#faebd0',
+      advisorLabelColor: '#b8a176',
+      advisorNameColor: '#faebd0',
+      advisorPhoneColor: '#e5ce9f',
+      footerColor: '#9e875e',
+      shadowColor: 'rgba(223, 186, 115, 0.45)',
+      cardBorderCss: '#1a1a1a',
+      keywords: ['ekanam', 'great value', 'black', 'onyx']
+    },
+    bronze_rajnagar: {
+      id: 'bronze_rajnagar',
+      name: 'Warm Bronze (Saya · Rajnagar)',
+      bgImage: '/images/templates/theme_bronze_rajnagar.jpg',
+      isDark: true,
+      brandDefault: 'SAYA',
+      projectDefault: 'RAJNAGAR',
+      footerDefault: 'BY SAYA INDIA',
+      brandColor: '#dfba73',
+      titleColor: '#dfba73',
+      titleGrad: ['#e2c079', '#faebd0', '#dfba73'],
+      subtitleColor: '#bfa36f',
+      guestColor: '#faebd0',
+      inviteTextColor: '#dfcaa0',
+      projectHighlightColor: '#faebd0',
+      dateColor: '#faebd0',
+      timeColor: '#faebd0',
+      locationColor: '#faebd0',
+      advisorLabelColor: '#b8a176',
+      advisorNameColor: '#faebd0',
+      advisorPhoneColor: '#e5ce9f',
+      footerColor: '#9e875e',
+      shadowColor: 'rgba(223, 186, 115, 0.45)',
+      cardBorderCss: '#4a2e18',
+      keywords: ['rajnagar', 'saya', 'bronze', 'coffee', 'leather']
+    }
+  },
+
+  // Resolve matching theme for project/developer
+  getInvitationTheme(projectName = '', developerName = '', manualThemeId = '') {
+    if (manualThemeId && manualThemeId !== 'auto' && this.INVITATION_THEMES[manualThemeId]) {
+      return this.INVITATION_THEMES[manualThemeId];
+    }
+    const combined = `${projectName || ''} ${developerName || ''}`.toLowerCase();
+
+    if (combined.includes('elie') || combined.includes('saab') || combined.includes('elle saab') || combined.includes('smart world') || combined.includes('purple')) {
+      return this.INVITATION_THEMES.purple_elie_saab;
+    }
+    if (combined.includes('trump') || combined.includes('ivory') || combined.includes('silk') || combined.includes('champagne')) {
+      return this.INVITATION_THEMES.ivory_trump;
+    }
+    if (combined.includes('hummingbird') || combined.includes('gulshan') || combined.includes('blue') || combined.includes('navy')) {
+      return this.INVITATION_THEMES.blue_hummingbird;
+    }
+    if (combined.includes('ekanam') || combined.includes('great value') || combined.includes('black') || combined.includes('onyx')) {
+      return this.INVITATION_THEMES.black_ekanam;
+    }
+    if (combined.includes('rajnagar') || combined.includes('saya') || combined.includes('bronze') || combined.includes('coffee')) {
+      return this.INVITATION_THEMES.bronze_rajnagar;
+    }
+    if (combined.includes('monarch') || combined.includes('cullinan') || combined.includes('ncr') || combined.includes('green') || combined.includes('emerald')) {
+      return this.INVITATION_THEMES.green_monarch;
+    }
+    return this.INVITATION_THEMES.green_monarch;
+  },
+
+  // Cleans brand/developer name for punchy top header matching references
+  cleanBrandName(devName, fallback = 'NCR') {
+    let raw = (devName || fallback || 'NCR').trim();
+    raw = raw.replace(/\b(Group|Homz|Properties|Pvt|Ltd|India|LLP|Realty)\b/gi, '').trim();
+    if (!raw) raw = fallback || 'NCR';
+    return raw.toUpperCase();
+  },
+
+  // Cleans project title for luxury display matching references
+  cleanProjectTitle(projName, fallback = 'MONARCH') {
+    let clean = (projName || fallback || 'MONARCH').trim();
+    if (clean.includes('-')) {
+      const parts = clean.split('-');
+      clean = parts[parts.length - 1].trim();
+    }
+    clean = clean.replace(/^(Saya|NCR|Gulshan|M3M|Smart World|Great Value)\s*[-:]?\s*/i, '').trim();
+    if (/elie|saab/i.test(clean)) return 'ELIE SAAB';
+    if (/monarch/i.test(clean)) return 'MONARCH';
+    if (/hummingbird/i.test(clean)) return 'HUMMINGBIRD';
+    if (/trump/i.test(clean)) return 'TRUMP';
+    if (/ekanam/i.test(clean)) return 'EKANAM';
+    if (/rajnagar/i.test(clean)) return 'RAJNAGAR';
+    return clean.toUpperCase();
+  },
+
+  // Personalized viewing line highlight (e.g. "Smart World Elie Saab", "M3M The Cullinan")
+  getProjectHighlight(projName = '', devName = '') {
+    const rawProj = (projName || '').toLowerCase();
+    if (rawProj.includes('elie') || rawProj.includes('saab')) return 'Smart World Elie Saab';
+    if (rawProj.includes('cullinan') || rawProj.includes('monarch')) return 'M3M The Cullinan';
+    if (rawProj.includes('hummingbird')) return 'Gulshan Hummingbird';
+    if (rawProj.includes('trump')) return 'Trump Towers';
+    if (rawProj.includes('ekanam')) return 'Great Value Ekanam';
+    if (rawProj.includes('rajnagar')) return 'SAYA Rajnagar';
+
+    const dClean = this.cleanBrandName(devName, '');
+    const pClean = (projName || '').replace(/^(Saya|NCR|Gulshan|M3M|Smart World|Great Value)\s*[-:]?\s*/i, '').trim();
+    if (dClean && !pClean.toLowerCase().includes(dClean.toLowerCase())) {
+      return `${dClean} ${pClean}`;
+    }
+    return pClean || projName || 'Exclusive Property Residence';
+  },
+
+  // Generates high-res personalized invitation pass card image matching Reference Design 1-12
   generateInvitationCard(data) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -365,10 +596,17 @@ const Utils = {
       canvas.height = 1024;
       const ctx = canvas.getContext('2d');
 
-      const agencyName = (data.agency_name || 'NCR').toUpperCase();
+      // Resolve theme dynamically based on project name, developer, or explicit override
+      const theme = Utils.getInvitationTheme(data.project_name, data.developer_name, data.theme_id || data.theme);
+
       const customerName = data.customer_name || 'Valued Client';
-      const projectName = data.project_name || 'MONARCH';
-      const developerName = (data.developer_name || 'M3M INDIA').toUpperCase();
+      const rawProject = data.project_name || theme.projectDefault;
+      const rawDeveloper = data.developer_name || data.agency_name || theme.brandDefault;
+
+      const brandText = Utils.cleanBrandName(rawDeveloper, theme.brandDefault);
+      const projectTitle = Utils.cleanProjectTitle(rawProject, theme.projectDefault);
+      const projectHighlight = Utils.getProjectHighlight(rawProject, rawDeveloper);
+
       const shortUrl = data.shortUrl || `${window.location.origin}/i/${data.short_code || ''}`;
       const advisorName = data.advisor_name || 'Karan Verma';
       const advisorPhone = data.advisor_phone || '+91 98111 22334';
@@ -379,7 +617,7 @@ const Utils = {
       const formattedDate = Utils.formatDate(data.visit_date) || '18 Nov 2026';
       const formattedTime = Utils.formatTime(data.visit_time) || '11:30 AM';
 
-      // Location formatting
+      // Location formatting (clean city or venue name)
       let rawLoc = data.location || data.project_location || 'Noida';
       let locationText = rawLoc;
       if (rawLoc.includes(',')) {
@@ -387,6 +625,15 @@ const Utils = {
         locationText = parts[parts.length - 1].trim();
       }
       if (!locationText || locationText.length < 2) locationText = 'Noida';
+
+      // Footer developer branding
+      let footerDev = brandText;
+      if (/elie|saab/i.test(projectTitle)) footerDev = 'SMART WORLD';
+      else if (/hummingbird/i.test(projectTitle)) footerDev = 'GULSHAN';
+      else if (/ekanam/i.test(projectTitle)) footerDev = 'GREAT VALUE';
+      else if (/rajnagar/i.test(projectTitle)) footerDev = 'SAYA';
+      else if (/trump/i.test(projectTitle) || /monarch/i.test(projectTitle) || /cullinan/i.test(rawProject)) footerDev = 'M3M';
+      const footerText = `BY ${footerDev} INDIA`;
 
       // Helper function to draw letter-spaced text with perfect centered alignment
       function drawLetterSpaced(text, centerX, y, letterSpacing) {
@@ -403,15 +650,15 @@ const Utils = {
         }
       }
 
-      // Drawing Routine matching Reference Image 2 exactly
-      const drawCardContent = (projLogoImg = null, devLogoImg = null, qrImg = null) => {
-        // 1. Top Brand / Developer Logo or Name ("NCR" in reference)
+      // Drawing Routine matching Reference Images 1-12
+      const drawCardContent = (projLogoImg = null, devLogoImg = null) => {
+        // 1. Top Brand / Developer Header (matching reference e.g. "SMART WORLD", "NCR", "GULSHAN", "M3M", "SAYA", "GREAT VALUE")
         const topLogo = devLogoImg || projLogoImg;
 
         if (topLogo) {
           try {
             const maxW = 140;
-            const maxH = 65;
+            const maxH = 60;
             let w = topLogo.naturalWidth || topLogo.width || maxW;
             let h = topLogo.naturalHeight || topLogo.height || maxH;
             const ratio = Math.min(maxW / w, maxH / h);
@@ -433,36 +680,48 @@ const Utils = {
         function drawBrandText() {
           ctx.save();
           ctx.textAlign = 'center';
-          ctx.fillStyle = '#dfba73';
+          ctx.fillStyle = theme.brandColor;
           ctx.font = 'bold 36px "Cinzel", "Playfair Display", Georgia, serif';
-          ctx.shadowColor = 'rgba(223, 186, 115, 0.45)';
-          ctx.shadowBlur = 10;
-          const displayBrand = (developerName || agencyName || 'NCR').slice(0, 16);
-          ctx.fillText(displayBrand, 410, 142);
+          if (theme.isDark) {
+            ctx.shadowColor = theme.shadowColor;
+            ctx.shadowBlur = 10;
+          }
+          ctx.fillText(brandText.slice(0, 16), 410, 142);
           ctx.restore();
         }
 
-        // 2. Main Project Title ("MONARCH" in reference)
+        // 2. Main Project Title (e.g. "ELIE SAAB", "MONARCH", "HUMMINGBIRD", "TRUMP", "EKANAM", "RAJNAGAR")
         ctx.save();
         ctx.textAlign = 'center';
         let projFontSize = 46;
-        if (projectName.length > 24) projFontSize = 32;
-        else if (projectName.length > 16) projFontSize = 38;
+        if (projectTitle.length > 22) projFontSize = 32;
+        else if (projectTitle.length > 15) projFontSize = 38;
 
         ctx.font = `700 ${projFontSize}px "Cinzel", "Playfair Display", Georgia, serif`;
-        const goldGrad = ctx.createLinearGradient(230, 210, 590, 255);
-        goldGrad.addColorStop(0, '#e2c079');
-        goldGrad.addColorStop(0.5, '#faebd0');
-        goldGrad.addColorStop(1, '#dfba73');
-        ctx.fillStyle = goldGrad;
-        ctx.shadowColor = 'rgba(223, 186, 115, 0.5)';
-        ctx.shadowBlur = 14;
-        ctx.fillText(projectName.toUpperCase(), 410, 245);
+        if (theme.isDark) {
+          const goldGrad = ctx.createLinearGradient(230, 210, 590, 255);
+          goldGrad.addColorStop(0, theme.titleGrad[0]);
+          goldGrad.addColorStop(0.5, theme.titleGrad[1]);
+          goldGrad.addColorStop(1, theme.titleGrad[2]);
+          ctx.fillStyle = goldGrad;
+          ctx.shadowColor = theme.shadowColor;
+          ctx.shadowBlur = 14;
+        } else {
+          // Rich mocha bronze for Ivory Trump silk template
+          const mochaGrad = ctx.createLinearGradient(230, 210, 590, 255);
+          mochaGrad.addColorStop(0, theme.titleGrad[0]);
+          mochaGrad.addColorStop(0.5, theme.titleGrad[1]);
+          mochaGrad.addColorStop(1, theme.titleGrad[2]);
+          ctx.fillStyle = mochaGrad;
+          ctx.shadowColor = theme.shadowColor;
+          ctx.shadowBlur = 4;
+        }
+        ctx.fillText(projectTitle, 410, 245);
         ctx.restore();
 
         // 3. Subtitle ("AN EXCLUSIVE INVITATION" in reference)
         ctx.save();
-        ctx.fillStyle = '#bfa36f';
+        ctx.fillStyle = theme.subtitleColor;
         ctx.font = '600 12.5px "Cinzel", "Inter", sans-serif';
         drawLetterSpaced('AN EXCLUSIVE INVITATION', 410, 282, 3.5);
         ctx.restore();
@@ -470,30 +729,31 @@ const Utils = {
         // 4. Personalized Guest Greeting & Viewing Invitation
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#faebd0';
+        ctx.fillStyle = theme.guestColor;
         ctx.font = '500 21px "Playfair Display", Georgia, serif';
         ctx.fillText(`Dear ${customerName},`, 410, 395);
 
-        ctx.fillStyle = '#dfcaa0';
+        ctx.fillStyle = theme.inviteTextColor;
         ctx.font = '400 18px "Playfair Display", Georgia, serif';
         ctx.fillText('You are cordially invited to a private viewing of', 410, 432);
 
-        ctx.fillStyle = '#faebd0';
+        ctx.fillStyle = theme.projectHighlightColor;
         ctx.font = '600 22px "Playfair Display", Georgia, serif';
-        const projectHighlight = developerName ? `${developerName} ${projectName}` : projectName;
         ctx.fillText(projectHighlight, 410, 468);
         ctx.restore();
 
         // 5. Date, Time & City Block
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#faebd0';
+        ctx.fillStyle = theme.dateColor;
         ctx.font = '500 21px "Playfair Display", Georgia, serif';
         ctx.fillText(`${weekday}, ${formattedDate}`, 410, 565);
 
+        ctx.fillStyle = theme.timeColor;
         ctx.font = '500 20px "Playfair Display", Georgia, serif';
         ctx.fillText(`${formattedTime} IST`, 410, 602);
 
+        ctx.fillStyle = theme.locationColor;
         ctx.font = '500 20px "Playfair Display", Georgia, serif';
         ctx.fillText(locationText, 410, 638);
         ctx.restore();
@@ -501,24 +761,23 @@ const Utils = {
         // 6. Property Advisor Block
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#b8a176';
+        ctx.fillStyle = theme.advisorLabelColor;
         ctx.font = '400 14px "Playfair Display", Georgia, serif';
         ctx.fillText('Your Property Adviser', 410, 735);
 
-        ctx.fillStyle = '#faebd0';
+        ctx.fillStyle = theme.advisorNameColor;
         ctx.font = '600 24px "Playfair Display", Georgia, serif';
         ctx.fillText(advisorName, 410, 770);
 
-        ctx.fillStyle = '#e5ce9f';
+        ctx.fillStyle = theme.advisorPhoneColor;
         ctx.font = '500 18px "Playfair Display", Georgia, serif';
         ctx.fillText(advisorPhone, 410, 804);
         ctx.restore();
 
-        // 7. Footer ("BY M3M INDIA" in reference)
+        // 7. Footer ("BY [DEVELOPER] INDIA" in reference)
         ctx.save();
-        ctx.fillStyle = '#9e875e';
+        ctx.fillStyle = theme.footerColor;
         ctx.font = '600 12px "Cinzel", "Inter", sans-serif';
-        const footerText = `BY ${developerName || agencyName || 'M3M INDIA'}`.toUpperCase();
         drawLetterSpaced(footerText, 410, 905, 3.0);
         ctx.restore();
 
@@ -526,7 +785,7 @@ const Utils = {
         const dataUrl = canvas.toDataURL('image/png', 1.0);
         canvas.toBlob((blob) => {
           const file = new File([blob], `invitation-${customerName.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
-          resolve({ dataUrl, blob, file, canvas });
+          resolve({ dataUrl, blob, file, canvas, theme });
         }, 'image/png');
       };
 
@@ -542,58 +801,49 @@ const Utils = {
         });
       };
 
-      // Determine QR Code source: use data URL if available, otherwise fetch from /api/qr
-      let qrSource = data.qr_code_data;
-      if (!qrSource || !qrSource.startsWith('data:image')) {
-        const qrPayload = qrSource || data.shortUrl || `${window.location.origin}/i/${data.short_code || ''}`;
-        qrSource = `/api/qr?text=${encodeURIComponent(qrPayload)}`;
-      }
-
-      // Load background template image (Reference Image 1: Luxury Dark Royal Blue with Gold Accents)
+      // Load matching project background template image (1 of 6 blank luxury backgrounds)
       const bgImg = new Image();
       bgImg.crossOrigin = 'anonymous';
       bgImg.onload = async () => {
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
         try {
-          const [pLogo, dLogo, qr] = await Promise.all([
+          const [pLogo, dLogo] = await Promise.all([
             loadImg(data.project_logo),
-            loadImg(data.developer_logo),
-            loadImg(qrSource)
+            loadImg(data.developer_logo)
           ]);
-          drawCardContent(pLogo, dLogo, qr);
+          drawCardContent(pLogo, dLogo);
         } catch (err) {
-          drawCardContent(null, null, null);
+          drawCardContent(null, null);
         }
       };
 
       bgImg.onerror = async () => {
-        // High-end CSS fallback rendering the exact luxury royal blue and gold frame if image fails
-        ctx.fillStyle = '#081224';
+        // High-end CSS fallback rendering corresponding luxury frame if image file is missing
+        ctx.fillStyle = theme.isDark ? (theme.cardBorderCss || '#0b162c') : '#f8f4ec';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Elegant gold rectangular frame
-        ctx.strokeStyle = '#c5a059';
+        // Elegant gold/mocha rectangular frame
+        ctx.strokeStyle = theme.isDark ? '#c5a059' : '#8c6d48';
         ctx.lineWidth = 2;
         ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
 
-        // Subtle inner golden border
-        ctx.strokeStyle = 'rgba(197, 160, 89, 0.4)';
+        // Subtle inner border
+        ctx.strokeStyle = theme.isDark ? 'rgba(197, 160, 89, 0.4)' : 'rgba(140, 109, 72, 0.3)';
         ctx.lineWidth = 1;
         ctx.strokeRect(62, 62, canvas.width - 124, canvas.height - 124);
 
         try {
-          const [pLogo, dLogo, qr] = await Promise.all([
+          const [pLogo, dLogo] = await Promise.all([
             loadImg(data.project_logo),
-            loadImg(data.developer_logo),
-            loadImg(qrSource)
+            loadImg(data.developer_logo)
           ]);
-          drawCardContent(pLogo, dLogo, qr);
+          drawCardContent(pLogo, dLogo);
         } catch (err) {
-          drawCardContent(null, null, null);
+          drawCardContent(null, null);
         }
       };
 
-      bgImg.src = '/images/luxury-card-bg.jpg';
+      bgImg.src = theme.bgImage;
     });
   },
 

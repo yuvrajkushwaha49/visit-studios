@@ -114,6 +114,20 @@ App.renderInvitationBuilder = async function (container) {
               </div>
 
               <div>
+                <label for="inviteThemeSelect">Card Theme / Template</label>
+                <select id="inviteThemeSelect" onchange="App.onBuilderThemeChange(this.value)">
+                  <option value="auto">✨ Auto-Detect (Matches Project)</option>
+                  <option value="purple_elie_saab">🟣 Royal Purple (Smart World · Elie Saab)</option>
+                  <option value="green_monarch">🟢 Emerald Green (NCR · Monarch)</option>
+                  <option value="blue_hummingbird">🔵 Royal Navy Blue (Gulshan · Hummingbird)</option>
+                  <option value="ivory_trump">⚪ Champagne Ivory Silk (M3M · Trump)</option>
+                  <option value="black_ekanam">⚫ Midnight Onyx (Great Value · Ekanam)</option>
+                  <option value="bronze_rajnagar">🟤 Warm Bronze (Saya · Rajnagar)</option>
+                </select>
+                <div id="builderThemeBadge" style="font-size:11px; color:var(--purple); font-weight:600; margin-top:4px;">✨ Auto-matched to Project Theme</div>
+              </div>
+
+              <div>
                 <label for="inviteSize">Apartment / Unit Size</label>
                 <div style="display:flex; gap:6px;">
                   <input id="inviteSize" placeholder="e.g. 2,400" style="flex:1;" oninput="App.updateLivePreview()">
@@ -332,6 +346,41 @@ App.onBuilderProjectChange = function (projId) {
     document.getElementById('invitePrice').value = cleanPrice;
   }
 
+  // Update Theme Badge / auto-match
+  const themeSelect = document.getElementById('inviteThemeSelect');
+  const badge = document.getElementById('builderThemeBadge');
+  const devSelect = document.getElementById('inviteDeveloperSelect');
+  const dev = this.cache?.developers?.find(d => d.id === devSelect?.value);
+  const theme = Utils.getInvitationTheme(proj.name, dev?.name, themeSelect?.value);
+  if (badge) {
+    if (!themeSelect?.value || themeSelect?.value === 'auto') {
+      badge.textContent = `✨ Auto-Theme: ${theme.name}`;
+      badge.style.color = 'var(--purple)';
+    } else {
+      badge.textContent = `🎨 Custom Theme: ${theme.name}`;
+      badge.style.color = 'var(--primary)';
+    }
+  }
+
+  this.updateLivePreview();
+};
+
+App.onBuilderThemeChange = function (themeId) {
+  const badge = document.getElementById('builderThemeBadge');
+  const projSelect = document.getElementById('inviteProjectSelect');
+  const proj = this.cache?.projects?.find(p => p.id === projSelect?.value);
+  const devSelect = document.getElementById('inviteDeveloperSelect');
+  const dev = this.cache?.developers?.find(d => d.id === devSelect?.value);
+  const theme = Utils.getInvitationTheme(proj?.name, dev?.name, themeId);
+  if (badge) {
+    if (!themeId || themeId === 'auto') {
+      badge.textContent = `✨ Auto-Theme: ${theme.name}`;
+      badge.style.color = 'var(--purple)';
+    } else {
+      badge.textContent = `🎨 Custom Theme: ${theme.name}`;
+      badge.style.color = 'var(--primary)';
+    }
+  }
   this.updateLivePreview();
 };
 
@@ -543,6 +592,7 @@ App.handleCreateInvitation = async function (e) {
       customer_phone: customerPhone,
       project_id: projectId,
       developer_id: developerId,
+      theme: document.getElementById('inviteThemeSelect')?.value || 'auto',
       size,
       price,
       location,
@@ -609,7 +659,8 @@ App.showShareModal = async function (invitation, customerName, customerPhone) {
     advisor_phone: invitation.advisor_phone || document.getElementById('inviteAdvisorPhone')?.value || App.currentUser?.phone || '+91 98765 43210',
     shortUrl: shortUrl,
     short_code: shortCode,
-    qr_code_data: invitation.qr_code_data || inviteUrl
+    qr_code_data: invitation.qr_code_data || inviteUrl,
+    theme_id: invitation.theme || document.getElementById('inviteThemeSelect')?.value || 'auto'
   };
 
   // Generate high-res pass image via Canvas
