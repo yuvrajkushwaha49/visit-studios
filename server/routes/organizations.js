@@ -9,11 +9,13 @@ const { logActivity } = require('../middleware/audit');
 // All organization routes require super_admin
 router.use(authenticate, authorizeRoles('super_admin'));
 
-// GET /api/organizations - List all organizations with stats
+// GET /api/organizations - List all organizations with stats and primary admin
 router.get('/', (req, res) => {
   try {
     const orgs = db.all(`
       SELECT o.*,
+        (SELECT email FROM users u WHERE u.organization_id = o.id AND u.role = 'admin' LIMIT 1) as admin_email,
+        (SELECT name FROM users u WHERE u.organization_id = o.id AND u.role = 'admin' LIMIT 1) as admin_name,
         (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.role = 'admin') as total_admins,
         (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.role = 'sales_head') as total_sales_heads,
         (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.role = 'sales_associate') as total_associates,
@@ -146,21 +148,23 @@ router.get('/activity-logs', (req, res) => {
   }
 });
 
-// GET /api/organizations/:id - Get single organization
+// GET /api/organizations/:id - Get single organization with admin credentials
 router.get('/:id', (req, res) => {
   try {
     const org = db.get('SELECT * FROM organizations WHERE id = ?', [req.params.id]);
     if (!org) return res.status(404).json({ error: 'Organization not found' });
-    return res.json({ organization: org });
+    const admin = db.get("SELECT id, name, email, phone FROM users WHERE organization_id = ? AND role = 'admin' LIMIT 1", [req.params.id]);
+    const admins = db.all("SELECT id, name, email, phone, status FROM users WHERE organization_id = ? AND role = 'admin'", [req.params.id]);
+    return res.json({ organization: org, admin, admins });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
-// PUT /api/organizations/:id - Edit organization
-router.put('/:id', (req, res) => {
+// PUT /api/organizations/:id - Edit organization and admin credentials
+router.put('/:id', async (req, res) => {
   try {
-    const { name, slug, phone, email, address } = req.body;
+    const { name, slug, phone, email, address, adminName, adminEmail, adminPassword } = req.body;
     const org = db.get('SELECT * FROM organizations WHERE id = ?', [req.params.id]);
     if (!org) return res.status(404).json({ error: 'Organization not found' });
 
@@ -183,8 +187,78 @@ router.put('/:id', (req, res) => {
       ]
     );
 
+    // Update or reset admin credentials if provided
+    const existingAdmin = db.get("SELECT id FROM users WHERE organization_id = ? AND role = 'admin' LIMIT 1", [req.params.id]);
+    if (existingAdmin) {
+      if (adminEmail && adminEmail.trim()) {
+        db.run("UPDATE users SET email = ? WHERE id = ?", [adminEmail.trim().toLowerCase(), existingAdmin.id]);
+      }
+      if (adminName && adminName.trim()) {
+        db.run("UPDATE users SET name = ? WHERE id = ?", [adminName.trim(), existingAdmin.id]);
+      }
+      if (adminPassword && adminPassword.trim()) {
+        const hash = await bcrypt.hash(adminPassword.trim(), 10);
+        db.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, existingAdmin.id]);
+      }
+    } else if (adminEmail && adminPassword) {
+      const adminId = 'usr-admin-' + crypto.randomUUID().slice(0, 8);
+      const hash = await bcrypt.hash(adminPassword.trim(), 10);
+      db.run(
+        `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, status) VALUES (?, ?, 'admin', ?, ?, ?, ?, 'active')`,
+        [adminId, req.params.id, adminName || (name + ' Admin'), adminEmail.trim().toLowerCase(), phone || '', hash]
+      );
+    }
+
     logActivity(req, 'UPDATE_ORGANIZATION', 'organizations', req.params.id, `Updated organization ${name || org.name}`);
-    return res.json({ success: true, message: 'Organization updated successfully' });
+    return res.json({ success: true, message: 'Organization and admin credentials updated successfully' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/organizations/:id/reset-admin-password - Reset organization admin password
+router.post('/:id/reset-admin-password', async (req, res) => {
+  try {
+    const { new_password, user_id, admin_email, admin_name } = req.body;
+    if (!new_password || new_password.trim().length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const org = db.get('SELECT name FROM organizations WHERE id = ?', [req.params.id]);
+    if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+    let admin = null;
+    if (user_id) {
+      admin = db.get("SELECT id, name, email FROM users WHERE id = ? AND organization_id = ?", [user_id, req.params.id]);
+    }
+    if (!admin) {
+      admin = db.get("SELECT id, name, email FROM users WHERE organization_id = ? AND role = 'admin' LIMIT 1", [req.params.id]);
+    }
+    if (!admin) {
+      // Create admin if none exists
+      const adminId = 'usr-admin-' + crypto.randomUUID().slice(0, 8);
+      const hash = await bcrypt.hash(new_password.trim(), 10);
+      db.run(
+        `INSERT INTO users (id, organization_id, role, name, email, phone, password_hash, status) VALUES (?, ?, 'admin', ?, ?, ?, ?, 'active')`,
+        [adminId, req.params.id, admin_name || (org.name + ' Admin'), (admin_email || 'admin@' + req.params.id + '.com').trim().toLowerCase(), '', hash]
+      );
+      return res.json({ success: true, message: `Admin account created with new password!` });
+    }
+
+    const hash = await bcrypt.hash(new_password.trim(), 10);
+    db.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, admin.id]);
+    if (admin_email && admin_email.trim()) {
+      db.run("UPDATE users SET email = ? WHERE id = ?", [admin_email.trim().toLowerCase(), admin.id]);
+    }
+    if (admin_name && admin_name.trim()) {
+      db.run("UPDATE users SET name = ? WHERE id = ?", [admin_name.trim(), admin.id]);
+    }
+
+    logActivity(req, 'RESET_ORG_ADMIN_PASSWORD', 'users', admin.id, `Reset password for organization admin ${admin.email}`);
+    return res.json({
+      success: true,
+      message: `Admin credentials updated successfully! New password is now active for ${admin_email || admin.email}.`
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
