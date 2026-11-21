@@ -357,423 +357,170 @@ const Utils = {
     renderOptions('');
   },
 
-  // Generates high-res personalized invitation pass card image matching Reference Design
+  // Generates high-res personalized invitation pass card image matching Reference Design 1 (Background) & Reference Design 2 (Content)
   generateInvitationCard(data) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
-      canvas.width = 1080;
-      canvas.height = 1400;
+      canvas.width = 819;
+      canvas.height = 1024;
       const ctx = canvas.getContext('2d');
 
-      const agencyName = (data.agency_name || 'VISIT STUDIO').toUpperCase();
+      const agencyName = (data.agency_name || 'NCR').toUpperCase();
       const customerName = data.customer_name || 'Valued Client';
-      const projectName = data.project_name || 'The Parkview Residences';
-      const developerName = (data.developer_name || 'ELITE DEVELOPERS').toUpperCase();
+      const projectName = data.project_name || 'MONARCH';
+      const developerName = (data.developer_name || 'M3M INDIA').toUpperCase();
       const shortUrl = data.shortUrl || `${window.location.origin}/i/${data.short_code || ''}`;
-      const advisorName = data.advisor_name || 'Amit Verma';
-      const advisorPhone = data.advisor_phone || '+91 98765 43210';
+      const advisorName = data.advisor_name || 'Karan Verma';
+      const advisorPhone = data.advisor_phone || '+91 98111 22334';
 
       // Parse Date components
       const d = data.visit_date ? new Date(data.visit_date + 'T00:00:00') : new Date();
-      const weekday = !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { weekday: 'long' }) + ',' : 'Wednesday,';
-      const formattedDate = Utils.formatDate(data.visit_date) || '25 Nov 2026';
-      const formattedTime = Utils.formatTime(data.visit_time) || '11:00 AM';
+      const weekday = !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { weekday: 'long' }) : 'Wednesday';
+      const formattedDate = Utils.formatDate(data.visit_date) || '18 Nov 2026';
+      const formattedTime = Utils.formatTime(data.visit_time) || '11:30 AM';
 
       // Location formatting
-      let rawLoc = data.location || data.project_location || 'Greater Noida';
+      let rawLoc = data.location || data.project_location || 'Noida';
       let locationText = rawLoc;
-      if (rawLoc.length > 20) {
+      if (rawLoc.includes(',')) {
         const parts = rawLoc.split(',');
         locationText = parts[parts.length - 1].trim();
       }
+      if (!locationText || locationText.length < 2) locationText = 'Noida';
 
-      // Drawing Routine
+      // Helper function to draw letter-spaced text with perfect centered alignment
+      function drawLetterSpaced(text, centerX, y, letterSpacing) {
+        ctx.textAlign = 'left';
+        let totalW = 0;
+        for (let i = 0; i < text.length; i++) {
+          totalW += ctx.measureText(text[i]).width;
+          if (i < text.length - 1) totalW += letterSpacing;
+        }
+        let curX = centerX - totalW / 2;
+        for (let i = 0; i < text.length; i++) {
+          ctx.fillText(text[i], curX, y);
+          curX += ctx.measureText(text[i]).width + letterSpacing;
+        }
+      }
+
+      // Drawing Routine matching Reference Image 2 exactly
       const drawCardContent = (projLogoImg = null, devLogoImg = null, qrImg = null) => {
-        // 1. Top Architectural / Brand Logo Mark (Project or Developer Logo)
-        const topLogo = projLogoImg || devLogoImg;
+        // 1. Top Brand / Developer Logo or Name ("NCR" in reference)
+        const topLogo = devLogoImg || projLogoImg;
 
         if (topLogo) {
           try {
-            const maxW = 160;
-            const maxH = 80;
+            const maxW = 140;
+            const maxH = 65;
             let w = topLogo.naturalWidth || topLogo.width || maxW;
             let h = topLogo.naturalHeight || topLogo.height || maxH;
             const ratio = Math.min(maxW / w, maxH / h);
             const renderW = Math.max(30, w * ratio);
-            const renderH = Math.max(30, h * ratio);
-            const drawX = 540 - renderW / 2;
-            const drawY = 118 - renderH / 2;
+            const renderH = Math.max(25, h * ratio);
+            const drawX = 410 - renderW / 2;
+            const drawY = 135 - renderH / 2;
 
             ctx.save();
             ctx.drawImage(topLogo, drawX, drawY, renderW, renderH);
             ctx.restore();
           } catch (e) {
-            drawFallbackBuildingLogo();
+            drawBrandText();
           }
         } else {
-          drawFallbackBuildingLogo();
+          drawBrandText();
         }
 
-        function drawFallbackBuildingLogo() {
-          const logoX = 540;
-          const logoY = 125;
-          ctx.fillStyle = '#102a45';
-          ctx.beginPath();
-          ctx.moveTo(logoX - 10, logoY - 45);
-          ctx.lineTo(logoX - 42, logoY - 25);
-          ctx.lineTo(logoX - 42, logoY + 30);
-          ctx.lineTo(logoX - 26, logoY + 30);
-          ctx.lineTo(logoX - 26, logoY - 8);
-          ctx.lineTo(logoX - 10, logoY - 20);
-          ctx.closePath();
-          ctx.fill();
-
-          ctx.fillStyle = '#f5ba13';
-          ctx.beginPath();
-          ctx.moveTo(logoX + 2, logoY - 42);
-          ctx.lineTo(logoX + 42, logoY - 18);
-          ctx.lineTo(logoX + 42, logoY + 30);
-          ctx.lineTo(logoX + 26, logoY + 30);
-          ctx.lineTo(logoX + 26, logoY - 4);
-          ctx.lineTo(logoX + 2, logoY - 16);
-          ctx.closePath();
-          ctx.fill();
-
-          ctx.fillStyle = '#102a45';
-          ctx.fillRect(logoX - 4, logoY - 5, 8, 35);
-        }
-
-        // 2. Main Brand Typography: Project Name & Builder
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#102a45';
-        let titleSize = 34;
-        if (projectName.length > 28) titleSize = 25;
-        else if (projectName.length > 20) titleSize = 29;
-        ctx.font = `bold ${titleSize}px "Inter", "Segoe UI", sans-serif`;
-        ctx.fillText(projectName.toUpperCase(), 540, 196);
-
-        ctx.fillStyle = '#1e293b';
-        ctx.font = '700 12.5px "Inter", sans-serif';
-        const subText = developerName ? `BY ${developerName.toUpperCase()} · PROPERTY VISIT INVITATION` : 'PROPERTY VISIT INVITATION';
-        ctx.fillText(subText, 540, 226);
-
-        // 3. Personalized Guest Greeting (Placed on top of invitation lead-in)
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 24px "Inter", sans-serif';
-        ctx.fillText(`Dear ${customerName},`, 540, 292);
-
-        // Lead-in Text with Flanking Yellow Accent Lines (Below Greeting)
-        ctx.fillStyle = '#334155';
-        ctx.font = '600 19px "Inter", sans-serif';
-        ctx.fillText('You are cordially invited for a', 540, 328);
-
-        ctx.strokeStyle = '#f5ba13';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(150, 321);
-        ctx.lineTo(320, 321);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(760, 321);
-        ctx.lineTo(930, 321);
-        ctx.stroke();
-
-        // 4. Hero Title: PROPERTY SITE VISIT
-        // Word: PROPERTY
-        ctx.fillStyle = '#102a45';
-        ctx.font = 'italic 900 76px "Inter", "Arial Black", sans-serif';
-        ctx.fillText('PROPERTY', 540, 415);
-
-        // Word: SITE VISIT inside Slanted Golden Banner
-        const bannerW = 620;
-        const bannerH = 74;
-        const bannerX = (1080 - bannerW) / 2;
-        const bannerY = 448;
-        const skew = 22;
-
-        ctx.fillStyle = '#f5ba13';
-        ctx.beginPath();
-        ctx.moveTo(bannerX + skew, bannerY);
-        ctx.lineTo(bannerX + bannerW, bannerY);
-        ctx.lineTo(bannerX + bannerW - skew, bannerY + bannerH);
-        ctx.lineTo(bannerX, bannerY + bannerH);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#102a45';
-        ctx.font = 'italic 900 56px "Inter", "Arial Black", sans-serif';
-        ctx.fillText('SITE VISIT', 540, bannerY + 56);
-
-        // 5. Schedule & Location 3-Column Grid
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(395, 585);
-        ctx.lineTo(395, 645);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(685, 585);
-        ctx.lineTo(685, 645);
-        ctx.stroke();
-
-        // --- Column 1: Date ---
-        const calX = 95;
-        const calY = 590;
-        ctx.fillStyle = '#f5ba13';
-        ctx.beginPath();
-        ctx.roundRect(calX, calY, 48, 48, 8);
-        ctx.fill();
-
-        ctx.fillStyle = '#d97706';
-        ctx.beginPath();
-        ctx.roundRect(calX, calY, 48, 14, [8, 8, 0, 0]);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(calX + 10, calY - 3, 4, 7);
-        ctx.fillRect(calX + 34, calY - 3, 4, 7);
-
-        ctx.fillStyle = '#ffffff';
-        for (let r = 0; r < 2; r++) {
-          for (let c = 0; c < 3; c++) {
-            ctx.fillRect(calX + 10 + c * 12, calY + 20 + r * 11, 4, 4);
-          }
-        }
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#1e293b';
-        ctx.font = '500 17px "Inter", sans-serif';
-        ctx.fillText(weekday, calX + 62, calY + 18);
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '800 24px "Inter", sans-serif';
-        ctx.fillText(formattedDate, calX + 62, calY + 44);
-
-        // --- Column 2: Time ---
-        const clockX = 445;
-        const clockY = 614;
-        ctx.strokeStyle = '#f5ba13';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(clockX, clockY, 22, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.strokeStyle = '#f5ba13';
-        ctx.lineWidth = 3.5;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(clockX, clockY);
-        ctx.lineTo(clockX, clockY - 12);
-        ctx.moveTo(clockX, clockY);
-        ctx.lineTo(clockX + 9, clockY + 3);
-        ctx.stroke();
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '800 25px "Inter", sans-serif';
-        ctx.fillText(formattedTime, clockX + 35, clockY + 8);
-
-        // --- Column 3: Location ---
-        const pinX = 725;
-        const pinY = 610;
-        ctx.fillStyle = '#f5ba13';
-        ctx.beginPath();
-        ctx.arc(pinX, pinY - 4, 14, Math.PI, 0, false);
-        ctx.lineTo(pinX, pinY + 16);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(pinX, pinY - 4, 5.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '800 23px "Inter", sans-serif';
-        ctx.fillText(locationText, pinX + 28, pinY + 8);
-
-        // 6. Project Residence Card Box
-        const boxX = 85;
-        const boxY = 690;
-        const boxW = 910;
-        const boxH = 135;
-
-        ctx.fillStyle = '#f1f5f9';
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 20);
-        ctx.fill();
-
-        const bldX = boxX + 65;
-        const bldY = boxY + 70;
-
-        const boxLogo = devLogoImg || projLogoImg;
-
-        if (boxLogo) {
-          try {
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(bldX - 42, bldY - 42, 84, 84, 12);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
-            ctx.clip();
-            ctx.drawImage(boxLogo, bldX - 38, bldY - 38, 76, 76);
-            ctx.restore();
-            ctx.strokeStyle = '#cbd5e1';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(bldX - 42, bldY - 42, 84, 84, 12);
-            ctx.stroke();
-          } catch (e) {
-            drawBuildingLines();
-          }
-        } else {
-          drawBuildingLines();
-        }
-
-        function drawBuildingLines() {
-          ctx.strokeStyle = '#d97706';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(bldX - 18, bldY + 28);
-          ctx.lineTo(bldX - 18, bldY - 26);
-          ctx.lineTo(bldX, bldY - 40);
-          ctx.lineTo(bldX + 18, bldY - 26);
-          ctx.lineTo(bldX + 18, bldY + 28);
-          ctx.moveTo(bldX - 32, bldY + 28);
-          ctx.lineTo(bldX - 32, bldY - 8);
-          ctx.lineTo(bldX - 18, bldY - 18);
-          ctx.moveTo(bldX + 18, bldY - 18);
-          ctx.lineTo(bldX + 32, bldY - 8);
-          ctx.lineTo(bldX + 32, bldY + 28);
-          ctx.stroke();
-        }
-
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(boxX + 135, boxY + 25);
-        ctx.lineTo(boxX + 135, boxY + 110);
-        ctx.stroke();
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#64748b';
-        ctx.font = '600 16px "Inter", sans-serif';
-        ctx.fillText('Project', boxX + 165, boxY + 45);
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '800 29px "Inter", sans-serif';
-        ctx.letterSpacing = '-0.5px';
-        ctx.fillText(projectName, boxX + 165, boxY + 80);
-
-        ctx.fillStyle = '#1e293b';
-        ctx.font = '700 14px "Inter", sans-serif';
-        ctx.fillText(`BY ${developerName}`, boxX + 165, boxY + 112);
-
-        // 7. Divider Line with Nodes (o————o)
-        const nodeY = 880;
-        const leftNodeX = 165;
-        const rightNodeX = 915;
-
-        ctx.strokeStyle = '#102a45';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(leftNodeX + 10, nodeY);
-        ctx.lineTo(rightNodeX - 10, nodeY);
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#102a45';
-        ctx.lineWidth = 3.5;
-        ctx.beginPath();
-        ctx.arc(leftNodeX, nodeY, 11, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(rightNodeX, nodeY, 11, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // 8. Advisor Section
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#64748b';
-        ctx.font = '600 18px "Inter", sans-serif';
-        ctx.fillText('Your Property Advisor', 540, 915);
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '900 35px "Inter", sans-serif';
-        ctx.fillText(advisorName, 540, 955);
-
-        // 9. Golden Phone Pill Button
-        const pillW = 390;
-        const pillH = 56;
-        const pillX = (1080 - pillW) / 2;
-        const pillY = 978;
-
-        ctx.fillStyle = '#f5ba13';
-        ctx.beginPath();
-        ctx.roundRect(pillX, pillY, pillW, pillH, 28);
-        ctx.fill();
-
-        // Phone handset icon inside pill
-        const phX = pillX + 44;
-        const phY = pillY + 28;
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(phX, phY - 5, 7, Math.PI * 0.7, Math.PI * 1.8);
-        ctx.arc(phX + 9, phY + 4, 7, Math.PI * 0.2, Math.PI * 1.3);
-        ctx.fill();
-
-        ctx.fillStyle = '#000000';
-        ctx.font = '800 23px "Inter", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(advisorPhone, 550, pillY + 36);
-
-        // 10. Luxury VIP Entry QR Code Box (Replaced raw link bar)
-        if (qrImg) {
-          const qrBoxW = 206;
-          const qrBoxH = 206;
-          const qrBoxX = (1080 - qrBoxW) / 2;
-          const qrBoxY = 1060;
-
-          // Crisp white background card with gentle shadow
+        function drawBrandText() {
           ctx.save();
-          ctx.fillStyle = '#ffffff';
-          ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
-          ctx.shadowBlur = 20;
-          ctx.shadowOffsetY = 6;
-          ctx.beginPath();
-          ctx.roundRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, 18);
-          ctx.fill();
-          ctx.restore();
-
-          // Elegant thin border
-          ctx.strokeStyle = '#e2e8f0';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.roundRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, 18);
-          ctx.stroke();
-
-          // Draw QR Code centered inside card
-          const qrSize = 176;
-          const qrX = 540 - qrSize / 2;
-          const qrY = qrBoxY + (qrBoxH - qrSize) / 2;
-          ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-          // Visit Verification caption below QR
           ctx.textAlign = 'center';
-          ctx.fillStyle = '#102a45';
-          ctx.font = '800 15px Arial, sans-serif';
-          ctx.fillText('SCAN TO VERIFY SITE VISIT', 540, qrBoxY + qrBoxH + 32);
-
-          ctx.fillStyle = '#64748b';
-          ctx.font = '600 12.5px "Inter", sans-serif';
-          const cleanDisplayUrl = shortUrl.replace(/^https?:\/\//, '');
-          ctx.fillText(cleanDisplayUrl, 540, qrBoxY + qrBoxH + 52);
+          ctx.fillStyle = '#dfba73';
+          ctx.font = 'bold 36px "Cinzel", "Playfair Display", Georgia, serif';
+          ctx.shadowColor = 'rgba(223, 186, 115, 0.45)';
+          ctx.shadowBlur = 10;
+          const displayBrand = (developerName || agencyName || 'NCR').slice(0, 16);
+          ctx.fillText(displayBrand, 410, 142);
+          ctx.restore();
         }
+
+        // 2. Main Project Title ("MONARCH" in reference)
+        ctx.save();
+        ctx.textAlign = 'center';
+        let projFontSize = 46;
+        if (projectName.length > 24) projFontSize = 32;
+        else if (projectName.length > 16) projFontSize = 38;
+
+        ctx.font = `700 ${projFontSize}px "Cinzel", "Playfair Display", Georgia, serif`;
+        const goldGrad = ctx.createLinearGradient(230, 210, 590, 255);
+        goldGrad.addColorStop(0, '#e2c079');
+        goldGrad.addColorStop(0.5, '#faebd0');
+        goldGrad.addColorStop(1, '#dfba73');
+        ctx.fillStyle = goldGrad;
+        ctx.shadowColor = 'rgba(223, 186, 115, 0.5)';
+        ctx.shadowBlur = 14;
+        ctx.fillText(projectName.toUpperCase(), 410, 245);
+        ctx.restore();
+
+        // 3. Subtitle ("AN EXCLUSIVE INVITATION" in reference)
+        ctx.save();
+        ctx.fillStyle = '#bfa36f';
+        ctx.font = '600 12.5px "Cinzel", "Inter", sans-serif';
+        drawLetterSpaced('AN EXCLUSIVE INVITATION', 410, 282, 3.5);
+        ctx.restore();
+
+        // 4. Personalized Guest Greeting & Viewing Invitation
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#faebd0';
+        ctx.font = '500 21px "Playfair Display", Georgia, serif';
+        ctx.fillText(`Dear ${customerName},`, 410, 395);
+
+        ctx.fillStyle = '#dfcaa0';
+        ctx.font = '400 18px "Playfair Display", Georgia, serif';
+        ctx.fillText('You are cordially invited to a private viewing of', 410, 432);
+
+        ctx.fillStyle = '#faebd0';
+        ctx.font = '600 22px "Playfair Display", Georgia, serif';
+        const projectHighlight = developerName ? `${developerName} ${projectName}` : projectName;
+        ctx.fillText(projectHighlight, 410, 468);
+        ctx.restore();
+
+        // 5. Date, Time & City Block
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#faebd0';
+        ctx.font = '500 21px "Playfair Display", Georgia, serif';
+        ctx.fillText(`${weekday}, ${formattedDate}`, 410, 565);
+
+        ctx.font = '500 20px "Playfair Display", Georgia, serif';
+        ctx.fillText(`${formattedTime} IST`, 410, 602);
+
+        ctx.font = '500 20px "Playfair Display", Georgia, serif';
+        ctx.fillText(locationText, 410, 638);
+        ctx.restore();
+
+        // 6. Property Advisor Block
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#b8a176';
+        ctx.font = '400 14px "Playfair Display", Georgia, serif';
+        ctx.fillText('Your Property Adviser', 410, 735);
+
+        ctx.fillStyle = '#faebd0';
+        ctx.font = '600 24px "Playfair Display", Georgia, serif';
+        ctx.fillText(advisorName, 410, 770);
+
+        ctx.fillStyle = '#e5ce9f';
+        ctx.font = '500 18px "Playfair Display", Georgia, serif';
+        ctx.fillText(advisorPhone, 410, 804);
+        ctx.restore();
+
+        // 7. Footer ("BY M3M INDIA" in reference)
+        ctx.save();
+        ctx.fillStyle = '#9e875e';
+        ctx.font = '600 12px "Cinzel", "Inter", sans-serif';
+        const footerText = `BY ${developerName || agencyName || 'M3M INDIA'}`.toUpperCase();
+        drawLetterSpaced(footerText, 410, 905, 3.0);
+        ctx.restore();
 
         // Return final output
         const dataUrl = canvas.toDataURL('image/png', 1.0);
@@ -802,7 +549,7 @@ const Utils = {
         qrSource = `/api/qr?text=${encodeURIComponent(qrPayload)}`;
       }
 
-      // Load background template image (Reference Image 1) & Project/Developer Logos & QR Code
+      // Load background template image (Reference Image 1: Luxury Dark Royal Blue with Gold Accents)
       const bgImg = new Image();
       bgImg.crossOrigin = 'anonymous';
       bgImg.onload = async () => {
@@ -818,9 +565,22 @@ const Utils = {
           drawCardContent(null, null, null);
         }
       };
+
       bgImg.onerror = async () => {
-        ctx.fillStyle = '#ffffff';
+        // High-end CSS fallback rendering the exact luxury royal blue and gold frame if image fails
+        ctx.fillStyle = '#081224';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Elegant gold rectangular frame
+        ctx.strokeStyle = '#c5a059';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(55, 55, canvas.width - 110, canvas.height - 110);
+
+        // Subtle inner golden border
+        ctx.strokeStyle = 'rgba(197, 160, 89, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(62, 62, canvas.width - 124, canvas.height - 124);
+
         try {
           const [pLogo, dLogo, qr] = await Promise.all([
             loadImg(data.project_logo),
@@ -832,7 +592,8 @@ const Utils = {
           drawCardContent(null, null, null);
         }
       };
-      bgImg.src = '/images/card-template.jpg';
+
+      bgImg.src = '/images/luxury-card-bg.jpg';
     });
   },
 

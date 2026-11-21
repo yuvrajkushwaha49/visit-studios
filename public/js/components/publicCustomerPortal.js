@@ -62,6 +62,18 @@ App.renderPublicInvitation = async function(token) {
     publicContainer.innerHTML = `
       <div class="public-customer-shell">
         <div class="public-customer-wrap">
+          <!-- Luxury VIP Invitation Pass Card (Image 1 Background + Image 2 Content) -->
+          <div style="margin-bottom: 24px; text-align: center;">
+            <div style="max-width: 440px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.35); border: 2px solid #dfba73; background:#081224;">
+              <img id="luxuryCardImg" src="/cards/${inv.id}.png" alt="VIP Pass" style="width: 100%; height: auto; display: block;" onerror="App.renderDynamicLuxuryCardFallback(this, '${token}')">
+            </div>
+            <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
+              <button class="btn soft small" onclick="App.downloadLuxuryPass('${inv.id}', '${Utils.escapeHTML(inv.customer_name)}')" style="font-size:12px; padding:6px 14px; border-color:#dfba73; color:#dfba73; background:rgba(223,186,115,0.08); font-weight:600;">
+                📥 Download Luxury Pass (HD)
+              </button>
+            </div>
+          </div>
+
           <!-- Digital Invitation Card -->
           <article class="invitation-card" style="box-shadow: 0 16px 50px rgba(31, 27, 59, 0.12);">
             <div class="inv-inner">
@@ -360,6 +372,53 @@ App.downloadPublicICS = function(id, title, location, dateStr, timeStr, duration
     timeStr,
     durationMinutes: duration
   });
+};
+
+App.renderDynamicLuxuryCardFallback = async function(imgElem, token) {
+  try {
+    const res = await API.get(`/invitations/public/${token}`);
+    const inv = res.invitation;
+    if (!inv) return;
+
+    const cardData = {
+      agency_name: inv.agency_name || 'NCR',
+      customer_name: inv.customer_name || 'Valued Client',
+      project_name: inv.project_name || 'MONARCH',
+      developer_name: inv.developer_name || 'M3M INDIA',
+      project_logo: inv.project_logo,
+      developer_logo: inv.developer_logo,
+      visit_date: inv.visit_date,
+      visit_time: inv.visit_time,
+      location: inv.project_location || inv.location || 'Noida',
+      advisor_name: inv.advisor_name || 'Karan Verma',
+      advisor_phone: inv.advisor_phone || '+91 98111 22334',
+      shortUrl: `${window.location.origin}/i/${inv.short_code || inv.id?.replace('inv-', '') || ''}`,
+      short_code: inv.short_code,
+      qr_code_data: inv.qr_code_data
+    };
+
+    const card = await Utils.generateInvitationCard(cardData);
+    if (imgElem && card?.dataUrl) {
+      imgElem.src = card.dataUrl;
+      imgElem.removeAttribute('onerror');
+      if (inv.id) {
+        API.post(`/invitations/${inv.id}/card-image`, { image_base64: card.dataUrl }).catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.warn('Luxury card fallback error:', e);
+  }
+};
+
+App.downloadLuxuryPass = function(id, custName) {
+  const img = document.getElementById('luxuryCardImg');
+  if (img && img.src && !img.src.endsWith('.png')) {
+    Utils.downloadDataUrl(img.src, `VIP_Invitation_Pass_${(custName || 'Guest').replace(/\s+/g, '_')}.png`);
+  } else if (img && img.src) {
+    Utils.downloadDataUrl(img.src, `VIP_Invitation_Pass_${(custName || 'Guest').replace(/\s+/g, '_')}.png`);
+  } else {
+    window.open(`/cards/${id}.png`, '_blank');
+  }
 };
 
 // Public Feedback Submission (#feedback=<visitId>)
