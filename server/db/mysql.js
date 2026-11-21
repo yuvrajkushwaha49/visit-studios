@@ -4,8 +4,12 @@ let pool = null;
 
 function getPool() {
   if (!pool) {
+    let cleanHost = (process.env.MYSQL_HOST || 'localhost').trim();
+    // Auto-strip accidental http://, https:// or trailing slashes
+    cleanHost = cleanHost.replace(/^https?:\/\//i, '').replace(/\/+.*$/, '');
+
     pool = mysql.createPool({
-      host: process.env.MYSQL_HOST || 'localhost',
+      host: cleanHost,
       port: parseInt(process.env.MYSQL_PORT) || 3306,
       user: process.env.MYSQL_USER || 'root',
       password: process.env.MYSQL_PASSWORD || '',
@@ -104,10 +108,63 @@ async function syncAllFromSQLite(sqliteDb) {
   }
 }
 
+async function syncFromMySQLToSQLite(sqliteDb) {
+  try {
+    const p = getPool();
+    const tables = [
+      'organizations',
+      'organization_settings',
+      'users',
+      'developers',
+      'projects',
+      'project_configurations',
+      'customers',
+      'customer_interactions',
+      'invitations',
+      'site_visits',
+      'followups',
+      'feedback',
+      'whatsapp_templates',
+      'whatsapp_logs'
+    ];
+
+    console.log('🔄 Checking MySQL for remote data sync...');
+    let totalImported = 0;
+    for (const table of tables) {
+      try {
+        const [rows] = await p.query('SELECT * FROM `' + table + '`');
+        if (!rows || rows.length === 0) continue;
+
+        console.log(`📥 Syncing ${rows.length} rows from MySQL table: ${table}`);
+        const cols = Object.keys(rows[0]);
+        const placeholders = cols.map(() => '?').join(', ');
+        const insertSQL = `INSERT OR REPLACE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
+
+        for (const row of rows) {
+          const vals = cols.map(c => {
+            const v = row[c];
+            if (v instanceof Date) return v.toISOString().slice(0, 19).replace('T', ' ');
+            return v === undefined ? null : v;
+          });
+          sqliteDb.prepare(insertSQL).run(...vals);
+          totalImported++;
+        }
+      } catch (err) {
+        // Table may not exist yet in MySQL
+        continue;
+      }
+    }
+    console.log(`✅ Remote MySQL data sync complete (${totalImported} records processed)!`);
+  } catch (err) {
+    console.error('MySQL to SQLite sync error:', err.message);
+  }
+}
+
 module.exports = {
   getPool,
   executeMySQL,
   testConnection,
   convertToMySQL,
-  syncAllFromSQLite
+  syncAllFromSQLite,
+  syncFromMySQLToSQLite
 };

@@ -23,7 +23,7 @@ db.exec('PRAGMA mmap_size = 268435456;');
 // Initialize tables
 db.exec(schemaSQL);
 
-const { executeMySQL, syncAllFromSQLite, testConnection } = require('./mysql');
+const { executeMySQL, syncAllFromSQLite, syncFromMySQLToSQLite, testConnection } = require('./mysql');
 
 // Database helper functions with parameter normalization & real-time MySQL synchronization
 const query = {
@@ -50,10 +50,10 @@ const query = {
   raw: db
 };
 
-// Initialize MySQL connection and sync on boot
-testConnection().then(connected => {
+// Initialize MySQL connection and auto-sync remote data into local database on boot
+testConnection().then(async connected => {
   if (connected) {
-    syncAllFromSQLite(db);
+    await syncFromMySQLToSQLite(db);
   }
 }).catch(err => {
   console.log('MySQL auto-sync deferred:', err.message);
