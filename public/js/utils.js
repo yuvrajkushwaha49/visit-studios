@@ -650,45 +650,19 @@ const Utils = {
         }
       }
 
-      // Drawing Routine matching Reference Images 1-12
-      const drawCardContent = (projLogoImg = null, devLogoImg = null) => {
-        // 1. Top Brand / Developer Header (matching reference e.g. "SMART WORLD", "NCR", "GULSHAN", "M3M", "SAYA", "GREAT VALUE")
-        const topLogo = devLogoImg || projLogoImg;
-
-        if (topLogo) {
-          try {
-            const maxW = 140;
-            const maxH = 60;
-            let w = topLogo.naturalWidth || topLogo.width || maxW;
-            let h = topLogo.naturalHeight || topLogo.height || maxH;
-            const ratio = Math.min(maxW / w, maxH / h);
-            const renderW = Math.max(30, w * ratio);
-            const renderH = Math.max(25, h * ratio);
-            const drawX = 410 - renderW / 2;
-            const drawY = 135 - renderH / 2;
-
-            ctx.save();
-            ctx.drawImage(topLogo, drawX, drawY, renderW, renderH);
-            ctx.restore();
-          } catch (e) {
-            drawBrandText();
-          }
-        } else {
-          drawBrandText();
+      // Drawing Routine matching Reference Images 1-12 (Pure luxury typography without image logos)
+      const drawCardContent = () => {
+        // 1. Top Brand / Developer Header (matching reference e.g. "SMART WORLD", "NCR", "GULSHAN", "M3M", "SAYA", "GREAT VALUE", "GODREJ")
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = theme.brandColor;
+        ctx.font = 'bold 36px "Cinzel", "Playfair Display", Georgia, serif';
+        if (theme.isDark) {
+          ctx.shadowColor = theme.shadowColor;
+          ctx.shadowBlur = 10;
         }
-
-        function drawBrandText() {
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.fillStyle = theme.brandColor;
-          ctx.font = 'bold 36px "Cinzel", "Playfair Display", Georgia, serif';
-          if (theme.isDark) {
-            ctx.shadowColor = theme.shadowColor;
-            ctx.shadowBlur = 10;
-          }
-          ctx.fillText(brandText.slice(0, 16), 410, 142);
-          ctx.restore();
-        }
+        ctx.fillText(brandText.slice(0, 18), 410, 142);
+        ctx.restore();
 
         // 2. Main Project Title (e.g. "ELIE SAAB", "MONARCH", "HUMMINGBIRD", "TRUMP", "EKANAM", "RAJNAGAR")
         ctx.save();
@@ -751,7 +725,8 @@ const Utils = {
 
         ctx.fillStyle = theme.timeColor;
         ctx.font = '500 20px "Playfair Display", Georgia, serif';
-        ctx.fillText(`${formattedTime} IST`, 410, 602);
+        const cleanTime = (formattedTime || '11:30 AM').replace(/\s*IST\s*$/i, '').trim();
+        ctx.fillText(`${cleanTime} IST`, 410, 602);
 
         ctx.fillStyle = theme.locationColor;
         ctx.font = '500 20px "Playfair Display", Georgia, serif';
@@ -789,35 +764,15 @@ const Utils = {
         }, 'image/png');
       };
 
-      // Helper function to safely load image with crossOrigin
-      const loadImg = (src) => {
-        if (!src) return Promise.resolve(null);
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => resolve(img);
-          img.onerror = () => resolve(null);
-          img.src = src;
-        });
-      };
-
       // Load matching project background template image (1 of 6 blank luxury backgrounds)
       const bgImg = new Image();
       bgImg.crossOrigin = 'anonymous';
-      bgImg.onload = async () => {
+      bgImg.onload = () => {
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-        try {
-          const [pLogo, dLogo] = await Promise.all([
-            loadImg(data.project_logo),
-            loadImg(data.developer_logo)
-          ]);
-          drawCardContent(pLogo, dLogo);
-        } catch (err) {
-          drawCardContent(null, null);
-        }
+        drawCardContent();
       };
 
-      bgImg.onerror = async () => {
+      bgImg.onerror = () => {
         // High-end CSS fallback rendering corresponding luxury frame if image file is missing
         ctx.fillStyle = theme.isDark ? (theme.cardBorderCss || '#0b162c') : '#f8f4ec';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -832,15 +787,7 @@ const Utils = {
         ctx.lineWidth = 1;
         ctx.strokeRect(62, 62, canvas.width - 124, canvas.height - 124);
 
-        try {
-          const [pLogo, dLogo] = await Promise.all([
-            loadImg(data.project_logo),
-            loadImg(data.developer_logo)
-          ]);
-          drawCardContent(pLogo, dLogo);
-        } catch (err) {
-          drawCardContent(null, null);
-        }
+        drawCardContent();
       };
 
       bgImg.src = theme.bgImage;
