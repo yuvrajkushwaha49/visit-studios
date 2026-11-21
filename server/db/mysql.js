@@ -31,8 +31,67 @@ function getPool() {
 function convertToMySQL(sql) {
   let mySql = sql
     .replace(/INSERT\s+OR\s+REPLACE\s+INTO/gi, 'REPLACE INTO')
-    .replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT IGNORE INTO');
+    .replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT IGNORE INTO')
+    .replace(/datetime\('now',\s*'\+1\s*hour'\)/gi, 'DATE_ADD(NOW(), INTERVAL 1 HOUR)')
+    .replace(/datetime\('now'\)/gi, 'NOW()');
+
+  // Handle password_resets DDL compatibility with MySQL
+  if (/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+password_resets/i.test(mySql)) {
+    return `
+      CREATE TABLE IF NOT EXISTS \`password_resets\` (
+        \`id\` VARCHAR(255) PRIMARY KEY,
+        \`user_id\` VARCHAR(255) NOT NULL,
+        \`token\` VARCHAR(255) UNIQUE NOT NULL,
+        \`temp_password\` TEXT,
+        \`expires_at\` DATETIME NOT NULL,
+        \`is_used\` INT DEFAULT 0,
+        \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+  }
+
   return mySql;
+}
+
+// Automatically ensure MySQL tables have required columns (e.g. short_code, theme)
+async function ensureMySQLSchema() {
+  try {
+    const p = getPool();
+    // 1. Check & add short_code to invitations if missing
+    try {
+      const [cols] = await p.query("SHOW COLUMNS FROM `invitations` LIKE 'short_code'");
+      if (!cols || cols.length === 0) {
+        await p.query("ALTER TABLE `invitations` ADD COLUMN `short_code` VARCHAR(64) NULL AFTER `token`");
+        console.log('✓ Added missing `short_code` column to MySQL `invitations` table');
+      }
+    } catch (_) {}
+
+    // 2. Check & add theme to invitations if missing
+    try {
+      const [cols] = await p.query("SHOW COLUMNS FROM `invitations` LIKE 'theme'");
+      if (!cols || cols.length === 0) {
+        await p.query("ALTER TABLE `invitations` ADD COLUMN `theme` VARCHAR(64) NULL AFTER `qr_code_data`");
+        console.log('✓ Added missing `theme` column to MySQL `invitations` table');
+      }
+    } catch (_) {}
+
+    // 3. Ensure password_resets table exists
+    try {
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS \`password_resets\` (
+          \`id\` VARCHAR(255) PRIMARY KEY,
+          \`user_id\` VARCHAR(255) NOT NULL,
+          \`token\` VARCHAR(255) UNIQUE NOT NULL,
+          \`temp_password\` TEXT,
+          \`expires_at\` DATETIME NOT NULL,
+          \`is_used\` INT DEFAULT 0,
+          \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+    } catch (_) {}
+  } catch (err) {
+    console.warn('ensureMySQLSchema notice:', err.message);
+  }
 }
 
 async function executeMySQL(sql, params = []) {
@@ -51,6 +110,7 @@ async function testConnection() {
     const p = getPool();
     const [rows] = await p.query('SELECT 1 + 1 as test');
     console.log('✓ MySQL Database Connected Successfully to ' + (process.env.MYSQL_DATABASE || 'visit_studio_db'));
+    await ensureMySQLSchema();
     return true;
   } catch (err) {
     console.error('MySQL connection failed:', err.message);
