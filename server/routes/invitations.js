@@ -387,19 +387,39 @@ router.post('/', async (req, res) => {
     const checkInPayload = JSON.stringify({ token, invitation_id: invId, customer_id: targetCustomerId, visit_date, short_code: shortCode, short_url: shortUrl });
     const qrCodeData = await generateQRCodeDataURL(checkInPayload);
 
-    // Insert invitation
-    db.run(
-      `INSERT INTO invitations (
-        id, organization_id, token, short_code, customer_id, project_id, developer_id, associate_id, sales_head_id,
-        visit_date, visit_time, duration, location, maps_url, size, price, notes, qr_code_data, theme, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`,
-      [
-        invId, orgId, token, shortCode, targetCustomerId, project_id, developer_id || proj.developer_id,
-        user.id, user.sales_head_id || null, visit_date, visit_time, duration || 60,
-        visitLocation, mapsLink, size || proj.super_built_up_area || '', price || proj.starting_price || '',
-        notes || '', qrCodeData, theme || null
-      ]
-    );
+    // Insert invitation (with self-healing auto-migration if theme column is missing on older databases)
+    try {
+      db.run(
+        `INSERT INTO invitations (
+          id, organization_id, token, short_code, customer_id, project_id, developer_id, associate_id, sales_head_id,
+          visit_date, visit_time, duration, location, maps_url, size, price, notes, qr_code_data, theme, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`,
+        [
+          invId, orgId, token, shortCode, targetCustomerId, project_id, developer_id || proj.developer_id,
+          user.id, user.sales_head_id || null, visit_date, visit_time, duration || 60,
+          visitLocation, mapsLink, size || proj.super_built_up_area || '', price || proj.starting_price || '',
+          notes || '', qrCodeData, theme || null
+        ]
+      );
+    } catch (insertErr) {
+      if (insertErr.message && insertErr.message.includes('has no column named theme')) {
+        try { db.exec('ALTER TABLE invitations ADD COLUMN theme TEXT;'); } catch (_) {}
+        db.run(
+          `INSERT INTO invitations (
+            id, organization_id, token, short_code, customer_id, project_id, developer_id, associate_id, sales_head_id,
+            visit_date, visit_time, duration, location, maps_url, size, price, notes, qr_code_data, theme, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent')`,
+          [
+            invId, orgId, token, shortCode, targetCustomerId, project_id, developer_id || proj.developer_id,
+            user.id, user.sales_head_id || null, visit_date, visit_time, duration || 60,
+            visitLocation, mapsLink, size || proj.super_built_up_area || '', price || proj.starting_price || '',
+            notes || '', qrCodeData, theme || null
+          ]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
 
     // Create synchronized site_visit entry
     const visitId = 'vis-' + crypto.randomUUID().slice(0, 8);

@@ -23,6 +23,13 @@ db.exec('PRAGMA mmap_size = 268435456;');
 // Initialize tables
 db.exec(schemaSQL);
 
+// Automatic non-destructive schema migrations for existing databases
+try {
+  db.exec('ALTER TABLE invitations ADD COLUMN theme TEXT;');
+} catch (e) {
+  // Column already exists or already migrated
+}
+
 const { executeMySQL, syncAllFromSQLite, syncFromMySQLToSQLite, testConnection } = require('./mysql');
 
 // Database helper functions with parameter normalization & real-time MySQL synchronization
