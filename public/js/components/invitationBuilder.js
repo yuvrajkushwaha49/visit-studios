@@ -420,12 +420,6 @@ App._renderLivePreviewImmediate = function () {
       : `${sizeVal} ${sizeUnit}`;
   }
 
-  const rawPrice = document.getElementById('invitePrice')?.value.trim();
-  let price = 'Price as discussed';
-  if (rawPrice) {
-    let clean = rawPrice.replace(/^[₹\s]+/, '').replace(/[\s]*(cr|crore|crores)?$/i, '').trim();
-    price = clean ? `₹${clean} Cr` : rawPrice;
-  }
   const location = document.getElementById('inviteLocation')?.value.trim() || 'Project Experience Centre';
   const dateVal = document.getElementById('inviteDate')?.value || '';
   const timeVal = document.getElementById('inviteTime')?.value || '';
@@ -476,14 +470,10 @@ App._renderLivePreviewImmediate = function () {
               </div>
             </div>
           </div>
-          <div class="inv-prop-specs">
+          <div class="inv-prop-specs inv-prop-specs-single">
             <div>
               <span>Super built-up area</span>
               <b>${Utils.escapeHTML(size)}</b>
-            </div>
-            <div>
-              <span>Discussed price</span>
-              <b>${Utils.escapeHTML(price)}</b>
             </div>
           </div>
         </div>

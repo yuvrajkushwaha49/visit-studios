@@ -391,6 +391,8 @@ function invitationDetailRow(inv) {
     Developer: inv.developer_name || '',
     'Visit Date': String(inv.visit_date || '').slice(0, 10),
     'Visit Time': formatVisitTime12(inv.visit_time),
+    'Created Date': String(inv.created_at || '').slice(0, 10),
+    'Created Time': formatVisitTime12(String(inv.created_at || '').slice(11, 16)),
     'Sent By': inv.associate_name || '',
     Role: invitationRoleLabel(inv.associate_role),
     Status: invitationStatusLabel(inv.status)
@@ -551,7 +553,7 @@ async function generateInvitationExcel(invitations, meta = {}) {
   const reportNow = new Date();
   const reportLabel = `Report For (${String(reportNow.getDate()).padStart(2, '0')}-${String(reportNow.getMonth() + 1).padStart(2, '0')}-${reportNow.getFullYear()}) Today`;
   const countHeaders = ['Member', 'Team', 'Role', 'Invitations Sent', 'Draft', 'Sent', 'Opened', 'Confirmed', 'Reschedule Requested', 'Cancelled', 'Expired'];
-  const listHeaders = ['Customer', 'Phone', 'Project', 'Developer', 'Visit Date', 'Visit Time', 'Sent By', 'Role', 'Status'];
+  const listHeaders = ['Customer', 'Phone', 'Project', 'Developer', 'Visit Date', 'Visit Time', 'Created Date', 'Created Time', 'Sent By', 'Role', 'Status'];
 
   [...teams.entries()]
     .filter(([, team]) => team.name !== 'Unassigned')

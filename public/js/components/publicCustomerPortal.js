@@ -40,8 +40,9 @@ App.renderPublicInvitation = async function(token) {
 
     document.title = `${inv.project_name} — Your Personal Site Visit Invitation`;
 
-    const dateBadge = Utils.getDateBadge(inv.visit_date);
-    const formattedDate = Utils.formatDate(inv.visit_date);
+    const visitDate = Utils.toDateOnly(inv.visit_date) || inv.visit_date;
+    const dateBadge = Utils.getDateBadge(visitDate);
+    const formattedDate = Utils.formatDate(visitDate);
     const formattedTime = Utils.formatTime(inv.visit_time);
     const mapUrl = inv.project_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(inv.project_location + ' ' + inv.project_name)}`;
 
@@ -54,7 +55,7 @@ App.renderPublicInvitation = async function(token) {
       title: `Site Visit · ${inv.project_name}`,
       description: `Site visit for ${inv.customer_name}.\nLocation: ${inv.project_location}\nHost Advisor: ${inv.advisor_name} (${inv.advisor_phone})\nNotes: ${inv.notes || ''}`,
       location: inv.project_location,
-      dateStr: inv.visit_date,
+      dateStr: visitDate,
       timeStr: inv.visit_time,
       durationMinutes: inv.duration || 60
     });
@@ -116,14 +117,10 @@ App.renderPublicInvitation = async function(token) {
                     </div>
                   </div>
                 </div>
-                <div class="inv-prop-specs">
+                <div class="inv-prop-specs inv-prop-specs-single">
                   <div>
                     <span>Super built-up area</span>
                     <b>${Utils.escapeHTML(inv.apartment_size || 'Apartment size')}</b>
-                  </div>
-                  <div>
-                    <span>Discussed price</span>
-                    <b>${Utils.escapeHTML(inv.discussed_price || 'Price on request')}</b>
                   </div>
                 </div>
               </div>
@@ -216,7 +213,7 @@ App.renderPublicInvitation = async function(token) {
                 📅 Add to Google Calendar ↗
               </a>
 
-              <button class="btn" onclick="App.downloadPublicICS('${inv.id}', '${inv.project_name}', '${inv.project_location}', '${inv.visit_date}', '${inv.visit_time}', ${inv.duration || 60})">
+              <button class="btn" onclick="App.downloadPublicICS('${inv.id}', '${inv.project_name}', '${inv.project_location}', '${visitDate}', '${inv.visit_time}', ${inv.duration || 60})">
                 📥 Download Calendar (.ics)
               </button>
 

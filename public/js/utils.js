@@ -30,18 +30,43 @@ const Utils = {
     };
   },
 
+  // Handles YYYY-MM-DD, MySQL "YYYY-MM-DD HH:mm:ss", and ISO strings
+  parseVisitDate(dateStr) {
+    if (!dateStr) return null;
+    const raw = String(dateStr).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const dt = new Date(`${raw}T12:00:00+05:30`);
+      return isNaN(dt) ? null : dt;
+    }
+    const mysql = raw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?/);
+    if (mysql) {
+      const secs = mysql[3] || '00';
+      const dt = new Date(`${mysql[1]}T${mysql[2]}:${secs}+05:30`);
+      return isNaN(dt) ? null : dt;
+    }
+    const dt = new Date(raw);
+    return isNaN(dt) ? null : dt;
+  },
+
+  toDateOnly(dateStr) {
+    if (!dateStr) return '';
+    const raw = String(dateStr).trim();
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : raw.slice(0, 10);
+  },
+
   formatDate(dateStr) {
     if (!dateStr) return '—';
     try {
-      const dt = new Date(dateStr + (dateStr.includes('T') ? '' : 'T12:00:00+05:30'));
-      if (isNaN(dt)) return dateStr;
+      const dt = this.parseVisitDate(dateStr);
+      if (!dt) return String(dateStr);
       return dt.toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
         year: 'numeric'
       });
     } catch {
-      return dateStr;
+      return String(dateStr);
     }
   },
 
@@ -55,6 +80,14 @@ const Utils = {
         const formattedHour = hour % 12 || 12;
         return `${formattedHour}:${m} ${ampm} IST`;
       }
+      // MySQL / ISO datetime → extract time
+      const match = String(timeStr).match(/(\d{2}):(\d{2})(?::\d{2})?/);
+      if (match) {
+        const hour = Number(match[1]);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const formattedHour = hour % 12 || 12;
+        return `${formattedHour}:${match[2]} ${ampm} IST`;
+      }
       return timeStr;
     } catch {
       return timeStr;
@@ -64,8 +97,8 @@ const Utils = {
   getDateBadge(dateStr) {
     if (!dateStr) return { month: 'DATE', day: '—' };
     try {
-      const dt = new Date(dateStr + (dateStr.includes('T') ? '' : 'T12:00:00+05:30'));
-      if (isNaN(dt)) return { month: 'DATE', day: '—' };
+      const dt = this.parseVisitDate(dateStr);
+      if (!dt) return { month: 'DATE', day: '—' };
       const month = dt.toLocaleDateString('en-IN', { month: 'short' }).toUpperCase();
       const day = dt.toLocaleDateString('en-IN', { day: '2-digit' });
       return { month, day };
@@ -76,7 +109,14 @@ const Utils = {
 
   generateGoogleCalendarUrl({ title, description, location, dateStr, timeStr, durationMinutes = 60 }) {
     try {
-      const start = new Date(`${dateStr}T${timeStr}:00+05:30`);
+      const dateOnly = this.toDateOnly(dateStr) || String(dateStr || '').slice(0, 10);
+      let timeOnly = String(timeStr || '11:00').trim();
+      if (/^\d{2}:\d{2}:\d{2}$/.test(timeOnly)) timeOnly = timeOnly.slice(0, 5);
+      if (!/^\d{2}:\d{2}$/.test(timeOnly)) {
+        const m = timeOnly.match(/(\d{2}):(\d{2})/);
+        timeOnly = m ? `${m[1]}:${m[2]}` : '11:00';
+      }
+      const start = new Date(`${dateOnly}T${timeOnly}:00+05:30`);
       const end = new Date(start.getTime() + durationMinutes * 60000);
       const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
@@ -611,10 +651,11 @@ const Utils = {
       const advisorName = data.advisor_name || 'Karan Verma';
       const advisorPhone = data.advisor_phone || '+91 98111 22334';
 
-      // Parse Date components
-      const d = data.visit_date ? new Date(data.visit_date + 'T00:00:00') : new Date();
+      // Parse Date components (supports MySQL datetime and YYYY-MM-DD)
+      const dateOnly = Utils.toDateOnly(data.visit_date) || data.visit_date;
+      const d = Utils.parseVisitDate(dateOnly) || new Date();
       const weekday = !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { weekday: 'long' }) : 'Wednesday';
-      const formattedDate = Utils.formatDate(data.visit_date) || '18 Nov 2026';
+      const formattedDate = Utils.formatDate(dateOnly) || '18 Nov 2026';
       const formattedTime = Utils.formatTime(data.visit_time) || '11:30 AM';
 
       // Location formatting (clean city or venue name)

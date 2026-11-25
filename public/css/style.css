@@ -1051,6 +1051,10 @@ textarea {
   gap: 12px;
 }
 
+.inv-prop-specs-single {
+  grid-template-columns: 1fr;
+}
+
 .inv-prop-specs span {
   display: block;
   font-size: 9.5px;

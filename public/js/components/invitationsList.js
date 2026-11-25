@@ -89,6 +89,7 @@ App.renderInvitationsList = async function(container) {
                 <th>Customer</th>
                 <th>Residence</th>
                 <th>Schedule</th>
+                <th>Created</th>
                 <th>Advisor</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -108,6 +109,10 @@ App.renderInvitationsList = async function(container) {
                   <td>
                     <strong>${Utils.formatDate(inv.visit_date)}</strong>
                     <small>${Utils.formatTime(inv.visit_time)}</small>
+                  </td>
+                  <td>
+                    <strong>${Utils.formatDate(inv.created_at)}</strong>
+                    <small>${Utils.formatTime(inv.created_at)}</small>
                   </td>
                   <td>${Utils.escapeHTML(inv.associate_name)}</td>
                   <td>
@@ -141,7 +146,7 @@ App.renderInvitationsList = async function(container) {
                 </tr>
               `).join('') : `
                 <tr>
-                  <td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">
+                  <td colspan="7" style="text-align:center; padding:40px; color:var(--muted);">
                     No invitations found. Click "New Invitation" to create one.
                   </td>
                 </tr>
@@ -349,6 +354,7 @@ App.renderDigitalInvitations = async function(container) {
                 <th>Customer</th>
                 <th>Residence</th>
                 <th>Schedule</th>
+                <th>Created</th>
                 <th>Advisor</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -440,6 +446,10 @@ App.invitationRowHtml = function(inv) {
         <small>${Utils.formatTime(inv.visit_time)}</small>
       </td>
       <td>
+        <strong>${Utils.formatDate(inv.created_at)}</strong>
+        <small>${Utils.formatTime(inv.created_at)}</small>
+      </td>
+      <td>
         ${Utils.escapeHTML(inv.associate_name || '—')}
         ${inv.team_name && inv.associate_role !== 'sales_head' ? `<small>${Utils.escapeHTML(inv.team_name)}</small>` : ''}
       </td>
@@ -486,7 +496,7 @@ App.renderInvitationRows = function(list, filtered, options = {}) {
   const pageData = this.paginateList(list || [], 'invitations_report', options);
   tbody.innerHTML = pageData.total
     ? pageData.items.map(inv => this.invitationRowHtml(inv)).join('')
-    : `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">${filtered ? 'No invitations match these filters.' : 'No invitations found. Click "New Invitation" to create one.'}</td></tr>`;
+    : `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--muted);">${filtered ? 'No invitations match these filters.' : 'No invitations found. Click "New Invitation" to create one.'}</td></tr>`;
   const count = document.getElementById('invFilterCount');
   if (count) {
     count.textContent = pageData.total

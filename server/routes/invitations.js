@@ -92,8 +92,9 @@ router.get('/public/:token', async (req, res) => {
         project_amenities: inv.project_amenities,
         project_description: inv.project_description,
         apartment_size: inv.size,
-        discussed_price: inv.price,
-        visit_date: inv.visit_date,
+        // Price is not shown on the public invitation link
+        discussed_price: null,
+        visit_date: inv.visit_date ? String(inv.visit_date).slice(0, 10) : inv.visit_date,
         visit_time: inv.visit_time,
         duration: inv.duration,
         notes: inv.notes,
