@@ -705,6 +705,10 @@ const App = {
         </button>
 
         <div class="nav-section">MANAGEMENT</div>
+        <button class="nav-item ${this.activePage === 'digital_invitations' ? 'active' : ''}" onclick="App.navigate('digital_invitations')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v14H4zM7 3v6m10-6v6M4 11h16"/></svg>
+          <span>Invitations Report</span>
+        </button>
         <button class="nav-item ${this.activePage === 'team' ? 'active' : ''}" onclick="App.navigate('team')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
           <span>Sales Team</span>
@@ -716,10 +720,6 @@ const App = {
         <button class="nav-item ${this.activePage === 'whatsapp' ? 'active' : ''}" onclick="App.navigate('whatsapp')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
           <span>WhatsApp Automation</span>
-        </button>
-        <button class="nav-item ${this.activePage === 'reports' ? 'active' : ''}" onclick="App.navigate('reports')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-          <span>Reports & Analytics</span>
         </button>
         <button class="nav-item ${this.activePage === 'settings' ? 'active' : ''}" onclick="App.navigate('settings')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -808,6 +808,18 @@ const App = {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const btn = document.querySelector(`.nav-item[onclick*="${pageId}"]`);
     if (btn) btn.classList.add('active');
+    if (pageId === 'team_member') {
+      document.querySelectorAll('.nav-item').forEach(el => {
+        const action = el.getAttribute('onclick') || '';
+        if (action.includes("navigate('team')") && !action.includes('team_member')) el.classList.add('active');
+      });
+    }
+    if (pageId === 'customer_detail') {
+      document.querySelectorAll('.nav-item').forEach(el => {
+        const action = el.getAttribute('onclick') || '';
+        if (action.includes("navigate('customers')") && !action.includes('customer_detail')) el.classList.add('active');
+      });
+    }
 
     // Update active mobile bottom nav item
     document.querySelectorAll('.mob-nav-btn').forEach(el => el.classList.remove('active'));
@@ -819,6 +831,12 @@ const App = {
     if (crumb) {
       if (pageId === 'team') {
         crumb.textContent = 'Sales Team';
+      } else if (pageId === 'digital_invitations') {
+        crumb.textContent = 'Invitations Report';
+      } else if (pageId === 'team_member') {
+        crumb.textContent = 'Team Member';
+      } else if (pageId === 'customer_detail') {
+        crumb.textContent = 'Customer';
       } else {
         crumb.textContent = pageId.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
       }
@@ -838,14 +856,20 @@ const App = {
         return this.renderInvitationBuilder(container);
       case 'invitations':
         return this.renderInvitationsList(container);
+      case 'digital_invitations':
+        return this.renderDigitalInvitations(container);
       case 'visits':
         return this.renderVisitsList(container);
       case 'customers':
         return this.renderCustomersList(container);
+      case 'customer_detail':
+        return this.renderCustomerDetail(container);
       case 'followups':
         return this.renderFollowupsList(container);
       case 'team':
         return this.renderTeamManagement(container);
+      case 'team_member':
+        return this.renderTeamMemberDetail(container);
       case 'projects':
         return this.renderProjectsManagement(container);
       case 'whatsapp':

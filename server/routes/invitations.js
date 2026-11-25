@@ -5,6 +5,7 @@ const db = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { logActivity } = require('../middleware/audit');
 const { generateQRCodeDataURL } = require('../services/qrService');
+const { generateInvitationExcel } = require('../services/exportService');
 const whatsappService = require('../services/whatsappService');
 const config = require('../config');
 
@@ -260,11 +261,63 @@ router.post('/public/:token/cancel', (req, res) => {
 // ==========================================
 router.use(authenticate);
 
-// GET /api/invitations - List staff invitations according to RBAC
-router.get('/', (req, res) => {
-  try {
-    const user = req.user;
-    const { status, project_id, search } = req.query;
+function invitationDateRange(preset, dateFrom, dateTo) {
+  const ymd = (d) => {
+    const z = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+  };
+  const now = new Date();
+  const shift = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    return ymd(d);
+  };
+
+  if (preset === 'today') {
+    const d = ymd(now);
+    return { from: d, to: d };
+  }
+  if (preset === 'tomorrow') {
+    const d = shift(1);
+    return { from: d, to: d };
+  }
+  if (preset === 'this_week') {
+    const day = now.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const endDate = new Date(now);
+    endDate.setDate(now.getDate() + mondayOffset + 6);
+    return { from: shift(mondayOffset), to: ymd(endDate) };
+  }
+  if (preset === 'this_month') {
+    return {
+      from: ymd(new Date(now.getFullYear(), now.getMonth(), 1)),
+      to: ymd(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+    };
+  }
+  if (preset === 'last_7_days') return { from: shift(-6), to: ymd(now) };
+  if (preset === 'last_30_days') return { from: shift(-29), to: ymd(now) };
+  if (preset === 'custom') {
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(dateFrom || '') ? dateFrom : '';
+    const to = /^\d{4}-\d{2}-\d{2}$/.test(dateTo || '') ? dateTo : '';
+    if (!from && !to) return null;
+    return { from: from || '0000-01-01', to: to || '9999-12-31' };
+  }
+  return null;
+}
+
+function listInvitations(user, query) {
+    const { status, project_id, search, period, date_from, date_to } = query;
+    const allowedStatuses = new Set(['draft', 'sent', 'opened', 'confirmed', 'reschedule_requested', 'cancelled', 'expired']);
+    const cleanList = (value) => String(value || '')
+      .split(',')
+      .map(item => item.trim())
+      .filter(item => /^[A-Za-z0-9_-]{1,80}$/.test(item))
+      .slice(0, 50);
+    const unique = (items) => [...new Set(items)];
+    const teamIds = unique(cleanList(query.team_ids));
+    const associateIds = unique(cleanList(query.associate_ids));
+    const projectIds = unique([...cleanList(query.project_ids), ...cleanList(project_id)]);
+    const statuses = unique([...cleanList(query.statuses), ...cleanList(status)].filter(item => allowedStatuses.has(item)));
 
     let sql = `
       SELECT i.*,
@@ -275,12 +328,22 @@ router.get('/', (req, res) => {
         d.name as developer_name,
         d.company_logo as developer_logo,
         u.name as associate_name,
+        u.role as associate_role,
+        CASE
+          WHEN u.role = 'sales_head' THEN u.id
+          ELSE COALESCE(i.sales_head_id, u.sales_head_id)
+        END as team_id,
+        sh.name as team_name,
         sv.status as visit_status
       FROM invitations i
       LEFT JOIN customers c ON i.customer_id = c.id
       LEFT JOIN projects p ON i.project_id = p.id
       LEFT JOIN developers d ON i.developer_id = d.id
       LEFT JOIN users u ON i.associate_id = u.id
+      LEFT JOIN users sh ON sh.id = CASE
+        WHEN u.role = 'sales_head' THEN u.id
+        ELSE COALESCE(i.sales_head_id, u.sales_head_id)
+      END
       LEFT JOIN site_visits sv ON sv.invitation_id = i.id
       WHERE 1=1
     `;
@@ -297,32 +360,103 @@ router.get('/', (req, res) => {
       params.push(user.organization_id, user.id);
     }
 
-    if (status) {
-      sql += ' AND i.status = ?';
-      params.push(status);
+    const addIn = (expression, values) => {
+      if (!values.length) return;
+      sql += ` AND ${expression} IN (${values.map(() => '?').join(',')})`;
+      params.push(...values);
+    };
+
+    addIn(`CASE WHEN u.role = 'sales_head' THEN u.id ELSE COALESCE(i.sales_head_id, u.sales_head_id) END`, teamIds);
+    addIn('i.associate_id', associateIds);
+    addIn('i.project_id', projectIds);
+    addIn('i.status', statuses);
+
+    const range = invitationDateRange(period, date_from, date_to);
+    if (range) {
+      sql += ' AND i.visit_date >= ? AND i.visit_date <= ?';
+      params.push(range.from, range.to);
     }
 
-    if (project_id) {
-      sql += ' AND i.project_id = ?';
-      params.push(project_id);
-    }
-
-    if (search) {
-      sql += ' AND (c.full_name LIKE ? OR p.name LIKE ? OR u.name LIKE ?)';
-      const term = `%${search}%`;
-      params.push(term, term, term);
+    if (search && String(search).trim()) {
+      sql += ' AND (c.full_name LIKE ? OR c.mobile_number LIKE ? OR p.name LIKE ? OR u.name LIKE ? OR sh.name LIKE ?)';
+      const term = `%${String(search).trim()}%`;
+      params.push(term, term, term, term, term);
     }
 
     sql += ' ORDER BY i.created_at DESC';
 
+    return db.all(sql, params);
+}
+
+function invitationDirectory(user, query) {
+  let sql = `
+    SELECT u.id, u.name, u.role, u.sales_head_id,
+      CASE WHEN u.role = 'sales_head' THEN u.name ELSE sh.name END as team_name
+    FROM users u
+    LEFT JOIN users sh ON sh.id = u.sales_head_id
+    WHERE u.status = 'active' AND u.role IN ('sales_head', 'sales_associate')
+  `;
+  const params = [];
+
+  if (user.role === 'admin') {
+    sql += ' AND u.organization_id = ?';
+    params.push(user.organization_id);
+  } else if (user.role === 'sales_head') {
+    sql += ' AND u.organization_id = ? AND (u.id = ? OR u.sales_head_id = ?)';
+    params.push(user.organization_id, user.id, user.id);
+  } else if (user.role === 'sales_associate') {
+    sql += ' AND (u.id = ? OR u.id = ?)';
+    params.push(user.id, user.sales_head_id || '');
+  }
+
+  sql += ' ORDER BY u.name';
+  let people = db.all(sql, params);
+
+  const cleanList = (value) => [...new Set(String(value || '').split(',').map(item => item.trim()).filter(item => /^[A-Za-z0-9_-]{1,80}$/.test(item)))];
+  const teamIds = cleanList(query.team_ids);
+  const associateIds = cleanList(query.associate_ids);
+
+  if (teamIds.length) {
+    people = people.filter(person => teamIds.includes(person.role === 'sales_head' ? person.id : person.sales_head_id));
+  }
+  if (associateIds.length) {
+    const selected = new Set(associateIds);
+    const headIds = new Set(people.filter(person => person.role === 'sales_associate' && selected.has(person.id)).map(person => person.sales_head_id).filter(Boolean));
+    people = people.filter(person => selected.has(person.id) || (person.role === 'sales_head' && headIds.has(person.id)));
+  }
+
+  return people;
+}
+
+// GET /api/invitations - List staff invitations according to RBAC
+router.get('/', (req, res) => {
+  try {
     const baseUrl = config.getBaseUrl(req);
-    const invitations = db.all(sql, params).map(inv => ({
+    const invitations = listInvitations(req.user, req.query).map(inv => ({
       ...inv,
       short_code: inv.short_code || inv.id.replace('inv-', ''),
       shortUrl: `${baseUrl}/i/${inv.short_code || inv.id.replace('inv-', '')}`,
       inviteUrl: `${baseUrl}/#invite=${inv.token}`
     }));
     return res.json({ invitations });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/invitations/export/excel - Multi-sheet invitation workbook
+router.get('/export/excel', async (req, res) => {
+  try {
+    const invitations = listInvitations(req.user, req.query);
+    const buffer = await generateInvitationExcel(invitations, {
+      generatedBy: req.user.name,
+      role: req.user.role,
+      directory: invitationDirectory(req.user, req.query)
+    });
+    const filename = `digital_invitations_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

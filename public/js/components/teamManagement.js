@@ -1,4 +1,327 @@
 // Sales Team Management Component with Full CRUD
+App.teamFilters = App.teamFilters || {
+  search: '',
+  teams: [],
+  members: [],
+  statuses: []
+};
+
+App.normalizeTeamFilters = function() {
+  const current = this.teamFilters || {};
+  const asList = (value) => Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
+  this.teamFilters = {
+    search: current.search || '',
+    teams: asList(current.teams),
+    members: asList(current.members),
+    statuses: asList(current.statuses)
+  };
+  return this.teamFilters;
+};
+
+App.teamHeadName = function(person, users) {
+  if (!person) return 'Direct / Unassigned';
+  if (person.sales_head_name) return person.sales_head_name;
+  const head = (users || []).find(user => user.id === person.sales_head_id);
+  return head ? head.name : 'Direct / Unassigned';
+};
+
+App.applyTeamFilters = function(users, filters) {
+  const heads = users.filter(user => user.role === 'sales_head');
+  const associates = users.filter(user => user.role === 'sales_associate');
+  const query = String(filters.search || '').trim().toLowerCase();
+  const matchesText = (user) => {
+    if (!query) return true;
+    const headName = user.role === 'sales_associate' ? this.teamHeadName(user, users) : '';
+    return [user.name, user.email, user.phone, headName].join(' ').toLowerCase().includes(query);
+  };
+  const matchesStatus = (user) => !filters.statuses.length || filters.statuses.includes(user.status);
+
+  let filteredHeads = heads.filter(head =>
+    matchesText(head) && matchesStatus(head) && (!filters.teams.length || filters.teams.includes(head.id))
+  );
+  const filteredAssociates = associates.filter(associate =>
+    matchesText(associate) &&
+    matchesStatus(associate) &&
+    (!filters.teams.length || filters.teams.includes(associate.sales_head_id)) &&
+    (!filters.members.length || filters.members.includes(associate.id))
+  );
+
+  if (filters.members.length && !filters.teams.length) {
+    const headIds = new Set(filteredAssociates.map(associate => associate.sales_head_id).filter(Boolean));
+    filteredHeads = heads.filter(head => headIds.has(head.id) && matchesStatus(head) && matchesText(head));
+  }
+
+  return { heads: filteredHeads, associates: filteredAssociates };
+};
+
+App.teamStatusButton = function(user) {
+  const isActive = user.status === 'active';
+  const next = isActive ? 'inactive' : 'active';
+  const label = isActive ? 'Deactivate' : 'Activate';
+  const style = isActive
+    ? 'color:#b45309; border-color:#fcd34d; background:#fffbeb;'
+    : 'color:#059669; border-color:#a7f3d0; background:#f0fdf4;';
+  return `<button class="btn small" onclick="App.toggleTeamMemberStatus('${user.id}', '${next}')" style="${style}">${label}</button>`;
+};
+
+App.toggleTeamMemberStatus = async function(userId, nextStatus) {
+  try {
+    await API.put(`/users/${userId}`, { status: nextStatus });
+    Utils.toast(nextStatus === 'active' ? 'Team member activated' : 'Team member deactivated');
+    this.reloadTeamScreen();
+  } catch (err) {
+    Utils.toast('Error: ' + err.message);
+  }
+};
+
+App.openTeamMember = function(userId) {
+  this.selectedTeamMemberId = userId;
+  this.navigate('team_member');
+};
+
+App.reloadTeamScreen = function() {
+  const container = document.getElementById('pageContent');
+  if (!container) return;
+  if (this.activePage === 'team_member') return this.renderTeamMemberDetail(container);
+  return this.renderTeamManagement(container);
+};
+
+App.renderTeamMemberDetail = async function(container) {
+  const userId = this.selectedTeamMemberId;
+  container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading team member...</div>`;
+  if (!userId) {
+    container.innerHTML = `<div class="panel" style="padding:30px;">Choose a team member from Sales Team.</div>`;
+    return;
+  }
+
+  try {
+    if (!this.currentUser) {
+      this.currentUser = (typeof API !== 'undefined' && API.getUser ? API.getUser() : null) || {};
+    }
+    const role = this.currentUser.role || 'admin';
+    const directory = await API.get('/users');
+    const users = directory.users || [];
+    const person = users.find(user => user.id === userId);
+    if (!person || (person.role !== 'sales_head' && person.role !== 'sales_associate')) {
+      container.innerHTML = `
+        <div class="panel" style="padding:30px;">
+          <p>This team member is not available.</p>
+          <button class="btn" onclick="App.navigate('team')">Back to Sales Team</button>
+        </div>
+      `;
+      return;
+    }
+
+    const isHead = person.role === 'sales_head';
+    const teamAssociates = users.filter(user => user.role === 'sales_associate' && user.sales_head_id === person.id);
+    const reportingHead = users.find(user => user.id === person.sales_head_id);
+    const invitationQuery = isHead ? { team_ids: person.id } : { associate_ids: person.id };
+    const [invRes, visitsRes, customersRes] = await Promise.all([
+      API.get('/invitations', invitationQuery),
+      API.get('/visits').catch(() => ({ visits: [] })),
+      API.get('/customers').catch(() => ({ customers: [] }))
+    ]);
+
+    const seenInvites = new Set();
+    const invitations = [];
+    (invRes.invitations || []).forEach(invitation => {
+      if (!invitation.id || seenInvites.has(invitation.id)) return;
+      seenInvites.add(invitation.id);
+      invitations.push(invitation);
+    });
+    const associateIds = new Set(teamAssociates.map(associate => associate.id));
+    const visits = (visitsRes.visits || []).filter(visit => isHead
+      ? visit.sales_head_id === person.id || associateIds.has(visit.associate_id)
+      : visit.associate_id === person.id);
+    const customers = (customersRes.customers || []).filter(customer => isHead
+      ? customer.assigned_sales_head_id === person.id || associateIds.has(customer.assigned_associate_id)
+      : customer.assigned_associate_id === person.id);
+    const countStatus = (status) => invitations.filter(invitation => invitation.status === status).length;
+    const badge = person.status === 'active' ? 'active' : 'inactive';
+    const roleLabel = isHead ? 'Sales Head' : 'Sales Associate';
+    const crumb = document.getElementById('topbarCrumb');
+    if (crumb) crumb.textContent = person.name;
+
+    const invitationRows = invitations.slice(0, 12).map(invitation => `
+      <tr>
+        <td><strong>${Utils.escapeHTML(invitation.customer_name || '—')}</strong><small>${Utils.escapeHTML(invitation.customer_phone || '')}</small></td>
+        <td>${Utils.escapeHTML(invitation.project_name || '—')}<small>${Utils.escapeHTML(invitation.developer_name || '')}</small></td>
+        <td><strong>${Utils.formatDate(String(invitation.visit_date || '').slice(0, 10))}</strong><small>${Utils.formatTime(invitation.visit_time)}</small></td>
+        <td>${Utils.escapeHTML(invitation.associate_name || '—')}</td>
+        <td><span class="badge ${invitation.status}">${Utils.escapeHTML(String(invitation.status || '').replace(/_/g, ' '))}</span></td>
+      </tr>
+    `).join('');
+    const visitRows = visits.slice(0, 8).map(visit => `
+      <tr>
+        <td><strong>${Utils.escapeHTML(visit.customer_name || '—')}</strong></td>
+        <td>${Utils.escapeHTML(visit.project_name || '—')}</td>
+        <td>${Utils.formatDate(String(visit.scheduled_date || '').slice(0, 10))} <small>${Utils.formatTime(visit.scheduled_time)}</small></td>
+        <td><span class="badge ${visit.status}">${Utils.escapeHTML(String(visit.status || '').replace(/_/g, ' '))}</span></td>
+      </tr>
+    `).join('');
+    const associateRows = teamAssociates.map(associate => `
+      <tr>
+        <td><button type="button" class="row-link" onclick="App.openTeamMember('${associate.id}')">${Utils.escapeHTML(associate.name)}</button></td>
+        <td>${Utils.escapeHTML(associate.email || '')}<small>${Utils.escapeHTML(associate.phone || '')}</small></td>
+        <td>${invitations.filter(invitation => invitation.associate_id === associate.id).length}</td>
+        <td><span class="badge ${associate.status === 'active' ? 'active' : 'inactive'}">${Utils.escapeHTML(associate.status)}</span></td>
+      </tr>
+    `).join('');
+
+    container.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="eyebrow">${roleLabel.toUpperCase()}</div>
+          <h1 class="page-title">${Utils.escapeHTML(person.name)}</h1>
+          <p class="page-desc">${Utils.escapeHTML(person.email || '')}${person.phone ? ` · ${Utils.escapeHTML(person.phone)}` : ''}</p>
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="App.navigate('team')">Back to Sales Team</button>
+          ${this.teamStatusButton(person)}
+          <button class="btn small soft" onclick="App.sendCredentialsToUser('${person.id}', '${Utils.escapeHTML(person.name)}', '${Utils.escapeHTML(person.email)}', '${Utils.escapeHTML(person.phone || '')}', '${roleLabel}')">✉ Send Login</button>
+          <button class="btn small soft" onclick="App.openEditUserModal('${person.id}')">Edit</button>
+          ${role === 'admin' && !isHead ? `<button class="btn small" onclick="App.openAssignHeadModal('${person.id}', '${Utils.escapeHTML(person.name)}')">Assign Head</button>` : ''}
+          ${role === 'admin' ? `<button class="btn small danger" onclick="App.deleteUser('${person.id}', '${Utils.escapeHTML(person.name)}')">Delete</button>` : ''}
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card purple"><div class="kpi-label">Status</div><div class="kpi-value" style="font-size:22px;"><span class="badge ${badge}">${Utils.escapeHTML(person.status)}</span></div><div class="kpi-sub">Joined ${Utils.formatDate(String(person.created_at || '').slice(0, 10))}</div></div>
+        ${isHead
+          ? `<div class="kpi-card blue"><div class="kpi-label">Associates</div><div class="kpi-value">${teamAssociates.length}</div><div class="kpi-sub">Direct team members</div></div>`
+          : `<div class="kpi-card blue"><div class="kpi-label">Sales Head</div><div class="kpi-value" style="font-size:20px;">${reportingHead ? `<button type="button" class="row-link" onclick="App.openTeamMember('${reportingHead.id}')">${Utils.escapeHTML(reportingHead.name)}</button>` : 'Unassigned'}</div><div class="kpi-sub">Reporting manager</div></div>`}
+        <div class="kpi-card gold"><div class="kpi-label">Invitations</div><div class="kpi-value">${invitations.length}</div><div class="kpi-sub">${countStatus('confirmed')} confirmed · ${countStatus('opened')} opened</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Visits</div><div class="kpi-value">${visits.length}</div><div class="kpi-sub">${customers.length} customers</div></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header"><h3 class="panel-title">Profile</h3></div>
+        <div style="padding:18px 20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;">
+          <div><div class="kpi-label">Role</div><strong>${roleLabel}</strong></div>
+          <div><div class="kpi-label">Email</div><strong>${Utils.escapeHTML(person.email || '—')}</strong></div>
+          <div><div class="kpi-label">Phone</div><strong>${Utils.escapeHTML(person.phone || '—')}</strong></div>
+          <div><div class="kpi-label">${isHead ? 'Team' : 'Reports To'}</div><strong>${isHead ? `${Utils.escapeHTML(person.name)} Team` : (reportingHead ? Utils.escapeHTML(reportingHead.name) : 'Unassigned')}</strong></div>
+        </div>
+      </div>
+
+      ${isHead ? `
+        <div class="panel" style="margin-bottom:24px;">
+          <div class="panel-header"><h3 class="panel-title">Sales Associates (${teamAssociates.length})</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Associate</th><th>Contact</th><th>Invitations</th><th>Status</th></tr></thead>
+              <tbody>
+                ${associateRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No associates on this team.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header"><h3 class="panel-title">Invitations (${invitations.length})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Project</th><th>Schedule</th><th>Sent By</th><th>Status</th></tr></thead>
+            <tbody>
+              ${invitationRows || `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--muted);">No invitations yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3 class="panel-title">Site Visits (${visits.length})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Project</th><th>Schedule</th><th>Status</th></tr></thead>
+            <tbody>
+              ${visitRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No site visits yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div class="panel" style="padding:30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
+  }
+};
+
+App.teamHeadRow = function(head, associates) {
+  const directCount = associates.filter(associate => associate.sales_head_id === head.id).length;
+  const badge = head.status === 'active' ? 'active' : 'inactive';
+  return `
+    <tr>
+      <td><button type="button" class="row-link" onclick="App.openTeamMember('${head.id}')">${Utils.escapeHTML(head.name)}</button></td>
+      <td>
+        ${Utils.escapeHTML(head.email)}
+        <small>${Utils.escapeHTML(head.phone || 'No phone')}</small>
+      </td>
+      <td><span class="badge completed">${directCount} Associates</span></td>
+      <td><span class="badge ${badge}">${Utils.escapeHTML(head.status)}</span></td>
+      <td>
+        <div class="actions">
+          <button class="btn small soft" onclick="App.openTeamMember('${head.id}')">View</button>
+          <button class="btn small soft" onclick="App.openEditUserModal('${head.id}')">Edit</button>
+          ${this.teamStatusButton(head)}
+        </div>
+      </td>
+    </tr>
+  `;
+};
+
+App.teamAssociateRow = function(associate, users, role) {
+  const badge = associate.status === 'active' ? 'active' : 'inactive';
+  return `
+    <tr>
+      <td><button type="button" class="row-link" onclick="App.openTeamMember('${associate.id}')">${Utils.escapeHTML(associate.name)}</button></td>
+      <td>
+        ${Utils.escapeHTML(associate.email)}
+        <small>${Utils.escapeHTML(associate.phone || '')}</small>
+      </td>
+      <td>
+        <span style="font-weight:600; color:var(--purple);">${Utils.escapeHTML(this.teamHeadName(associate, users))}</span>
+      </td>
+      <td><span class="badge ${badge}">${Utils.escapeHTML(associate.status)}</span></td>
+      <td>
+        <div class="actions">
+          <button class="btn small soft" onclick="App.openTeamMember('${associate.id}')">View</button>
+          <button class="btn small soft" onclick="App.openEditUserModal('${associate.id}')">Edit</button>
+          ${this.teamStatusButton(associate)}
+        </div>
+      </td>
+    </tr>
+  `;
+};
+
+App.paintTeamDirectory = function(users, filters) {
+  const role = this.currentUser?.role || 'admin';
+  const filtered = this.applyTeamFilters(users, filters);
+  const headsBody = document.getElementById('teamHeadsBody');
+  const associatesBody = document.getElementById('teamAssociatesBody');
+  if (headsBody) {
+    headsBody.innerHTML = filtered.heads.length
+      ? filtered.heads.map(head => this.teamHeadRow(head, users.filter(user => user.role === 'sales_associate'))).join('')
+      : `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">No sales heads match these filters.</td></tr>`;
+  }
+  if (associatesBody) {
+    associatesBody.innerHTML = filtered.associates.length
+      ? filtered.associates.map(associate => this.teamAssociateRow(associate, users, role)).join('')
+      : `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">No sales associates match these filters.</td></tr>`;
+  }
+  const headsTitle = document.getElementById('teamHeadsTitle');
+  const associatesTitle = document.getElementById('teamAssociatesTitle');
+  if (headsTitle) headsTitle.textContent = `Sales Heads / Team Leaders (${filtered.heads.length})`;
+  if (associatesTitle) associatesTitle.textContent = `Sales Associates (${filtered.associates.length})`;
+  const count = document.getElementById('teamFilterCount');
+  if (count) {
+    const parts = [];
+    if (role === 'admin' || role === 'super_admin') parts.push(`${filtered.heads.length} team${filtered.heads.length === 1 ? '' : 's'}`);
+    parts.push(`${filtered.associates.length} member${filtered.associates.length === 1 ? '' : 's'}`);
+    count.textContent = parts.join(' · ');
+  }
+};
+
 App.renderTeamManagement = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading sales team...</div>`;
 
@@ -9,11 +332,40 @@ App.renderTeamManagement = async function(container) {
       this.currentUser = (typeof API !== 'undefined' && API.getUser ? API.getUser() : null) || {};
     }
     const role = this.currentUser.role || 'admin';
+    const showTeam = role === 'admin' || role === 'super_admin';
+    const filters = this.normalizeTeamFilters();
 
     this.cache = this.cache || {};
     this.cache.users = users;
-    const salesHeads = users.filter(u => u.role === 'sales_head');
-    const associates = users.filter(u => u.role === 'sales_associate');
+    const salesHeads = users.filter(user => user.role === 'sales_head').sort((a, b) => a.name.localeCompare(b.name));
+    const associates = users.filter(user => user.role === 'sales_associate').sort((a, b) => a.name.localeCompare(b.name));
+    const filtered = this.applyTeamFilters(users, filters);
+    const selectionLabel = (count, emptyLabel) => count ? `${count} Selected` : emptyLabel;
+    const statusOptions = [
+      { id: 'active', name: 'Active' },
+      { id: 'inactive', name: 'Inactive' },
+      { id: 'suspended', name: 'Suspended' }
+    ];
+    const headLabel = (head) => head.organization_name ? `${head.name} · ${head.organization_name}` : head.name;
+    const multiSelect = (id, emptyLabel, options, selected, onchangeName) => `
+      <div class="multi-select-wrap">
+        <div class="multi-select-trigger" onclick="App.toggleMultiSelectDropdown('${id}Dropdown')">
+          <span id="${id}Label">${selectionLabel(selected.length, emptyLabel)}</span>
+          <span style="font-size:10px; color:#94a3b8;">▼</span>
+        </div>
+        <div id="${id}Dropdown" class="multi-select-dropdown hidden">
+          <input type="text" class="multi-select-search" placeholder="Search..." oninput="App.filterMultiSelectOptions(this, '${id}Options')">
+          <div class="multi-select-options" id="${id}Options">
+            ${options.length ? options.map(opt => `
+              <label class="multi-select-item" ${opt.sales_head_id ? `data-head="${Utils.escapeHTML(opt.sales_head_id)}"` : ''}>
+                <input type="checkbox" value="${Utils.escapeHTML(opt.id)}" ${selected.includes(opt.id) ? 'checked' : ''} onchange="${onchangeName}">
+                <span>${Utils.escapeHTML(opt.name)}</span>
+              </label>
+            `).join('') : `<div class="multi-select-item">No options</div>`}
+          </div>
+        </div>
+      </div>
+    `;
 
     container.innerHTML = `
       <div class="page-header">
@@ -40,11 +392,43 @@ App.renderTeamManagement = async function(container) {
         </div>
       </div>
 
-      <!-- Sales Heads Section (Admins) -->
-      ${role === 'admin' ? `
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="teamSearch" placeholder="Name, email or phone" value="${Utils.escapeHTML(filters.search)}" onkeydown="if(event.key==='Enter'){event.preventDefault();App.searchTeam();}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          ${showTeam ? `
+            <div class="inv-filter-field">
+              <span>Team</span>
+              ${multiSelect('teamTeam', 'All Teams', salesHeads.map(head => ({ id: head.id, name: headLabel(head) })), filters.teams, 'App.onTeamTeamsChange()')}
+            </div>
+          ` : ''}
+          <div class="inv-filter-field">
+            <span>Member</span>
+            ${multiSelect('teamMember', 'All Members', associates.map(associate => ({ id: associate.id, name: associate.name, sales_head_id: associate.sales_head_id || '' })), filters.members, 'App.onTeamMembersChange()')}
+          </div>
+          <div class="inv-filter-field">
+            <span>Status</span>
+            ${multiSelect('teamStatus', 'All Statuses', statusOptions, filters.statuses, 'App.onTeamStatusesChange()')}
+          </div>
+        </div>
+        <div class="inv-filters-actions">
+          <span id="teamFilterCount" class="inv-filter-count"></span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetTeamFilters()">Reset</button>
+            <button type="button" class="btn small primary" id="teamSearchBtn" onclick="App.searchTeam()">Search</button>
+            <button type="button" class="btn small gold" id="teamExportBtn" onclick="App.exportTeamExcel()">Export Excel</button>
+          </div>
+        </div>
+      </div>
+
+      ${showTeam ? `
         <div class="panel" style="margin-bottom: 28px;">
           <div class="panel-header">
-            <h3 class="panel-title">Sales Heads / Team Leaders (${salesHeads.length})</h3>
+            <h3 class="panel-title" id="teamHeadsTitle">Sales Heads / Team Leaders (${filtered.heads.length})</h3>
           </div>
           <div class="table-wrap">
             <table>
@@ -57,52 +441,15 @@ App.renderTeamManagement = async function(container) {
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                ${salesHeads.length ? salesHeads.map(sh => {
-                  const directCount = associates.filter(a => a.sales_head_id === sh.id).length;
-                  return `
-                    <tr>
-                      <td>
-                        <strong>${Utils.escapeHTML(sh.name)}</strong>
-                      </td>
-                      <td>
-                        ${Utils.escapeHTML(sh.email)}
-                        <small>${Utils.escapeHTML(sh.phone || 'No phone')}</small>
-                      </td>
-                      <td>
-                        <span class="badge completed">${directCount} Associates</span>
-                      </td>
-                      <td>
-                        <span class="badge active">${sh.status}</span>
-                      </td>
-                      <td>
-                        <div class="actions">
-                          <button class="btn small soft" onclick="App.sendCredentialsToUser('${sh.id}', '${Utils.escapeHTML(sh.name)}', '${Utils.escapeHTML(sh.email)}', '${Utils.escapeHTML(sh.phone || '')}', 'Sales Head')" title="Send Login ID & Password via Email" style="color:#059669; border-color:#a7f3d0; background:#f0fdf4;">
-                            ✉ Send Login
-                          </button>
-                          <button class="btn small soft" onclick="App.openEditUserModal('${sh.id}')">
-                            Edit
-                          </button>
-                          <button class="btn small danger" onclick="App.deleteUser('${sh.id}', '${Utils.escapeHTML(sh.name)}')">
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('') : `
-                  <tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">No Sales Heads created yet.</td></tr>
-                `}
-              </tbody>
+              <tbody id="teamHeadsBody"></tbody>
             </table>
           </div>
         </div>
       ` : ''}
 
-      <!-- Sales Associates Section -->
       <div class="panel">
         <div class="panel-header">
-          <h3 class="panel-title">Sales Associates (${associates.length})</h3>
+          <h3 class="panel-title" id="teamAssociatesTitle">Sales Associates (${filtered.associates.length})</h3>
         </div>
         <div class="table-wrap">
           <table>
@@ -115,54 +462,138 @@ App.renderTeamManagement = async function(container) {
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              ${associates.length ? associates.map(a => `
-                <tr>
-                  <td>
-                    <strong>${Utils.escapeHTML(a.name)}</strong>
-                  </td>
-                  <td>
-                    ${Utils.escapeHTML(a.email)}
-                    <small>${Utils.escapeHTML(a.phone || '')}</small>
-                  </td>
-                  <td>
-                    <span style="font-weight:600; color:var(--purple);">
-                      ${Utils.escapeHTML(a.sales_head_name || 'Direct / Unassigned')}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge active">${a.status}</span>
-                  </td>
-                  <td>
-                    <div class="actions">
-                      <button class="btn small soft" onclick="App.sendCredentialsToUser('${a.id}', '${Utils.escapeHTML(a.name)}', '${Utils.escapeHTML(a.email)}', '${Utils.escapeHTML(a.phone || '')}', 'Sales Associate')" title="Send Login ID & Password via Email" style="color:#059669; border-color:#a7f3d0; background:#f0fdf4;">
-                        ✉ Send Login
-                      </button>
-                      <button class="btn small soft" onclick="App.openEditUserModal('${a.id}')">
-                        Edit
-                      </button>
-                      ${role === 'admin' ? `
-                        <button class="btn small" onclick="App.openAssignHeadModal('${a.id}', '${Utils.escapeHTML(a.name)}')">
-                          Assign Head
-                        </button>
-                        <button class="btn small danger" onclick="App.deleteUser('${a.id}', '${Utils.escapeHTML(a.name)}')">
-                          Delete
-                        </button>
-                      ` : ''}
-                    </div>
-                  </td>
-                </tr>
-              `).join('') : `
-                <tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">No Sales Associates found.</td></tr>
-              `}
-            </tbody>
+            <tbody id="teamAssociatesBody"></tbody>
           </table>
         </div>
       </div>
     `;
+    this.paintTeamDirectory(users, filters);
+    if (showTeam) this.onTeamTeamsChange();
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
+};
+
+App.checkedTeamValues = function(optionsId) {
+  return [...document.querySelectorAll(`#${optionsId} input:checked`)].map(input => input.value);
+};
+
+App.setTeamMultiLabel = function(labelId, count, emptyLabel) {
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = count ? `${count} Selected` : emptyLabel;
+};
+
+App.onTeamTeamsChange = function() {
+  const teams = this.checkedTeamValues('teamTeamOptions');
+  this.setTeamMultiLabel('teamTeamLabel', teams.length, 'All Teams');
+  document.querySelectorAll('#teamMemberOptions .multi-select-item').forEach(item => {
+    const headId = item.getAttribute('data-head') || '';
+    const visible = !teams.length || teams.includes(headId);
+    item.style.display = visible ? 'flex' : 'none';
+    if (!visible) {
+      const box = item.querySelector('input');
+      if (box) box.checked = false;
+    }
+  });
+  this.onTeamMembersChange();
+};
+
+App.onTeamMembersChange = function() {
+  const count = this.checkedTeamValues('teamMemberOptions').length;
+  this.setTeamMultiLabel('teamMemberLabel', count, 'All Members');
+};
+
+App.onTeamStatusesChange = function() {
+  const count = this.checkedTeamValues('teamStatusOptions').length;
+  this.setTeamMultiLabel('teamStatusLabel', count, 'All Statuses');
+};
+
+App.readTeamFilters = function() {
+  return {
+    search: (document.getElementById('teamSearch')?.value || '').trim(),
+    teams: this.checkedTeamValues('teamTeamOptions'),
+    members: this.checkedTeamValues('teamMemberOptions'),
+    statuses: this.checkedTeamValues('teamStatusOptions')
+  };
+};
+
+App.exportTeamExcel = async function() {
+  const filters = this.readTeamFilters();
+  const params = new URLSearchParams();
+  if (filters.search) params.set('search', filters.search);
+  if (filters.teams.length) params.set('team_ids', filters.teams.join(','));
+  if (filters.members.length) params.set('associate_ids', filters.members.join(','));
+  if (filters.statuses.length) params.set('statuses', filters.statuses.join(','));
+  const button = document.getElementById('teamExportBtn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Exporting...';
+  }
+  Utils.toast('Preparing Excel export...');
+  try {
+    const response = await fetch(`/api/users/export/excel?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${API.getToken()}` }
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Export failed');
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `sales_team_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    Utils.toast('Excel downloaded');
+  } catch (err) {
+    Utils.toast('Error: ' + err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Export Excel';
+    }
+  }
+};
+
+App.searchTeam = async function() {
+  const filters = this.readTeamFilters();
+  this.teamFilters = filters;
+  const button = document.getElementById('teamSearchBtn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Searching...';
+  }
+  try {
+    const data = await API.get('/users');
+    this.cache = this.cache || {};
+    this.cache.users = data.users || [];
+    this.paintTeamDirectory(this.cache.users, filters);
+  } catch (err) {
+    Utils.toast('Error: ' + err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Search';
+    }
+  }
+};
+
+App.resetTeamFilters = function() {
+  this.teamFilters = { search: '', teams: [], members: [], statuses: [] };
+  const search = document.getElementById('teamSearch');
+  if (search) search.value = '';
+  document.querySelectorAll('#teamTeamOptions input, #teamMemberOptions input, #teamStatusOptions input').forEach(input => {
+    input.checked = false;
+  });
+  document.querySelectorAll('#teamMemberOptions .multi-select-item').forEach(item => {
+    item.style.display = 'flex';
+  });
+  this.onTeamTeamsChange();
+  this.onTeamStatusesChange();
+  this.searchTeam();
 };
 
 // Add User Modal
@@ -345,10 +776,7 @@ App.handleEditUserSubmit = async function(e, userId) {
     Utils.toast(res.message || 'User updated successfully');
     Utils.closeModal();
 
-    const container = document.getElementById('pageContent');
-    if (container && typeof App.renderTeamManagement === 'function') {
-      await App.renderTeamManagement(container);
-    }
+    App.reloadTeamScreen();
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }
@@ -359,7 +787,11 @@ App.deleteUser = async function(userId, userName) {
   try {
     const res = await API.delete(`/users/${userId}`);
     Utils.toast(res.message);
-    App.renderTeamManagement(document.getElementById('pageContent'));
+    if (App.activePage === 'team_member' && App.selectedTeamMemberId === userId) {
+      App.navigate('team');
+    } else {
+      App.reloadTeamScreen();
+    }
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }
@@ -399,7 +831,7 @@ App.handleAssignHeadSubmit = async function(e, userId) {
     const res = await API.patch(`/users/${userId}/assign-head`, { sales_head_id });
     Utils.toast(res.message);
     Utils.closeModal();
-    App.renderTeamManagement(document.getElementById('pageContent'));
+    App.reloadTeamScreen();
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }

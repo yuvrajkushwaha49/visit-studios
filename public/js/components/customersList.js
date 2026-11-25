@@ -5,7 +5,6 @@ App.renderCustomersList = async function(container) {
   try {
     const data = await API.get('/customers');
     const customers = data.customers || [];
-    const role = this.currentUser.role;
 
     container.innerHTML = `
       <div class="page-header">
@@ -60,7 +59,7 @@ App.renderCustomersList = async function(container) {
                 <tr data-search="${Utils.escapeHTML((c.full_name + ' ' + c.mobile_number + ' ' + c.customer_code).toLowerCase())}" data-status="${c.status}">
                   <td><code>${Utils.escapeHTML(c.customer_code)}</code></td>
                   <td>
-                    <strong>${Utils.escapeHTML(c.full_name)}</strong>
+                    <button type="button" class="row-link" onclick="App.openCustomerDetail('${c.id}')">${Utils.escapeHTML(c.full_name)}</button>
                     <small>${Utils.escapeHTML(c.mobile_number)} · ${Utils.escapeHTML(c.email || 'No email')}</small>
                   </td>
                   <td>
@@ -80,20 +79,8 @@ App.renderCustomersList = async function(container) {
                   </td>
                   <td>
                     <div class="actions">
-                      <button class="btn small soft" onclick="App.openCustomerProfile('${c.id}')">
-                        Profile
-                      </button>
-                      <button class="btn small" onclick="App.openEditCustomerModal('${c.id}')">
-                        Edit
-                      </button>
-                      ${role !== 'sales_associate' ? `
-                        <button class="btn small" onclick="App.openReassignCustomerModal('${c.id}', '${Utils.escapeHTML(c.full_name)}')">
-                          Reassign
-                        </button>
-                      ` : ''}
-                      <button class="btn small danger" onclick="App.deleteCustomer('${c.id}', '${Utils.escapeHTML(c.full_name)}')">
-                        Delete
-                      </button>
+                      <button class="btn small soft" onclick="App.openCustomerDetail('${c.id}')">View</button>
+                      <button class="btn small soft" onclick="App.openEditCustomerModal('${c.id}')">Edit</button>
                     </div>
                   </td>
                 </tr>
@@ -234,65 +221,166 @@ App.handleAddCustomerSubmit = async function(e) {
   }
 };
 
-// Customer Profile & Timeline Modal
-App.openCustomerProfile = async function(customerId) {
-  Utils.showModal(`<div style="padding:40px; text-align:center; color:var(--muted);">Loading customer history...</div>`);
+App.openCustomerDetail = function(customerId) {
+  this.selectedCustomerId = customerId;
+  this.navigate('customer_detail');
+};
+
+App.reloadCustomerScreen = function() {
+  const container = document.getElementById('pageContent');
+  if (!container) return;
+  if (this.activePage === 'customer_detail') return this.renderCustomerDetail(container);
+  return this.renderCustomersList(container);
+};
+
+App.renderCustomerDetail = async function(container) {
+  const customerId = this.selectedCustomerId;
+  container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading customer...</div>`;
+  if (!customerId) {
+    container.innerHTML = `<div class="panel" style="padding:30px;">Choose a customer from the list.</div>`;
+    return;
+  }
 
   try {
+    if (!this.currentUser) {
+      this.currentUser = (typeof API !== 'undefined' && API.getUser ? API.getUser() : null) || {};
+    }
+    const role = this.currentUser.role || 'admin';
     const data = await API.get(`/customers/${customerId}`);
     const c = data.customer;
     const interactions = data.interactions || [];
+    const invitations = data.invitations || [];
     const visits = data.visits || [];
+    const followups = data.followups || [];
+    const crumb = document.getElementById('topbarCrumb');
+    if (crumb) crumb.textContent = c.full_name;
 
-    const html = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+    const invitationRows = invitations.slice(0, 12).map(invitation => `
+      <tr>
+        <td>${Utils.escapeHTML(invitation.project_name || '—')}</td>
+        <td><strong>${Utils.formatDate(String(invitation.visit_date || '').slice(0, 10))}</strong><small>${Utils.formatTime(invitation.visit_time)}</small></td>
+        <td>${Utils.escapeHTML(invitation.associate_name || '—')}</td>
+        <td><span class="badge ${invitation.status}">${Utils.escapeHTML(String(invitation.status || '').replace(/_/g, ' '))}</span></td>
+      </tr>
+    `).join('');
+    const visitRows = visits.slice(0, 10).map(visit => `
+      <tr>
+        <td>${Utils.escapeHTML(visit.project_name || '—')}</td>
+        <td>${Utils.formatDate(String(visit.scheduled_date || '').slice(0, 10))} <small>${Utils.formatTime(visit.scheduled_time)}</small></td>
+        <td>${Utils.escapeHTML(visit.associate_name || '—')}</td>
+        <td><span class="badge ${visit.status}">${Utils.escapeHTML(String(visit.status || '').replace(/_/g, ' '))}</span></td>
+      </tr>
+    `).join('');
+    const followupRows = followups.slice(0, 8).map(followup => `
+      <tr>
+        <td>${Utils.formatDate(String(followup.follow_up_date || '').slice(0, 10))}</td>
+        <td>${Utils.escapeHTML(followup.notes || followup.follow_up_type || '—')}</td>
+        <td>${Utils.escapeHTML(followup.associate_name || '—')}</td>
+        <td><span class="badge ${followup.status}">${Utils.escapeHTML(String(followup.status || '').replace(/_/g, ' '))}</span></td>
+      </tr>
+    `).join('');
+    const interactionRows = interactions.slice(0, 12).map(item => `
+      <tr>
+        <td><strong>${Utils.escapeHTML(item.interaction_type || 'Note')}</strong></td>
+        <td>${Utils.escapeHTML(item.notes || '')}</td>
+        <td>${Utils.escapeHTML(item.user_name || '—')}</td>
+        <td>${Utils.formatDate(String(item.created_at || '').slice(0, 10))}</td>
+      </tr>
+    `).join('');
+
+    container.innerHTML = `
+      <div class="page-header">
         <div>
-          <div class="eyebrow">${Utils.escapeHTML(c.customer_code)}</div>
-          <h2 class="modal-title" style="margin-bottom:2px;">${Utils.escapeHTML(c.full_name)}</h2>
-          <p style="color:var(--muted); font-size:12px;">${Utils.escapeHTML(c.mobile_number)} · ${Utils.escapeHTML(c.email || 'No email')}</p>
+          <div class="eyebrow">${Utils.escapeHTML(c.customer_code || 'CUSTOMER')}</div>
+          <h1 class="page-title">${Utils.escapeHTML(c.full_name)}</h1>
+          <p class="page-desc">${Utils.escapeHTML(c.mobile_number || '')}${c.email ? ` · ${Utils.escapeHTML(c.email)}` : ''}</p>
         </div>
-        <span class="badge ${c.status}">${c.status.replace('_', ' ')}</span>
-      </div>
-
-      <!-- Specs Box -->
-      <div style="background:var(--pale); border-radius:8px; padding:14px 18px; margin-bottom:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
-        <div><strong style="color:var(--purple);">Budget:</strong> ${Utils.escapeHTML(c.budget || 'Not specified')}</div>
-        <div><strong style="color:var(--purple);">Location:</strong> ${Utils.escapeHTML(c.preferred_location || 'Flexible')}</div>
-        <div><strong style="color:var(--purple);">Interested In:</strong> ${Utils.escapeHTML(c.interested_project_name || 'General Inquiry')}</div>
-        <div><strong style="color:var(--purple);">Advisor:</strong> ${Utils.escapeHTML(c.assigned_associate_name || 'Unassigned')}</div>
-      </div>
-
-      <div style="margin-bottom:18px;">
-        <h4 style="font-size:13px; font-weight:600; margin-bottom:10px;">Activity Timeline & Interaction History</h4>
-        <div style="max-height: 240px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; padding:12px;">
-          ${interactions.length ? interactions.map(i => `
-            <div style="padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--line); font-size:11.5px;">
-              <div style="display:flex; justify-content:space-between; color:var(--muted); font-size:10.5px;">
-                <strong style="color:var(--purple);">${Utils.escapeHTML(i.interaction_type)}</strong>
-                <span>${Utils.formatDate(i.created_at)}</span>
-              </div>
-              <div style="margin-top:3px; color:var(--ink);">${Utils.escapeHTML(i.notes)}</div>
-            </div>
-          `).join('') : `
-            <div style="color:var(--muted); font-size:11.5px; text-align:center; padding:20px;">No interaction notes recorded yet.</div>
-          `}
+        <div class="actions">
+          <button class="btn" onclick="App.navigate('customers')">Back to Customers</button>
+          <button class="btn small soft" onclick="App.openEditCustomerModal('${c.id}')">Edit</button>
+          ${role !== 'sales_associate' ? `<button class="btn small" onclick="App.openReassignCustomerModal('${c.id}', '${Utils.escapeHTML(c.full_name)}')">Reassign</button>` : ''}
+          <button class="btn small danger" onclick="App.deleteCustomer('${c.id}', '${Utils.escapeHTML(c.full_name)}')">Delete</button>
         </div>
       </div>
 
-      <!-- Add Note Input -->
-      <form onsubmit="App.handleAddInteractionNote(event, '${c.id}')" style="margin-bottom:20px; display:flex; gap:8px;">
-        <input id="newInteractionNote" required placeholder="Add follow-up call note or customer remark..." style="flex:1;">
-        <button type="submit" class="btn primary small">Add Note</button>
-      </form>
+      <div class="kpi-grid">
+        <div class="kpi-card purple"><div class="kpi-label">Status</div><div class="kpi-value" style="font-size:20px;"><span class="badge ${c.status}">${Utils.escapeHTML(String(c.status || '').replace(/_/g, ' '))}</span></div><div class="kpi-sub">Lead source: ${Utils.escapeHTML(c.lead_source || 'Direct')}</div></div>
+        <div class="kpi-card blue"><div class="kpi-label">Advisor</div><div class="kpi-value" style="font-size:18px;">${Utils.escapeHTML(c.assigned_associate_name || 'Unassigned')}</div><div class="kpi-sub">Head: ${Utils.escapeHTML(c.assigned_sales_head_name || 'Direct')}</div></div>
+        <div class="kpi-card gold"><div class="kpi-label">Invitations</div><div class="kpi-value">${invitations.length}</div><div class="kpi-sub">${visits.length} visits</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Follow-ups</div><div class="kpi-value">${followups.length}</div><div class="kpi-sub">${interactions.length} notes</div></div>
+      </div>
 
-      <div style="display:flex; justify-content:flex-end;">
-        <button type="button" class="btn" onclick="Utils.closeModal()">Close</button>
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header"><h3 class="panel-title">Profile</h3></div>
+        <div style="padding:18px 20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;">
+          <div><div class="kpi-label">Mobile</div><strong>${Utils.escapeHTML(c.mobile_number || '—')}</strong></div>
+          <div><div class="kpi-label">WhatsApp</div><strong>${Utils.escapeHTML(c.whatsapp_number || c.mobile_number || '—')}</strong></div>
+          <div><div class="kpi-label">Email</div><strong>${Utils.escapeHTML(c.email || '—')}</strong></div>
+          <div><div class="kpi-label">Budget</div><strong>${Utils.escapeHTML(c.budget || 'Open')}</strong></div>
+          <div><div class="kpi-label">Preferred Location</div><strong>${Utils.escapeHTML(c.preferred_location || 'Flexible')}</strong></div>
+          <div><div class="kpi-label">Interested Project</div><strong>${Utils.escapeHTML(c.interested_project_name || 'Exploring')}</strong></div>
+          <div><div class="kpi-label">Configuration</div><strong>${Utils.escapeHTML(c.configuration || '—')}</strong></div>
+          <div><div class="kpi-label">Developer</div><strong>${Utils.escapeHTML(c.developer_name || '—')}</strong></div>
+        </div>
+        ${c.requirements ? `<div style="padding:0 20px 18px; font-size:12.5px; color:var(--muted);"><strong style="color:var(--ink);">Requirements:</strong> ${Utils.escapeHTML(c.requirements)}</div>` : ''}
+      </div>
+
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header"><h3 class="panel-title">Activity Notes (${interactions.length})</h3></div>
+        <div style="padding:16px 20px; border-bottom:1px solid var(--line);">
+          <form onsubmit="App.handleAddInteractionNote(event, '${c.id}')" style="display:flex; gap:8px;">
+            <input id="newInteractionNote" required placeholder="Add follow-up call note or customer remark..." style="flex:1;">
+            <button type="submit" class="btn primary small">Add Note</button>
+          </form>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Type</th><th>Notes</th><th>By</th><th>Date</th></tr></thead>
+            <tbody>
+              ${interactionRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No interaction notes yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header"><h3 class="panel-title">Invitations (${invitations.length})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Project</th><th>Schedule</th><th>Sent By</th><th>Status</th></tr></thead>
+            <tbody>
+              ${invitationRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No invitations yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header"><h3 class="panel-title">Site Visits (${visits.length})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Project</th><th>Schedule</th><th>Advisor</th><th>Status</th></tr></thead>
+            <tbody>
+              ${visitRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No site visits yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3 class="panel-title">Follow-ups (${followups.length})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Notes</th><th>Advisor</th><th>Status</th></tr></thead>
+            <tbody>
+              ${followupRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No follow-ups yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
-
-    Utils.showModal(html);
   } catch (err) {
-    Utils.showModal(`<div style="padding:20px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`);
+    container.innerHTML = `<div class="panel" style="padding:30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
 };
 
@@ -308,7 +396,7 @@ App.handleAddInteractionNote = async function(e, customerId) {
       notes
     });
     Utils.toast('Interaction note added!');
-    App.openCustomerProfile(customerId);
+    App.reloadCustomerScreen();
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }
@@ -352,7 +440,7 @@ App.handleReassignCustomerSubmit = async function(e, customerId) {
     const res = await API.patch(`/customers/${customerId}/reassign`, { associate_id });
     Utils.toast(res.message);
     Utils.closeModal();
-    App.renderCustomersList(document.getElementById('pageContent'));
+    App.reloadCustomerScreen();
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }
@@ -389,7 +477,12 @@ App.handleImportCustomerSubmit = async function(e) {
     const res = await API.post('/customers/import/csv', { csvContent });
     Utils.toast(`Import complete: ${res.imported} imported, ${res.skipped} duplicates skipped.`);
     Utils.closeModal();
-    App.renderCustomersList(document.getElementById('pageContent'));
+    App.reloadCustomerScreen();
+  } catch (err) {
+    Utils.toast('Error: ' + err.message);
+  }
+};
+
 // Edit Customer Modal
 App.openEditCustomerModal = async function(customerId) {
   Utils.showModal(`<div style="padding:40px; text-align:center; color:var(--muted);">Loading customer details...</div>`);
@@ -499,7 +592,7 @@ App.handleEditCustomerSubmit = async function(e, customerId) {
     await API.put(`/customers/${customerId}`, payload);
     Utils.toast('Customer profile updated successfully!');
     Utils.closeModal();
-    App.renderCustomersList(document.getElementById('pageContent'));
+    App.reloadCustomerScreen();
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }
@@ -511,7 +604,11 @@ App.deleteCustomer = async function(customerId, customerName) {
   try {
     const res = await API.delete(`/customers/${customerId}`);
     Utils.toast(res.message);
-    App.renderCustomersList(document.getElementById('pageContent'));
+    if (App.activePage === 'customer_detail' && App.selectedCustomerId === customerId) {
+      App.navigate('customers');
+    } else {
+      App.reloadCustomerScreen();
+    }
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   }

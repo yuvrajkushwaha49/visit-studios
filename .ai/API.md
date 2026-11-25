@@ -70,7 +70,8 @@ This document catalogues all actual REST API endpoints detected in the codebase 
 ### 3.2. Invitations (`/api/invitations`)
 | Method | Endpoint | Allowed Roles | Description | Request Query / Body | Response |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/invitations` | All authenticated | Lists invitations (scoped by org/role) | Query: `status, project_id, sales_rep_id, start_date, end_date, search` | `{ success: true, data: [...] }` |
+| `GET` | `/api/invitations` | All authenticated | Lists invitations (scoped by org/role). Filters are applied in SQL. | Query: `search, status, statuses, project_id, project_ids, team_ids, associate_ids, period, date_from, date_to` | `{ invitations: [...] }` |
+| `GET` | `/api/invitations/export/excel` | All authenticated | Downloads the same filtered invitations as an Excel workbook. Sheets: Summary, Member Wise, Team Wise, Only Team Leader, then one sheet per team. | Same query as the list | `.xlsx` file |
 | `GET` | `/api/invitations/:id` | All authenticated | Gets specific invitation record | URL param: `id` | `{ success: true, data: {...} }` |
 | `POST` | `/api/invitations` | All authenticated | Creates an invitation & auto-generates QR + short link | Body: `{ customer_id (or new customer fields), project_id, scheduled_date, scheduled_time, notes, unit_configuration_id }` | `{ success: true, data: {...}, short_url }` |
 | `PUT` | `/api/invitations/:id` | All authenticated | Updates scheduled time, status, notes | Body: `{ scheduled_date, scheduled_time, status, notes }` | `{ success: true, data: {...} }` |
@@ -122,6 +123,7 @@ This document catalogues all actual REST API endpoints detected in the codebase 
 | Method | Endpoint | Allowed Roles | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/users` | All authenticated | Lists users within caller's organization |
+| `GET` | `/api/users/export/excel` | All authenticated | Downloads the scoped sales team as Excel. Query: `search, team_ids, associate_ids, statuses` |
 | `POST` | `/api/users` | `admin`, `super_admin` | Creates team member / sales executive |
 | `PUT` | `/api/users/:id` | `admin`, `super_admin` | Updates role, status, team assignment |
 | `DELETE`| `/api/users/:id` | `admin`, `super_admin` | Deactivates/deletes user |

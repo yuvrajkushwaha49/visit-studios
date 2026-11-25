@@ -8,16 +8,13 @@ const xlsx = require('xlsx');
 const db = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 const { logActivity } = require('../middleware/audit');
+const { generateTeamExcel } = require('../services/exportService');
 
 router.use(authenticate);
 
-// GET /api/users - List users according to role hierarchy
-router.get('/', (req, res) => {
-  try {
-    const user = req.user;
-    let users = [];
-
-    if (user.role === 'super_admin') {
+function listScopedUsers(user) {
+  let users = [];
+  if (user.role === 'super_admin') {
       users = db.all(`
         SELECT u.id, u.organization_id, u.role, u.name, u.email, u.phone, u.sales_head_id, u.status, u.created_at,
                o.name as organization_name,
@@ -50,9 +47,63 @@ router.get('/', (req, res) => {
         FROM users u
         WHERE u.id = ? OR u.id = ?
       `, [user.id, user.sales_head_id]);
-    }
+  }
 
-    return res.json({ users });
+  return users;
+}
+
+function filterTeamDirectory(users, query) {
+  const cleanList = (value) => [...new Set(String(value || '').split(',').map(item => item.trim()).filter(item => /^[A-Za-z0-9_-]{1,80}$/.test(item)))].slice(0, 50);
+  const allowedStatus = new Set(['active', 'inactive', 'suspended']);
+  const teamIds = cleanList(query.team_ids);
+  const memberIds = cleanList(query.associate_ids);
+  const statuses = cleanList(query.statuses).filter(status => allowedStatus.has(status));
+  const search = String(query.search || '').trim().toLowerCase();
+  const heads = users.filter(person => person.role === 'sales_head');
+  const associates = users.filter(person => person.role === 'sales_associate');
+  const headName = (person) => person.sales_head_name || heads.find(head => head.id === person.sales_head_id)?.name || '';
+  const matchesText = (person) => {
+    if (!search) return true;
+    const team = person.role === 'sales_associate' ? headName(person) : '';
+    return [person.name, person.email, person.phone, team].join(' ').toLowerCase().includes(search);
+  };
+  const matchesStatus = (person) => !statuses.length || statuses.includes(person.status);
+
+  let filteredHeads = heads.filter(head => matchesText(head) && matchesStatus(head) && (!teamIds.length || teamIds.includes(head.id)));
+  const filteredAssociates = associates.filter(associate =>
+    matchesText(associate) &&
+    matchesStatus(associate) &&
+    (!teamIds.length || teamIds.includes(associate.sales_head_id)) &&
+    (!memberIds.length || memberIds.includes(associate.id))
+  );
+  if (memberIds.length && !teamIds.length) {
+    const headIds = new Set(filteredAssociates.map(associate => associate.sales_head_id).filter(Boolean));
+    filteredHeads = heads.filter(head => headIds.has(head.id) && matchesStatus(head) && matchesText(head));
+  }
+  return { heads: filteredHeads, associates: filteredAssociates };
+}
+
+// GET /api/users - List users according to role hierarchy
+router.get('/', (req, res) => {
+  try {
+    return res.json({ users: listScopedUsers(req.user) });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/users/export/excel - Sales team workbook for the current filters
+router.get('/export/excel', async (req, res) => {
+  try {
+    const { heads, associates } = filterTeamDirectory(listScopedUsers(req.user), req.query);
+    const buffer = await generateTeamExcel(heads, associates, {
+      generatedBy: req.user.name,
+      role: req.user.role
+    });
+    const filename = `sales_team_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

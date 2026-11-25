@@ -1,4 +1,169 @@
 // Developers & Projects Management Component with Full CRUD & Logo Upload
+App.projectFilters = App.projectFilters || {
+  search: '',
+  developers: [],
+  projects: [],
+  statuses: []
+};
+
+App.normalizeProjectFilters = function() {
+  const current = this.projectFilters || {};
+  const asList = (value) => Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
+  this.projectFilters = {
+    search: current.search || '',
+    developers: asList(current.developers),
+    projects: asList(current.projects),
+    statuses: asList(current.statuses)
+  };
+  return this.projectFilters;
+};
+
+App.applyProjectFilters = function(developers, projects, filters) {
+  const query = String(filters.search || '').trim().toLowerCase();
+  const matchesStatus = (row) => !filters.statuses.length || filters.statuses.includes(row.status || 'active');
+  const developerText = (developer) => [developer.name, developer.contact_name, developer.contact_phone, developer.contact_email, developer.address, developer.description].join(' ').toLowerCase();
+  const projectText = (project) => [project.name, project.developer_name, project.location, project.description, project.amenities, project.starting_price].join(' ').toLowerCase();
+
+  let filteredDevelopers = developers.filter(developer =>
+    matchesStatus(developer) &&
+    (!filters.developers.length || filters.developers.includes(developer.id)) &&
+    (!query || developerText(developer).includes(query))
+  );
+  const filteredProjects = projects.filter(project =>
+    matchesStatus(project) &&
+    (!filters.developers.length || filters.developers.includes(project.developer_id)) &&
+    (!filters.projects.length || filters.projects.includes(project.id)) &&
+    (!query || projectText(project).includes(query))
+  );
+
+  if (filters.projects.length && !filters.developers.length) {
+    const developerIds = new Set(filteredProjects.map(project => project.developer_id));
+    filteredDevelopers = developers.filter(developer =>
+      developerIds.has(developer.id) &&
+      matchesStatus(developer) &&
+      (!query || developerText(developer).includes(query))
+    );
+  }
+
+  return { developers: filteredDevelopers, projects: filteredProjects };
+};
+
+App.developerCardHtml = function(developer, role) {
+  return `
+    <div class="panel" style="padding:18px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:0;">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:10px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            ${developer.company_logo ? `
+              <div style="width:48px; height:48px; border-radius:10px; border:1px solid #e2e8f0; background:#ffffff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+                <img src="${developer.company_logo}" alt="${Utils.escapeHTML(developer.name)}" style="max-width:100%; max-height:100%; object-fit:contain;">
+              </div>
+            ` : `
+              <div style="width:48px; height:48px; border-radius:10px; border:1px solid #e2e8f0; background:linear-gradient(135deg, #1e293b, #0f172a); color:#f5ba13; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0;">
+                ${Utils.escapeHTML(String(developer.name || '').slice(0, 2).toUpperCase())}
+              </div>
+            `}
+            <div>
+              <h4 style="font-size:16px; font-weight:700; margin:0 0 2px;">${Utils.escapeHTML(developer.name)}</h4>
+              <span class="badge active" style="font-size:10px; padding:2px 7px;">${developer.total_projects || 0} Projects</span>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11.5px; color:var(--muted); line-height:1.5; margin-bottom:12px;">
+          ${Utils.escapeHTML(developer.description || 'Premium real estate development partner.')}
+        </p>
+        <div style="font-size:11px; color:var(--muted);">
+          <div>Contact: <strong>${Utils.escapeHTML(developer.contact_name || 'CRM Team')}</strong> (${Utils.escapeHTML(developer.contact_phone || '')})</div>
+          ${developer.website ? `<div>Web: <a href="${Utils.escapeHTML(developer.website)}" target="_blank" style="color:var(--purple); text-decoration:underline;">${Utils.escapeHTML(developer.website)}</a></div>` : ''}
+        </div>
+      </div>
+      ${role === 'admin' ? `
+        <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn small soft" onclick="App.openEditDeveloperModal('${developer.id}')">Edit</button>
+          <button class="btn small danger" onclick="App.deleteDeveloper('${developer.id}', '${Utils.escapeHTML(developer.name)}')">Delete</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+};
+
+App.projectCardHtml = function(project, role) {
+  return `
+    <div class="panel" style="margin-bottom:0; display:flex; flex-direction:column;">
+      <div style="padding:20px; flex:1;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:12px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            ${project.project_logo ? `
+              <div style="width:52px; height:52px; border-radius:10px; border:1px solid #e2e8f0; background:#ffffff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                <img src="${project.project_logo}" alt="${Utils.escapeHTML(project.name)}" style="max-width:100%; max-height:100%; object-fit:contain;">
+              </div>
+            ` : `
+              <div style="width:52px; height:52px; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; color:#3b82f6; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">
+                🏛️
+              </div>
+            `}
+            <div>
+              <div class="eyebrow" style="margin-bottom:2px;">${Utils.escapeHTML(project.developer_name)}</div>
+              <h4 style="font-family:'Playfair Display', Georgia, serif; font-size:18px; font-weight:600; margin:0;">
+                ${Utils.escapeHTML(project.name)}
+              </h4>
+            </div>
+          </div>
+          <span class="badge active" style="white-space:nowrap;">${Utils.escapeHTML(project.starting_price || 'Price on request')}</span>
+        </div>
+        <p style="font-size:11.5px; color:var(--muted); margin-bottom:14px; line-height:1.5;">
+          ${Utils.escapeHTML(project.description || '')}
+        </p>
+        <div style="background:var(--pale); border-radius:6px; padding:10px 12px; font-size:11.5px; margin-bottom:12px;">
+          <div style="margin-bottom:4px;">📍 <strong>Location:</strong> ${Utils.escapeHTML(project.location)}</div>
+          <div>📐 <strong>Super Built-up:</strong> ${Utils.escapeHTML(project.super_built_up_area || 'Various configurations')}</div>
+        </div>
+        ${project.amenities ? `
+          <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
+            ✨ <strong>Amenities:</strong> ${Utils.escapeHTML(project.amenities)}
+          </div>
+        ` : ''}
+      </div>
+      <div style="padding:12px 20px; background:#faf9fd; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+        ${project.google_maps_url ? `
+          <a href="${Utils.escapeHTML(project.google_maps_url)}" target="_blank" class="btn small soft">Maps Location ↗</a>
+        ` : '<span></span>'}
+        ${role === 'admin' ? `
+          <div class="actions">
+            <button class="btn small soft" onclick="App.openEditProjectModal('${project.id}')">Edit</button>
+            <button class="btn small danger" onclick="App.deleteProject('${project.id}', '${Utils.escapeHTML(project.name)}')">Delete</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+};
+
+App.paintProjectDirectory = function(developers, projects, filters) {
+  const role = this.currentUser?.role || '';
+  const filtered = this.applyProjectFilters(developers, projects, filters);
+  const developersGrid = document.getElementById('projDevelopersGrid');
+  const projectsGrid = document.getElementById('projProjectsGrid');
+  if (developersGrid) {
+    developersGrid.innerHTML = filtered.developers.length
+      ? filtered.developers.map(developer => this.developerCardHtml(developer, role)).join('')
+      : `<div class="panel" style="padding:24px; color:var(--muted); margin-bottom:0;">No developers match these filters.</div>`;
+  }
+  if (projectsGrid) {
+    projectsGrid.innerHTML = filtered.projects.length
+      ? filtered.projects.map(project => this.projectCardHtml(project, role)).join('')
+      : `<div class="panel" style="padding:24px; color:var(--muted); margin-bottom:0;">No projects match these filters.</div>`;
+  }
+  const developersTitle = document.getElementById('projDevelopersTitle');
+  const projectsTitle = document.getElementById('projProjectsTitle');
+  if (developersTitle) developersTitle.textContent = `Developers (${filtered.developers.length})`;
+  if (projectsTitle) projectsTitle.textContent = `Projects & Residences (${filtered.projects.length})`;
+  const count = document.getElementById('projFilterCount');
+  if (count) {
+    count.textContent = `${filtered.developers.length} developer${filtered.developers.length === 1 ? '' : 's'} · ${filtered.projects.length} project${filtered.projects.length === 1 ? '' : 's'}`;
+  }
+};
+
 App.renderProjectsManagement = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading developers and projects...</div>`;
 
@@ -8,12 +173,39 @@ App.renderProjectsManagement = async function(container) {
       API.get('/projects')
     ]);
 
-    const developers = devsRes.developers || [];
-    const projects = projsRes.projects || [];
+    const developers = (devsRes.developers || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+    const projects = (projsRes.projects || []).slice().sort((a, b) => a.name.localeCompare(b.name));
     const role = this.currentUser.role;
+    const filters = this.normalizeProjectFilters();
 
+    this.cache = this.cache || {};
     this.cache.developers = developers;
     this.cache.projects = projects;
+
+    const selectionLabel = (count, emptyLabel) => count ? `${count} Selected` : emptyLabel;
+    const statusOptions = [
+      { id: 'active', name: 'Active' },
+      { id: 'inactive', name: 'Inactive' }
+    ];
+    const multiSelect = (id, emptyLabel, options, selected, onchangeName) => `
+      <div class="multi-select-wrap">
+        <div class="multi-select-trigger" onclick="App.toggleMultiSelectDropdown('${id}Dropdown')">
+          <span id="${id}Label">${selectionLabel(selected.length, emptyLabel)}</span>
+          <span style="font-size:10px; color:#94a3b8;">▼</span>
+        </div>
+        <div id="${id}Dropdown" class="multi-select-dropdown hidden">
+          <input type="text" class="multi-select-search" placeholder="Search..." oninput="App.filterMultiSelectOptions(this, '${id}Options')">
+          <div class="multi-select-options" id="${id}Options">
+            ${options.length ? options.map(opt => `
+              <label class="multi-select-item" ${opt.developer_id ? `data-developer="${Utils.escapeHTML(opt.developer_id)}"` : ''}>
+                <input type="checkbox" value="${Utils.escapeHTML(opt.id)}" ${selected.includes(opt.id) ? 'checked' : ''} onchange="${onchangeName}">
+                <span>${Utils.escapeHTML(opt.name)}</span>
+              </label>
+            `).join('') : `<div class="multi-select-item">No options</div>`}
+          </div>
+        </div>
+      </div>
+    `;
 
     container.innerHTML = `
       <div class="page-header">
@@ -34,110 +226,132 @@ App.renderProjectsManagement = async function(container) {
         </div>
       </div>
 
-      <!-- Developers Grid -->
-      <h3 style="font-size:15px; font-weight:600; margin-bottom:14px;">Developers (${developers.length})</h3>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:32px;">
-        ${developers.map(d => `
-          <div class="panel" style="padding:18px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:0;">
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:10px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  ${d.company_logo ? `
-                    <div style="width:48px; height:48px; border-radius:10px; border:1px solid #e2e8f0; background:#ffffff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-                      <img src="${d.company_logo}" alt="${Utils.escapeHTML(d.name)}" style="max-width:100%; max-height:100%; object-fit:contain;">
-                    </div>
-                  ` : `
-                    <div style="width:48px; height:48px; border-radius:10px; border:1px solid #e2e8f0; background:linear-gradient(135deg, #1e293b, #0f172a); color:#f5ba13; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0;">
-                      ${d.name.slice(0, 2).toUpperCase()}
-                    </div>
-                  `}
-                  <div>
-                    <h4 style="font-size:16px; font-weight:700; margin:0 0 2px;">${Utils.escapeHTML(d.name)}</h4>
-                    <span class="badge active" style="font-size:10px; padding:2px 7px;">${d.total_projects || 0} Projects</span>
-                  </div>
-                </div>
-              </div>
-              <p style="font-size:11.5px; color:var(--muted); line-height:1.5; margin-bottom:12px;">
-                ${Utils.escapeHTML(d.description || 'Premium real estate development partner.')}
-              </p>
-              <div style="font-size:11px; color:var(--muted);">
-                <div>Contact: <strong>${Utils.escapeHTML(d.contact_name || 'CRM Team')}</strong> (${Utils.escapeHTML(d.contact_phone || '')})</div>
-                ${d.website ? `<div>Web: <a href="${Utils.escapeHTML(d.website)}" target="_blank" style="color:var(--purple); text-decoration:underline;">${Utils.escapeHTML(d.website)}</a></div>` : ''}
-              </div>
-            </div>
-            ${role === 'admin' ? `
-              <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px;">
-                <button class="btn small soft" onclick="App.openEditDeveloperModal('${d.id}')">Edit</button>
-                <button class="btn small danger" onclick="App.deleteDeveloper('${d.id}', '${Utils.escapeHTML(d.name)}')">Delete</button>
-              </div>
-            ` : ''}
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="projSearch" placeholder="Developer, project, location or contact" value="${Utils.escapeHTML(filters.search)}" onkeydown="if(event.key==='Enter'){event.preventDefault();App.searchProjects();}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          <div class="inv-filter-field">
+            <span>Developer</span>
+            ${multiSelect('projDev', 'All Developers', developers.map(developer => ({ id: developer.id, name: developer.name })), filters.developers, 'App.onProjectDevelopersChange()')}
           </div>
-        `).join('')}
+          <div class="inv-filter-field">
+            <span>Project</span>
+            ${multiSelect('projProject', 'All Projects', projects.map(project => ({ id: project.id, name: project.name, developer_id: project.developer_id || '' })), filters.projects, 'App.onProjectProjectsChange()')}
+          </div>
+          <div class="inv-filter-field">
+            <span>Status</span>
+            ${multiSelect('projStatus', 'All Statuses', statusOptions, filters.statuses, 'App.onProjectStatusesChange()')}
+          </div>
+        </div>
+        <div class="inv-filters-actions">
+          <span id="projFilterCount" class="inv-filter-count"></span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetProjectFilters()">Reset</button>
+            <button type="button" class="btn small primary" id="projSearchBtn" onclick="App.searchProjects()">Search</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Projects Grid -->
-      <h3 style="font-size:15px; font-weight:600; margin-bottom:14px;">Projects & Residences (${projects.length})</h3>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
-        ${projects.map(p => `
-          <div class="panel" style="margin-bottom:0; display:flex; flex-direction:column;">
-            <div style="padding:20px; flex:1;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:12px;">
-                <div style="display:flex; gap:12px; align-items:flex-start;">
-                  ${p.project_logo ? `
-                    <div style="width:52px; height:52px; border-radius:10px; border:1px solid #e2e8f0; background:#ffffff; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                      <img src="${p.project_logo}" alt="${Utils.escapeHTML(p.name)}" style="max-width:100%; max-height:100%; object-fit:contain;">
-                    </div>
-                  ` : `
-                    <div style="width:52px; height:52px; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; color:#3b82f6; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">
-                      🏛️
-                    </div>
-                  `}
-                  <div>
-                    <div class="eyebrow" style="margin-bottom:2px;">${Utils.escapeHTML(p.developer_name)}</div>
-                    <h4 style="font-family:'Playfair Display', Georgia, serif; font-size:18px; font-weight:600; margin:0;">
-                      ${Utils.escapeHTML(p.name)}
-                    </h4>
-                  </div>
-                </div>
-                <span class="badge active" style="white-space:nowrap;">${Utils.escapeHTML(p.starting_price || 'Price on request')}</span>
-              </div>
+      <h3 id="projDevelopersTitle" style="font-size:15px; font-weight:600; margin-bottom:14px;">Developers</h3>
+      <div id="projDevelopersGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:32px;"></div>
 
-              <p style="font-size:11.5px; color:var(--muted); margin-bottom:14px; line-height:1.5;">
-                ${Utils.escapeHTML(p.description || '')}
-              </p>
-
-              <div style="background:var(--pale); border-radius:6px; padding:10px 12px; font-size:11.5px; margin-bottom:12px;">
-                <div style="margin-bottom:4px;">📍 <strong>Location:</strong> ${Utils.escapeHTML(p.location)}</div>
-                <div>📐 <strong>Super Built-up:</strong> ${Utils.escapeHTML(p.super_built_up_area || 'Various configurations')}</div>
-              </div>
-
-              ${p.amenities ? `
-                <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
-                  ✨ <strong>Amenities:</strong> ${Utils.escapeHTML(p.amenities)}
-                </div>
-              ` : ''}
-            </div>
-
-            <div style="padding:12px 20px; background:#faf9fd; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
-              ${p.google_maps_url ? `
-                <a href="${Utils.escapeHTML(p.google_maps_url)}" target="_blank" class="btn small soft">
-                  Maps Location ↗
-                </a>
-              ` : '<span></span>'}
-              ${role === 'admin' ? `
-                <div class="actions">
-                  <button class="btn small soft" onclick="App.openEditProjectModal('${p.id}')">Edit</button>
-                  <button class="btn small danger" onclick="App.deleteProject('${p.id}', '${Utils.escapeHTML(p.name)}')">Delete</button>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>
+      <h3 id="projProjectsTitle" style="font-size:15px; font-weight:600; margin-bottom:14px;">Projects & Residences</h3>
+      <div id="projProjectsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;"></div>
     `;
+    this.paintProjectDirectory(developers, projects, filters);
+    this.onProjectDevelopersChange();
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
+};
+
+App.checkedProjectValues = function(optionsId) {
+  return [...document.querySelectorAll(`#${optionsId} input:checked`)].map(input => input.value);
+};
+
+App.setProjectMultiLabel = function(labelId, count, emptyLabel) {
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = count ? `${count} Selected` : emptyLabel;
+};
+
+App.onProjectDevelopersChange = function() {
+  const developers = this.checkedProjectValues('projDevOptions');
+  this.setProjectMultiLabel('projDevLabel', developers.length, 'All Developers');
+  document.querySelectorAll('#projProjectOptions .multi-select-item').forEach(item => {
+    const developerId = item.getAttribute('data-developer') || '';
+    const visible = !developers.length || developers.includes(developerId);
+    item.style.display = visible ? 'flex' : 'none';
+    if (!visible) {
+      const box = item.querySelector('input');
+      if (box) box.checked = false;
+    }
+  });
+  this.onProjectProjectsChange();
+};
+
+App.onProjectProjectsChange = function() {
+  const count = this.checkedProjectValues('projProjectOptions').length;
+  this.setProjectMultiLabel('projProjectLabel', count, 'All Projects');
+};
+
+App.onProjectStatusesChange = function() {
+  const count = this.checkedProjectValues('projStatusOptions').length;
+  this.setProjectMultiLabel('projStatusLabel', count, 'All Statuses');
+};
+
+App.readProjectFilters = function() {
+  return {
+    search: (document.getElementById('projSearch')?.value || '').trim(),
+    developers: this.checkedProjectValues('projDevOptions'),
+    projects: this.checkedProjectValues('projProjectOptions'),
+    statuses: this.checkedProjectValues('projStatusOptions')
+  };
+};
+
+App.searchProjects = async function() {
+  const filters = this.readProjectFilters();
+  this.projectFilters = filters;
+  const button = document.getElementById('projSearchBtn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Searching...';
+  }
+  try {
+    const [devsRes, projsRes] = await Promise.all([
+      API.get('/developers'),
+      API.get('/projects')
+    ]);
+    this.cache = this.cache || {};
+    this.cache.developers = devsRes.developers || [];
+    this.cache.projects = projsRes.projects || [];
+    this.paintProjectDirectory(this.cache.developers, this.cache.projects, filters);
+  } catch (err) {
+    Utils.toast('Error: ' + err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Search';
+    }
+  }
+};
+
+App.resetProjectFilters = function() {
+  this.projectFilters = { search: '', developers: [], projects: [], statuses: [] };
+  const search = document.getElementById('projSearch');
+  if (search) search.value = '';
+  document.querySelectorAll('#projDevOptions input, #projProjectOptions input, #projStatusOptions input').forEach(input => {
+    input.checked = false;
+  });
+  document.querySelectorAll('#projProjectOptions .multi-select-item').forEach(item => {
+    item.style.display = 'flex';
+  });
+  this.onProjectDevelopersChange();
+  this.onProjectStatusesChange();
+  this.searchProjects();
 };
 
 // Reusable Logo File Upload Handler

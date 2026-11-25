@@ -131,7 +131,6 @@ App.renderDashboard = async function(container) {
           <div class="panel">
             <div class="panel-header">
               <h3 class="panel-title">Sales Associate Performance</h3>
-              <button class="btn small" onclick="App.navigate('reports')">Full Report →</button>
             </div>
             <div class="table-wrap">
               <table>
