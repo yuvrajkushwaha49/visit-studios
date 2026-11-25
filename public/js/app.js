@@ -709,6 +709,10 @@ const App = {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v14H4zM7 3v6m10-6v6M4 11h16"/></svg>
           <span>Invitations Report</span>
         </button>
+        <button class="nav-item ${this.activePage === 'management_customers' ? 'active' : ''}" onclick="App.navigate('management_customers')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
+          <span>Customer</span>
+        </button>
         <button class="nav-item ${this.activePage === 'team' ? 'active' : ''}" onclick="App.navigate('team')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
           <span>Sales Team</span>
@@ -815,9 +819,10 @@ const App = {
       });
     }
     if (pageId === 'customer_detail') {
+      const returnPage = this.customerDetailReturnPage || 'management_customers';
       document.querySelectorAll('.nav-item').forEach(el => {
         const action = el.getAttribute('onclick') || '';
-        if (action.includes("navigate('customers')") && !action.includes('customer_detail')) el.classList.add('active');
+        if (action.includes(`navigate('${returnPage}')`)) el.classList.add('active');
       });
     }
 
@@ -836,6 +841,8 @@ const App = {
       } else if (pageId === 'team_member') {
         crumb.textContent = 'Team Member';
       } else if (pageId === 'customer_detail') {
+        crumb.textContent = 'Customer';
+      } else if (pageId === 'management_customers') {
         crumb.textContent = 'Customer';
       } else {
         crumb.textContent = pageId.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -862,6 +869,8 @@ const App = {
         return this.renderVisitsList(container);
       case 'customers':
         return this.renderCustomersList(container);
+      case 'management_customers':
+        return this.renderManagementCustomers(container);
       case 'customer_detail':
         return this.renderCustomerDetail(container);
       case 'followups':
@@ -885,3 +894,117 @@ const App = {
 };
 
 window.App = App;
+
+App.pagerState = App.pagerState || {};
+App.pagerRefresh = App.pagerRefresh || {};
+
+App.ensurePager = function(key, options = {}) {
+  if (!this.pagerState[key]) {
+    this.pagerState[key] = { page: 1, pageSize: 10 };
+  }
+  const state = this.pagerState[key];
+  if (options.resetPage) state.page = 1;
+  if (options.pageSize) state.pageSize = Math.max(1, Number(options.pageSize) || 10);
+  state.pageSize = Math.max(1, Number(state.pageSize) || 10);
+  state.page = Math.max(1, Number(state.page) || 1);
+  return state;
+};
+
+App.paginateList = function(items, key, options = {}) {
+  const list = Array.isArray(items) ? items : [];
+  const state = this.ensurePager(key, options);
+  const pageSize = state.pageSize;
+  const total = list.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+  if (state.page > totalPages) state.page = totalPages;
+  const page = state.page;
+  const start = total ? (page - 1) * pageSize : 0;
+  const end = total ? Math.min(start + pageSize, total) : 0;
+  return {
+    items: list.slice(start, end),
+    total,
+    page,
+    pageSize,
+    totalPages,
+    start,
+    end,
+    label: total
+      ? `Showing ${start + 1}–${end} of ${total}`
+      : 'Showing 0'
+  };
+};
+
+App.renderPager = function(pagerId, key, total, page, pageSize, totalPages, noun = 'items') {
+  const bar = document.getElementById(pagerId);
+  if (!bar) return;
+  if (!total) {
+    bar.innerHTML = '';
+    bar.classList.add('is-empty');
+    return;
+  }
+  bar.classList.remove('is-empty');
+
+  const maxButtons = 5;
+  let startPage = Math.max(1, page - Math.floor(maxButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  startPage = Math.max(1, endPage - maxButtons + 1);
+  const pageButtons = [];
+  for (let i = startPage; i <= endPage; i += 1) {
+    pageButtons.push(`
+      <button type="button" class="page-btn ${i === page ? 'active' : ''}" onclick="App.goPagerPage('${key}', ${i})" ${i === page ? 'aria-current="page"' : ''}>${i}</button>
+    `);
+  }
+
+  bar.innerHTML = `
+    <div class="table-pagination-meta">
+      <label>
+        Rows
+        <select onchange="App.changePagerSize('${key}', this.value)">
+          ${[10, 25, 50].map(size => `<option value="${size}" ${size === pageSize ? 'selected' : ''}>${size}</option>`).join('')}
+        </select>
+      </label>
+      <span>Page ${page} of ${totalPages} · ${total} ${noun}</span>
+    </div>
+    <div class="table-pagination-nav">
+      <button type="button" class="page-btn" onclick="App.goPagerPage('${key}', ${page - 1})" ${page <= 1 ? 'disabled' : ''}>Prev</button>
+      ${pageButtons.join('')}
+      <button type="button" class="page-btn" onclick="App.goPagerPage('${key}', ${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Next</button>
+    </div>
+  `;
+};
+
+App.goPagerPage = function(key, page) {
+  const state = this.ensurePager(key);
+  state.page = Math.max(1, Number(page) || 1);
+  const refresh = this.pagerRefresh[key];
+  if (typeof refresh === 'function') refresh.call(this);
+};
+
+App.changePagerSize = function(key, size) {
+  this.ensurePager(key, { pageSize: size, resetPage: true });
+  const refresh = this.pagerRefresh[key];
+  if (typeof refresh === 'function') refresh.call(this);
+};
+
+App.applyDomTablePager = function({ key, tableId, pagerId, matchRow, resetPage = false, noun = 'items', countElId = null }) {
+  this.pagerRefresh[key] = () => this.applyDomTablePager({
+    key, tableId, pagerId, matchRow, noun, countElId
+  });
+  const rows = [...document.querySelectorAll(`#${tableId} tbody tr[data-search]`)];
+  const matched = rows.filter(row => {
+    try { return matchRow(row); } catch { return true; }
+  });
+  rows.forEach(row => { row.style.display = 'none'; });
+  const pageData = this.paginateList(matched, key, { resetPage });
+  pageData.items.forEach(row => { row.style.display = ''; });
+  this.renderPager(pagerId, key, pageData.total, pageData.page, pageData.pageSize, pageData.totalPages, noun);
+  if (countElId) {
+    const countEl = document.getElementById(countElId);
+    if (countEl) {
+      countEl.textContent = pageData.total
+        ? `${pageData.label} ${noun}`
+        : `0 ${noun}`;
+    }
+  }
+  return pageData;
+};

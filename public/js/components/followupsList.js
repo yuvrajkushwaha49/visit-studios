@@ -23,14 +23,14 @@ App.renderFollowupsList = async function(container) {
       </div>
 
       <div class="filter-bar">
-        <input class="filter-input filter-search" id="folSearch" placeholder="Search customer or notes..." oninput="App.filterFollowupsTable()">
-        <select class="filter-input" id="folStatusFilter" onchange="App.filterFollowupsTable()">
+        <input class="filter-input filter-search" id="folSearch" placeholder="Search customer or notes..." oninput="App.filterFollowupsTable(true)">
+        <select class="filter-input" id="folStatusFilter" onchange="App.filterFollowupsTable(true)">
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="overdue">Overdue Alerts</option>
           <option value="completed">Completed</option>
         </select>
-        <select class="filter-input" id="folPriorityFilter" onchange="App.filterFollowupsTable()">
+        <select class="filter-input" id="folPriorityFilter" onchange="App.filterFollowupsTable(true)">
           <option value="">All Priorities</option>
           <option value="urgent">Urgent</option>
           <option value="high">High</option>
@@ -112,27 +112,31 @@ App.renderFollowupsList = async function(container) {
             </tbody>
           </table>
         </div>
+        <div id="followupsPagination" class="table-pagination"></div>
       </div>
     `;
+    this.filterFollowupsTable(true);
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
 };
 
-App.filterFollowupsTable = Utils.debounce(function() {
+App.filterFollowupsTable = Utils.debounce(function(resetPage) {
   const query = (document.getElementById('folSearch')?.value || '').toLowerCase();
   const status = document.getElementById('folStatusFilter')?.value || '';
   const priority = document.getElementById('folPriorityFilter')?.value || '';
-  const rows = document.querySelectorAll('#followupsTable tbody tr');
-
-  rows.forEach(r => {
-    const s = r.getAttribute('data-search') || '';
-    const st = r.getAttribute('data-status') || '';
-    const pr = r.getAttribute('data-priority') || '';
-    const matchesQuery = !query || s.includes(query);
-    const matchesStatus = !status || st === status;
-    const matchesPriority = !priority || pr === priority;
-    r.style.display = matchesQuery && matchesStatus && matchesPriority ? '' : 'none';
+  App.applyDomTablePager({
+    key: 'followups',
+    tableId: 'followupsTable',
+    pagerId: 'followupsPagination',
+    resetPage: resetPage === true,
+    noun: 'follow-ups',
+    matchRow: (row) => {
+      const s = row.getAttribute('data-search') || '';
+      const st = row.getAttribute('data-status') || '';
+      const pr = row.getAttribute('data-priority') || '';
+      return (!query || s.includes(query)) && (!status || st === status) && (!priority || pr === priority);
+    }
   });
 }, 100);
 

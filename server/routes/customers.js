@@ -33,9 +33,17 @@ router.get('/', (req, res) => {
     const params = [];
 
     // RBAC Filter
+    // ORGANIZATION Customer Management uses mine=1 so admin also sees only their own EMP customers.
+    // MANAGEMENT Customer list omits mine and still returns the full organization.
+    const mineOnly = String(req.query.mine || '') === '1';
     if (user.role === 'admin') {
-      sql += ' AND c.organization_id = ?';
-      params.push(user.organization_id);
+      if (mineOnly) {
+        sql += ' AND c.organization_id = ? AND (c.assigned_associate_id = ? OR c.assigned_sales_head_id = ?)';
+        params.push(user.organization_id, user.id, user.id);
+      } else {
+        sql += ' AND c.organization_id = ?';
+        params.push(user.organization_id);
+      }
     } else if (user.role === 'sales_head') {
       sql += ' AND c.organization_id = ? AND (c.assigned_sales_head_id = ? OR c.assigned_associate_id IN (SELECT id FROM users WHERE sales_head_id = ?))';
       params.push(user.organization_id, user.id, user.id);
@@ -103,7 +111,7 @@ router.get('/:id', (req, res) => {
     }
 
     // Load full history / timeline
-    const interactions = db.all(`
+    let interactions = db.all(`
       SELECT ci.*, u.name as user_name, u.role as user_role
       FROM customer_interactions ci
       LEFT JOIN users u ON ci.user_id = u.id
@@ -111,7 +119,7 @@ router.get('/:id', (req, res) => {
       ORDER BY ci.created_at DESC
     `, [cust.id]);
 
-    const invitations = db.all(`
+    let invitations = db.all(`
       SELECT i.*, p.name as project_name, u.name as associate_name
       FROM invitations i
       LEFT JOIN projects p ON i.project_id = p.id
@@ -120,7 +128,7 @@ router.get('/:id', (req, res) => {
       ORDER BY i.created_at DESC
     `, [cust.id]);
 
-    const visits = db.all(`
+    let visits = db.all(`
       SELECT sv.*, p.name as project_name, u.name as associate_name
       FROM site_visits sv
       LEFT JOIN projects p ON sv.project_id = p.id
@@ -129,13 +137,33 @@ router.get('/:id', (req, res) => {
       ORDER BY sv.scheduled_date DESC
     `, [cust.id]);
 
-    const followups = db.all(`
+    let followups = db.all(`
       SELECT f.*, u.name as associate_name
       FROM followups f
       LEFT JOIN users u ON f.associate_id = u.id
       WHERE f.customer_id = ?
       ORDER BY f.follow_up_date DESC
     `, [cust.id]);
+
+    // ORGANIZATION Customer Management: EMP activity notes = only that EMP's Invitation Sent
+    const empScope = String(req.query.emp_scope || '') === '1';
+    const isInvitationSent = (type) => {
+      const value = String(type || '').trim().toLowerCase();
+      return value === 'invitation sent' || value === 'sent';
+    };
+
+    if (user.role === 'sales_associate') {
+      interactions = interactions.filter(item => item.user_id === user.id && isInvitationSent(item.interaction_type));
+    } else if (user.role === 'sales_head') {
+      const teamIds = new Set(
+        (db.all('SELECT id FROM users WHERE sales_head_id = ?', [user.id]) || []).map(row => row.id)
+      );
+      teamIds.add(user.id);
+      interactions = interactions.filter(item => teamIds.has(item.user_id) && isInvitationSent(item.interaction_type));
+    } else if (user.role === 'admin' && empScope) {
+      const empId = cust.assigned_associate_id || cust.assigned_sales_head_id;
+      interactions = interactions.filter(item => (!empId || item.user_id === empId) && isInvitationSent(item.interaction_type));
+    }
 
     return res.json({
       customer: cust,

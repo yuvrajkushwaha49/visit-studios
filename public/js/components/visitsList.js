@@ -27,7 +27,7 @@ App.renderVisitsList = async function(container) {
 
       <!-- Filter Bar -->
       <div class="filter-bar">
-        <input class="filter-input filter-search" id="visitSearch" placeholder="Search customer, project or advisor..." oninput="App.filterVisitsTable()">
+        <input class="filter-input filter-search" id="visitSearch" placeholder="Search customer, project or advisor..." oninput="App.filterVisitsTable(true)">
         <select class="filter-input" id="visitRangeFilter" onchange="App.onVisitRangeChange(this.value)">
           <option value="" ${!range ? 'selected' : ''}>All Dates</option>
           <option value="today" ${range === 'today' ? 'selected' : ''}>Today's Visits</option>
@@ -35,7 +35,7 @@ App.renderVisitsList = async function(container) {
           <option value="week" ${range === 'week' ? 'selected' : ''}>This Week</option>
           <option value="month" ${range === 'month' ? 'selected' : ''}>This Month</option>
         </select>
-        <select class="filter-input" id="visitStatusFilter" onchange="App.filterVisitsTable()">
+        <select class="filter-input" id="visitStatusFilter" onchange="App.filterVisitsTable(true)">
           <option value="">All Statuses</option>
           <option value="upcoming">Upcoming</option>
           <option value="confirmed">Confirmed</option>
@@ -131,8 +131,10 @@ App.renderVisitsList = async function(container) {
             </tbody>
           </table>
         </div>
+        <div id="visitsPagination" class="table-pagination"></div>
       </div>
     `;
+    this.filterVisitsTable(true);
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
@@ -140,20 +142,24 @@ App.renderVisitsList = async function(container) {
 
 App.onVisitRangeChange = function(range) {
   this.currentVisitRange = range;
+  this.ensurePager('site_visits', { resetPage: true });
   this.renderVisitsList(document.getElementById('pageContent'));
 };
 
-App.filterVisitsTable = Utils.debounce(function() {
+App.filterVisitsTable = Utils.debounce(function(resetPage) {
   const query = (document.getElementById('visitSearch')?.value || '').toLowerCase();
   const status = document.getElementById('visitStatusFilter')?.value || '';
-  const rows = document.querySelectorAll('#visitsTable tbody tr');
-
-  rows.forEach(r => {
-    const s = r.getAttribute('data-search') || '';
-    const st = r.getAttribute('data-status') || '';
-    const matchesQuery = !query || s.includes(query);
-    const matchesStatus = !status || st === status;
-    r.style.display = matchesQuery && matchesStatus ? '' : 'none';
+  App.applyDomTablePager({
+    key: 'site_visits',
+    tableId: 'visitsTable',
+    pagerId: 'visitsPagination',
+    resetPage: resetPage === true,
+    noun: 'visits',
+    matchRow: (row) => {
+      const s = row.getAttribute('data-search') || '';
+      const st = row.getAttribute('data-status') || '';
+      return (!query || s.includes(query)) && (!status || st === status);
+    }
   });
 }, 100);
 

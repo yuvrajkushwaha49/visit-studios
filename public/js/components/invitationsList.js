@@ -70,8 +70,8 @@ App.renderInvitationsList = async function(container) {
       </div>
 
       <div class="filter-bar">
-        <input class="filter-input filter-search" id="invSearch" placeholder="Search customer, project or advisor..." oninput="App.filterInvitationsTable()">
-        <select class="filter-input" id="invStatusFilter" onchange="App.filterInvitationsTable()">
+        <input class="filter-input filter-search" id="invSearch" placeholder="Search customer, project or advisor..." oninput="App.filterInvitationsTable(true)">
+        <select class="filter-input" id="invStatusFilter" onchange="App.filterInvitationsTable(true)">
           <option value="">All Statuses</option>
           <option value="sent">Sent</option>
           <option value="opened">Opened</option>
@@ -149,24 +149,29 @@ App.renderInvitationsList = async function(container) {
             </tbody>
           </table>
         </div>
+        <div id="digitalInvPagination" class="table-pagination"></div>
       </div>
     `;
+    this.filterInvitationsTable(true);
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
 };
 
-App.filterInvitationsTable = Utils.debounce(function() {
+App.filterInvitationsTable = Utils.debounce(function(resetPage) {
   const query = (document.getElementById('invSearch')?.value || '').toLowerCase();
   const status = document.getElementById('invStatusFilter')?.value || '';
-  const rows = document.querySelectorAll('#invitationsTable tbody tr');
-
-  rows.forEach(r => {
-    const s = r.getAttribute('data-search') || '';
-    const st = r.getAttribute('data-status') || '';
-    const matchesQuery = !query || s.includes(query);
-    const matchesStatus = !status || st === status;
-    r.style.display = matchesQuery && matchesStatus ? '' : 'none';
+  App.applyDomTablePager({
+    key: 'digital_invitations',
+    tableId: 'invitationsTable',
+    pagerId: 'digitalInvPagination',
+    resetPage: resetPage === true,
+    noun: 'invitations',
+    matchRow: (row) => {
+      const s = row.getAttribute('data-search') || '';
+      const st = row.getAttribute('data-status') || '';
+      return (!query || s.includes(query)) && (!status || st === status);
+    }
   });
 }, 100);
 
@@ -349,15 +354,18 @@ App.renderDigitalInvitations = async function(container) {
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              ${list.length
-                ? list.map(inv => this.invitationRowHtml(inv)).join('')
-                : `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">${this.invitationHasFilters(filters) ? 'No invitations match these filters.' : 'No invitations found. Click "New Invitation" to create one.'}</td></tr>`}
-            </tbody>
+            <tbody id="invReportBody"></tbody>
           </table>
         </div>
+        <div id="invReportPagination" class="table-pagination"></div>
       </div>
     `;
+    this.cache = this.cache || {};
+    this.cache.reportInvitations = list;
+    this.pagerRefresh.invitations_report = () => {
+      this.renderInvitationRows(this.cache.reportInvitations || [], this.invitationHasFilters(this.normalizeInvitationFilters()));
+    };
+    this.renderInvitationRows(list, this.invitationHasFilters(filters));
     if (showMember) this.onInvitationTeamsChange();
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
@@ -467,14 +475,25 @@ App.invitationRowHtml = function(inv) {
   `;
 };
 
-App.renderInvitationRows = function(list, filtered) {
-  const tbody = document.querySelector('#invitationsTable tbody');
+App.renderInvitationRows = function(list, filtered, options = {}) {
+  const tbody = document.querySelector('#invitationsTable tbody') || document.getElementById('invReportBody');
   if (!tbody) return;
-  tbody.innerHTML = list.length
-    ? list.map(inv => this.invitationRowHtml(inv)).join('')
+  this.cache = this.cache || {};
+  this.cache.reportInvitations = list || [];
+  this.pagerRefresh.invitations_report = () => {
+    this.renderInvitationRows(this.cache.reportInvitations || [], filtered);
+  };
+  const pageData = this.paginateList(list || [], 'invitations_report', options);
+  tbody.innerHTML = pageData.total
+    ? pageData.items.map(inv => this.invitationRowHtml(inv)).join('')
     : `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">${filtered ? 'No invitations match these filters.' : 'No invitations found. Click "New Invitation" to create one.'}</td></tr>`;
   const count = document.getElementById('invFilterCount');
-  if (count) count.textContent = `${list.length} invitation${list.length === 1 ? '' : 's'}`;
+  if (count) {
+    count.textContent = pageData.total
+      ? `${pageData.label} invitation${pageData.total === 1 ? '' : 's'}`
+      : '0 invitations';
+  }
+  this.renderPager('invReportPagination', 'invitations_report', pageData.total, pageData.page, pageData.pageSize, pageData.totalPages, 'invitations');
 };
 
 App.onInvitationPeriodChange = function() {
@@ -531,7 +550,7 @@ App.searchInvitations = async function() {
   }
   try {
     const data = await API.get('/invitations', this.invitationQuery(filters));
-    this.renderInvitationRows(data.invitations || [], this.invitationHasFilters(filters));
+    this.renderInvitationRows(data.invitations || [], this.invitationHasFilters(filters), { resetPage: true });
   } catch (err) {
     Utils.toast('Error: ' + err.message);
   } finally {
@@ -543,6 +562,7 @@ App.searchInvitations = async function() {
 };
 
 App.resetInvitationFilters = function() {
+  this.ensurePager('invitations_report', { resetPage: true });
   this.invitationFilters = {
     search: '',
     teams: [],

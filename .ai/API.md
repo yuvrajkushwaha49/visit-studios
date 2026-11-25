@@ -94,8 +94,8 @@ This document catalogues all actual REST API endpoints detected in the codebase 
 ### 3.4. Customers CRM (`/api/customers`)
 | Method | Endpoint | Allowed Roles | Description | Request Query / Body | Response |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/customers` | All authenticated | Lists customers (with search & pagination) | Query: `search, budget_min, budget_max, status, limit, offset` | `{ success: true, data: [...] }` |
-| `GET` | `/api/customers/:id` | All authenticated | Customer profile + interaction history | URL param: `id` | `{ success: true, data: {...} }` |
+| `GET` | `/api/customers` | All authenticated | List customers by RBAC. Admin with `mine=1` gets only customers assigned to that admin (ORGANIZATION Customer Management). Without `mine`, admin gets the full organization list (MANAGEMENT Customer). | Query: `mine, search, status, project_id` | `{ customers: [...] }` |
+| `GET` | `/api/customers/:id` | All authenticated | Customer profile + interaction history. Sales associate/head always get Activity Notes limited to their (or team) `Invitation Sent` rows. Admin may pass `emp_scope=1` for the same EMP Invitation Sent filter on ORGANIZATION Customer detail. | URL param: `id`; query: `emp_scope=1` (optional) | `{ customer, interactions, invitations, visits, followups }` |
 | `POST` | `/api/customers` | All authenticated | Creates a new customer profile | Body: `{ name, email, phone, budget, preferred_location, notes }` | `{ success: true, data: {...} }` |
 | `PUT` | `/api/customers/:id` | All authenticated | Updates customer information | Body: `{ name, email, phone, budget, ... }` | `{ success: true, data: {...} }` |
 | `DELETE`| `/api/customers/:id` | `admin`, `super_admin` | Deletes customer profile | URL param: `id` | `{ success: true, message }` |

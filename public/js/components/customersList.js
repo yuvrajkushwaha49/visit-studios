@@ -3,20 +3,40 @@ App.renderCustomersList = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading customers...</div>`;
 
   try {
-    const data = await API.get('/customers');
-    const customers = data.customers || [];
+    if (!this.currentUser) {
+      this.currentUser = (typeof API !== 'undefined' && API.getUser ? API.getUser() : null) || {};
+    }
+    const role = this.currentUser.role || 'admin';
+    const userId = this.currentUser.id;
+    // ORGANIZATION Customer Management: only this logged-in EMP's customers (admin included)
+    const data = await API.get('/customers', role === 'admin' ? { mine: '1' } : {});
+    let customers = data.customers || [];
+    if (role === 'admin' || role === 'sales_associate') {
+      customers = customers.filter(c =>
+        c.assigned_associate_id === userId || c.assigned_sales_head_id === userId
+      );
+    }
+
+    this.cache = this.cache || {};
+    this.cache.orgCustomers = customers;
 
     container.innerHTML = `
       <div class="page-header">
         <div>
           <div class="eyebrow">RELATIONSHIP PIPELINE</div>
           <h1 class="page-title">Customer Management</h1>
-          <p class="page-desc">Manage buyer inquiries, site visit history, preferences, and advisor assignments.</p>
+          <p class="page-desc">${role === 'admin'
+            ? 'Only customers assigned to you. Open MANAGEMENT → Customer for the full organization list.'
+            : 'Your assigned customers only — invitation activity stays limited to what you sent.'}</p>
         </div>
         <div class="actions">
           <button class="btn primary" onclick="App.openAddCustomerModal()">
             + Add Customer
           </button>
+          ${role === 'admin' ? `
+          <button class="btn soft" onclick="App.navigate('management_customers')">
+            Full Organization →
+          </button>` : ''}
           <button class="btn" onclick="App.openImportCustomerModal()">
             Import CSV
           </button>
@@ -28,8 +48,8 @@ App.renderCustomersList = async function(container) {
 
       <!-- Filter Bar -->
       <div class="filter-bar">
-        <input class="filter-input filter-search" id="custSearch" placeholder="Search customer name, mobile or code..." oninput="App.filterCustomersTable()">
-        <select class="filter-input" id="custStatusFilter" onchange="App.filterCustomersTable()">
+        <input class="filter-input filter-search" id="custSearch" placeholder="Search customer name, mobile or code..." oninput="App.filterCustomersTable(true)">
+        <select class="filter-input" id="custStatusFilter" onchange="App.filterCustomersTable(true)">
           <option value="">All Statuses</option>
           <option value="lead">Lead</option>
           <option value="interested">Interested</option>
@@ -59,7 +79,7 @@ App.renderCustomersList = async function(container) {
                 <tr data-search="${Utils.escapeHTML((c.full_name + ' ' + c.mobile_number + ' ' + c.customer_code).toLowerCase())}" data-status="${c.status}">
                   <td><code>${Utils.escapeHTML(c.customer_code)}</code></td>
                   <td>
-                    <button type="button" class="row-link" onclick="App.openCustomerDetail('${c.id}')">${Utils.escapeHTML(c.full_name)}</button>
+                    <button type="button" class="row-link" onclick="App.openCustomerDetail('${c.id}', 'customers')">${Utils.escapeHTML(c.full_name)}</button>
                     <small>${Utils.escapeHTML(c.mobile_number)} · ${Utils.escapeHTML(c.email || 'No email')}</small>
                   </td>
                   <td>
@@ -79,7 +99,7 @@ App.renderCustomersList = async function(container) {
                   </td>
                   <td>
                     <div class="actions">
-                      <button class="btn small soft" onclick="App.openCustomerDetail('${c.id}')">View</button>
+                      <button class="btn small soft" onclick="App.openCustomerDetail('${c.id}', 'customers')">View</button>
                       <button class="btn small soft" onclick="App.openEditCustomerModal('${c.id}')">Edit</button>
                     </div>
                   </td>
@@ -87,31 +107,38 @@ App.renderCustomersList = async function(container) {
               `).join('') : `
                 <tr>
                   <td colspan="7" style="text-align:center; padding:40px; color:var(--muted);">
-                    No customers found. Click "Add Customer" to create your first client record.
+                    ${role === 'admin'
+                      ? 'No customers are assigned to you here. Use MANAGEMENT → Customer to view every customer in the organization.'
+                      : 'No customers found. Click "Add Customer" to create your first client record.'}
                   </td>
                 </tr>
               `}
             </tbody>
           </table>
         </div>
+        <div id="customersPagination" class="table-pagination"></div>
       </div>
     `;
+    this.filterCustomersTable(true);
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
 };
 
-App.filterCustomersTable = Utils.debounce(function() {
+App.filterCustomersTable = Utils.debounce(function(resetPage) {
   const query = (document.getElementById('custSearch')?.value || '').toLowerCase();
   const status = document.getElementById('custStatusFilter')?.value || '';
-  const rows = document.querySelectorAll('#customersTable tbody tr');
-
-  rows.forEach(r => {
-    const s = r.getAttribute('data-search') || '';
-    const st = r.getAttribute('data-status') || '';
-    const matchesQuery = !query || s.includes(query);
-    const matchesStatus = !status || st === status;
-    r.style.display = matchesQuery && matchesStatus ? '' : 'none';
+  App.applyDomTablePager({
+    key: 'customers',
+    tableId: 'customersTable',
+    pagerId: 'customersPagination',
+    resetPage: resetPage === true,
+    noun: 'customers',
+    matchRow: (row) => {
+      const s = row.getAttribute('data-search') || '';
+      const st = row.getAttribute('data-status') || '';
+      return (!query || s.includes(query)) && (!status || st === status);
+    }
   });
 }, 100);
 
@@ -221,8 +248,9 @@ App.handleAddCustomerSubmit = async function(e) {
   }
 };
 
-App.openCustomerDetail = function(customerId) {
+App.openCustomerDetail = function(customerId, returnPage) {
   this.selectedCustomerId = customerId;
+  this.customerDetailReturnPage = returnPage || this.activePage || 'management_customers';
   this.navigate('customer_detail');
 };
 
@@ -230,7 +258,317 @@ App.reloadCustomerScreen = function() {
   const container = document.getElementById('pageContent');
   if (!container) return;
   if (this.activePage === 'customer_detail') return this.renderCustomerDetail(container);
+  if (this.activePage === 'management_customers') return this.renderManagementCustomers(container);
   return this.renderCustomersList(container);
+};
+
+App.managementCustomerFilters = App.managementCustomerFilters || {
+  search: '',
+  teams: [],
+  members: [],
+  projects: [],
+  statuses: []
+};
+
+App.normalizeManagementCustomerFilters = function() {
+  const current = this.managementCustomerFilters || {};
+  const asList = (value) => Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
+  this.managementCustomerFilters = {
+    search: current.search || '',
+    teams: asList(current.teams),
+    members: asList(current.members),
+    projects: asList(current.projects),
+    statuses: asList(current.statuses)
+  };
+  return this.managementCustomerFilters;
+};
+
+App.applyManagementCustomerFilters = function(customers, filters) {
+  const query = String(filters.search || '').trim().toLowerCase();
+  return (customers || []).filter(customer => {
+    const matchesSearch = !query || [
+      customer.full_name,
+      customer.mobile_number,
+      customer.customer_code,
+      customer.email,
+      customer.assigned_associate_name,
+      customer.assigned_sales_head_name,
+      customer.interested_project_name
+    ].join(' ').toLowerCase().includes(query);
+    const matchesTeam = !filters.teams.length || filters.teams.includes(String(customer.assigned_sales_head_id || ''));
+    const matchesMember = !filters.members.length || filters.members.includes(String(customer.assigned_associate_id || ''));
+    const matchesProject = !filters.projects.length || filters.projects.includes(String(customer.interested_project_id || ''));
+    const matchesStatus = !filters.statuses.length || filters.statuses.includes(String(customer.status || ''));
+    return matchesSearch && matchesTeam && matchesMember && matchesProject && matchesStatus;
+  });
+};
+
+App.managementCustomerRow = function(customer) {
+  return `
+    <tr>
+      <td><code>${Utils.escapeHTML(customer.customer_code || '')}</code></td>
+      <td>
+        <button type="button" class="row-link" onclick="App.openCustomerDetail('${customer.id}', 'management_customers')">${Utils.escapeHTML(customer.full_name || '')}</button>
+        <small>${Utils.escapeHTML(customer.mobile_number || '')} · ${Utils.escapeHTML(customer.email || 'No email')}</small>
+      </td>
+      <td>
+        <strong>${Utils.escapeHTML(customer.budget || 'Open')}</strong>
+        <small>${Utils.escapeHTML(customer.preferred_location || 'Any location')}</small>
+      </td>
+      <td>
+        ${Utils.escapeHTML(customer.interested_project_name || 'Exploring')}
+        <small>${Utils.escapeHTML(customer.configuration || '')}</small>
+      </td>
+      <td>
+        ${Utils.escapeHTML(customer.assigned_associate_name || 'Unassigned')}
+        <small>Head: ${Utils.escapeHTML(customer.assigned_sales_head_name || 'Direct')}</small>
+      </td>
+      <td><span class="badge ${customer.status}">${Utils.escapeHTML(String(customer.status || '').replace(/_/g, ' '))}</span></td>
+      <td>
+        <div class="actions">
+          <button class="btn small soft" onclick="App.openCustomerDetail('${customer.id}', 'management_customers')">View</button>
+          <button class="btn small soft" onclick="App.openEditCustomerModal('${customer.id}')">Edit</button>
+        </div>
+      </td>
+    </tr>
+  `;
+};
+
+App.paintManagementCustomers = function(customers, filters, options = {}) {
+  const filtered = this.applyManagementCustomerFilters(customers, filters);
+  this.pagerRefresh.management_customers = () => {
+    this.paintManagementCustomers(this.cache?.customers || [], this.normalizeManagementCustomerFilters());
+  };
+  const pageData = this.paginateList(filtered, 'management_customers', options);
+  const body = document.getElementById('mgmtCustomersBody');
+  if (body) {
+    body.innerHTML = pageData.total
+      ? pageData.items.map(customer => this.managementCustomerRow(customer)).join('')
+      : `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--muted);">No customers match these filters.</td></tr>`;
+  }
+
+  const count = document.getElementById('mgmtCustFilterCount');
+  if (count) {
+    count.textContent = pageData.total
+      ? `${pageData.label} customer${pageData.total === 1 ? '' : 's'}`
+      : '0 customers';
+  }
+
+  this.renderPager('mgmtCustPagination', 'management_customers', pageData.total, pageData.page, pageData.pageSize, pageData.totalPages, 'customers');
+};
+
+App.renderManagementCustomers = async function(container) {
+  container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading customers...</div>`;
+
+  try {
+    const filters = this.normalizeManagementCustomerFilters();
+    const [data, usersRes, projectsRes] = await Promise.all([
+      API.get('/customers'),
+      API.get('/users').catch(() => ({ users: [] })),
+      API.get('/projects').catch(() => ({ projects: [] }))
+    ]);
+    const customers = data.customers || [];
+    const users = usersRes.users || [];
+    const heads = users
+      .filter(user => user.role === 'sales_head' && user.status === 'active')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const members = users
+      .filter(user => user.role === 'sales_associate' && user.status === 'active')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const projects = (projectsRes.projects || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+    this.cache = this.cache || {};
+    this.cache.customers = customers;
+
+    const selectionLabel = (count, emptyLabel) => count ? `${count} Selected` : emptyLabel;
+    const statusOptions = [
+      { id: 'lead', name: 'Lead' },
+      { id: 'interested', name: 'Interested' },
+      { id: 'visit_scheduled', name: 'Visit Scheduled' },
+      { id: 'visited', name: 'Visited' },
+      { id: 'negotiation', name: 'Negotiation' },
+      { id: 'booked', name: 'Booked' },
+      { id: 'inactive', name: 'Inactive' }
+    ];
+    const multiSelect = (id, emptyLabel, options, selected, onchangeName) => `
+      <div class="multi-select-wrap">
+        <div class="multi-select-trigger" onclick="App.toggleMultiSelectDropdown('${id}Dropdown')">
+          <span id="${id}Label">${selectionLabel(selected.length, emptyLabel)}</span>
+          <span style="font-size:10px; color:#94a3b8;">▼</span>
+        </div>
+        <div id="${id}Dropdown" class="multi-select-dropdown hidden">
+          <input type="text" class="multi-select-search" placeholder="Search..." oninput="App.filterMultiSelectOptions(this, '${id}Options')">
+          <div class="multi-select-options" id="${id}Options">
+            ${options.length ? options.map(opt => `
+              <label class="multi-select-item" ${opt.sales_head_id ? `data-head="${Utils.escapeHTML(opt.sales_head_id)}"` : ''}>
+                <input type="checkbox" value="${Utils.escapeHTML(opt.id)}" ${selected.includes(opt.id) ? 'checked' : ''} onchange="${onchangeName}">
+                <span>${Utils.escapeHTML(opt.name)}</span>
+              </label>
+            `).join('') : `<div class="multi-select-item">No options</div>`}
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="eyebrow">MANAGEMENT</div>
+          <h1 class="page-title">Customer</h1>
+          <p class="page-desc">Filter customers by team, member, project and status, then open the full detail page.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" onclick="App.openAddCustomerModal()">+ Add Customer</button>
+        </div>
+      </div>
+
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="mgmtCustSearch" placeholder="Name, mobile, code or advisor" value="${Utils.escapeHTML(filters.search)}" onkeydown="if(event.key==='Enter'){event.preventDefault();App.searchManagementCustomers();}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          <div class="inv-filter-field">
+            <span>Team</span>
+            ${multiSelect('mgmtCustTeam', 'All Teams', heads.map(head => ({ id: head.id, name: head.name })), filters.teams, 'App.onManagementCustomerTeamsChange()')}
+          </div>
+          <div class="inv-filter-field">
+            <span>Member</span>
+            ${multiSelect('mgmtCustMember', 'All Members', members.map(member => ({ id: member.id, name: member.name, sales_head_id: member.sales_head_id || '' })), filters.members, 'App.onManagementCustomerMembersChange()')}
+          </div>
+          <div class="inv-filter-field">
+            <span>Project</span>
+            ${multiSelect('mgmtCustProject', 'All Projects', projects.map(project => ({ id: project.id, name: project.name })), filters.projects, 'App.onManagementCustomerProjectsChange()')}
+          </div>
+          <div class="inv-filter-field">
+            <span>Status</span>
+            ${multiSelect('mgmtCustStatus', 'All Statuses', statusOptions, filters.statuses, 'App.onManagementCustomerStatusesChange()')}
+          </div>
+        </div>
+        <div class="inv-filters-actions">
+          <span id="mgmtCustFilterCount" class="inv-filter-count"></span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetManagementCustomerFilters()">Reset</button>
+            <button type="button" class="btn small primary" id="mgmtCustSearchBtn" onclick="App.searchManagementCustomers()">Search</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="table-wrap">
+          <table id="mgmtCustomersTable">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Customer</th>
+                <th>Budget / Pref</th>
+                <th>Interested Project</th>
+                <th>Assigned Associate</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="mgmtCustomersBody"></tbody>
+          </table>
+        </div>
+        <div id="mgmtCustPagination" class="table-pagination"></div>
+      </div>
+    `;
+    this.paintManagementCustomers(customers, filters);
+    this.onManagementCustomerTeamsChange();
+  } catch (err) {
+    container.innerHTML = `<div class="panel" style="padding: 30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
+  }
+};
+
+App.checkedManagementCustomerValues = function(optionsId) {
+  return [...document.querySelectorAll(`#${optionsId} input:checked`)].map(input => input.value);
+};
+
+App.setManagementCustomerMultiLabel = function(labelId, count, emptyLabel) {
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = count ? `${count} Selected` : emptyLabel;
+};
+
+App.onManagementCustomerTeamsChange = function() {
+  const teams = this.checkedManagementCustomerValues('mgmtCustTeamOptions');
+  this.setManagementCustomerMultiLabel('mgmtCustTeamLabel', teams.length, 'All Teams');
+  document.querySelectorAll('#mgmtCustMemberOptions .multi-select-item').forEach(item => {
+    const headId = item.getAttribute('data-head') || '';
+    const visible = !teams.length || teams.includes(headId);
+    item.style.display = visible ? 'flex' : 'none';
+    if (!visible) {
+      const box = item.querySelector('input');
+      if (box) box.checked = false;
+    }
+  });
+  this.onManagementCustomerMembersChange();
+};
+
+App.onManagementCustomerMembersChange = function() {
+  const count = this.checkedManagementCustomerValues('mgmtCustMemberOptions').length;
+  this.setManagementCustomerMultiLabel('mgmtCustMemberLabel', count, 'All Members');
+};
+
+App.onManagementCustomerProjectsChange = function() {
+  const count = this.checkedManagementCustomerValues('mgmtCustProjectOptions').length;
+  this.setManagementCustomerMultiLabel('mgmtCustProjectLabel', count, 'All Projects');
+};
+
+App.onManagementCustomerStatusesChange = function() {
+  const count = this.checkedManagementCustomerValues('mgmtCustStatusOptions').length;
+  this.setManagementCustomerMultiLabel('mgmtCustStatusLabel', count, 'All Statuses');
+};
+
+App.readManagementCustomerFilters = function() {
+  return {
+    search: (document.getElementById('mgmtCustSearch')?.value || '').trim(),
+    teams: this.checkedManagementCustomerValues('mgmtCustTeamOptions'),
+    members: this.checkedManagementCustomerValues('mgmtCustMemberOptions'),
+    projects: this.checkedManagementCustomerValues('mgmtCustProjectOptions'),
+    statuses: this.checkedManagementCustomerValues('mgmtCustStatusOptions')
+  };
+};
+
+App.searchManagementCustomers = async function() {
+  const filters = this.readManagementCustomerFilters();
+  this.managementCustomerFilters = filters;
+  const button = document.getElementById('mgmtCustSearchBtn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Searching...';
+  }
+  try {
+    const data = await API.get('/customers');
+    this.cache = this.cache || {};
+    this.cache.customers = data.customers || [];
+    this.paintManagementCustomers(this.cache.customers, filters, { resetPage: true });
+  } catch (err) {
+    Utils.toast('Error: ' + err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Search';
+    }
+  }
+};
+
+App.resetManagementCustomerFilters = function() {
+  this.managementCustomerFilters = { search: '', teams: [], members: [], projects: [], statuses: [] };
+  this.ensurePager('management_customers', { resetPage: true });
+  const search = document.getElementById('mgmtCustSearch');
+  if (search) search.value = '';
+  document.querySelectorAll('#mgmtCustTeamOptions input, #mgmtCustMemberOptions input, #mgmtCustProjectOptions input, #mgmtCustStatusOptions input').forEach(input => {
+    input.checked = false;
+  });
+  document.querySelectorAll('#mgmtCustMemberOptions .multi-select-item').forEach(item => {
+    item.style.display = 'flex';
+  });
+  this.onManagementCustomerTeamsChange();
+  this.onManagementCustomerProjectsChange();
+  this.onManagementCustomerStatusesChange();
+  this.searchManagementCustomers();
 };
 
 App.renderCustomerDetail = async function(container) {
@@ -246,14 +584,21 @@ App.renderCustomerDetail = async function(container) {
       this.currentUser = (typeof API !== 'undefined' && API.getUser ? API.getUser() : null) || {};
     }
     const role = this.currentUser.role || 'admin';
-    const data = await API.get(`/customers/${customerId}`);
+    const returnPage = this.customerDetailReturnPage || 'management_customers';
+    const orgEmpView = returnPage === 'customers' || role === 'sales_associate' || role === 'sales_head';
+    const detailQuery = (orgEmpView && role === 'admin') ? { emp_scope: '1' } : {};
+    const data = await API.get(`/customers/${customerId}`, detailQuery);
     const c = data.customer;
-    const interactions = data.interactions || [];
+    let interactions = data.interactions || [];
     const invitations = data.invitations || [];
     const visits = data.visits || [];
     const followups = data.followups || [];
     const crumb = document.getElementById('topbarCrumb');
     if (crumb) crumb.textContent = c.full_name;
+
+    if (orgEmpView) {
+      interactions = this.filterEmpInvitationSentNotes(interactions, c);
+    }
 
     const invitationRows = invitations.slice(0, 12).map(invitation => `
       <tr>
@@ -296,7 +641,7 @@ App.renderCustomerDetail = async function(container) {
           <p class="page-desc">${Utils.escapeHTML(c.mobile_number || '')}${c.email ? ` · ${Utils.escapeHTML(c.email)}` : ''}</p>
         </div>
         <div class="actions">
-          <button class="btn" onclick="App.navigate('customers')">Back to Customers</button>
+          <button class="btn" onclick="App.navigate('${returnPage}')">Back to Customer</button>
           <button class="btn small soft" onclick="App.openEditCustomerModal('${c.id}')">Edit</button>
           ${role !== 'sales_associate' ? `<button class="btn small" onclick="App.openReassignCustomerModal('${c.id}', '${Utils.escapeHTML(c.full_name)}')">Reassign</button>` : ''}
           <button class="btn small danger" onclick="App.deleteCustomer('${c.id}', '${Utils.escapeHTML(c.full_name)}')">Delete</button>
@@ -307,7 +652,7 @@ App.renderCustomerDetail = async function(container) {
         <div class="kpi-card purple"><div class="kpi-label">Status</div><div class="kpi-value" style="font-size:20px;"><span class="badge ${c.status}">${Utils.escapeHTML(String(c.status || '').replace(/_/g, ' '))}</span></div><div class="kpi-sub">Lead source: ${Utils.escapeHTML(c.lead_source || 'Direct')}</div></div>
         <div class="kpi-card blue"><div class="kpi-label">Advisor</div><div class="kpi-value" style="font-size:18px;">${Utils.escapeHTML(c.assigned_associate_name || 'Unassigned')}</div><div class="kpi-sub">Head: ${Utils.escapeHTML(c.assigned_sales_head_name || 'Direct')}</div></div>
         <div class="kpi-card gold"><div class="kpi-label">Invitations</div><div class="kpi-value">${invitations.length}</div><div class="kpi-sub">${visits.length} visits</div></div>
-        <div class="kpi-card green"><div class="kpi-label">Follow-ups</div><div class="kpi-value">${followups.length}</div><div class="kpi-sub">${interactions.length} notes</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Follow-ups</div><div class="kpi-value">${followups.length}</div><div class="kpi-sub">${interactions.length} ${orgEmpView ? 'invitation sent' : 'notes'}</div></div>
       </div>
 
       <div class="panel" style="margin-bottom:24px;">
@@ -326,18 +671,19 @@ App.renderCustomerDetail = async function(container) {
       </div>
 
       <div class="panel" style="margin-bottom:24px;">
-        <div class="panel-header"><h3 class="panel-title">Activity Notes (${interactions.length})</h3></div>
+        <div class="panel-header"><h3 class="panel-title">${orgEmpView ? `Invitation Sent (${interactions.length})` : `Activity Notes (${interactions.length})`}</h3></div>
+        ${orgEmpView ? '' : `
         <div style="padding:16px 20px; border-bottom:1px solid var(--line);">
           <form onsubmit="App.handleAddInteractionNote(event, '${c.id}')" style="display:flex; gap:8px;">
             <input id="newInteractionNote" required placeholder="Add follow-up call note or customer remark..." style="flex:1;">
             <button type="submit" class="btn primary small">Add Note</button>
           </form>
-        </div>
+        </div>`}
         <div class="table-wrap">
           <table>
             <thead><tr><th>Type</th><th>Notes</th><th>By</th><th>Date</th></tr></thead>
             <tbody>
-              ${interactionRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">No interaction notes yet.</td></tr>`}
+              ${interactionRows || `<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--muted);">${orgEmpView ? 'No invitation sent activity for this employee yet.' : 'No interaction notes yet.'}</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -382,6 +728,25 @@ App.renderCustomerDetail = async function(container) {
   } catch (err) {
     container.innerHTML = `<div class="panel" style="padding:30px; color:var(--red);">Error: ${Utils.escapeHTML(err.message)}</div>`;
   }
+};
+
+App.filterEmpInvitationSentNotes = function(interactions, customer) {
+  const user = this.currentUser || {};
+  const role = user.role || 'admin';
+  const isInvitationSent = (type) => {
+    const value = String(type || '').trim().toLowerCase();
+    return value === 'invitation sent' || value === 'sent';
+  };
+  let list = (interactions || []).filter(item => isInvitationSent(item.interaction_type));
+  if (role === 'sales_associate') {
+    list = list.filter(item => item.user_id === user.id);
+  } else if (role === 'sales_head') {
+    list = list.filter(item => item.user_id === user.id || item.user_id === customer.assigned_associate_id);
+  } else {
+    const empId = customer.assigned_associate_id || customer.assigned_sales_head_id;
+    if (empId) list = list.filter(item => item.user_id === empId);
+  }
+  return list;
 };
 
 App.handleAddInteractionNote = async function(e, customerId) {
@@ -605,7 +970,7 @@ App.deleteCustomer = async function(customerId, customerName) {
     const res = await API.delete(`/customers/${customerId}`);
     Utils.toast(res.message);
     if (App.activePage === 'customer_detail' && App.selectedCustomerId === customerId) {
-      App.navigate('customers');
+      App.navigate(App.customerDetailReturnPage || 'management_customers');
     } else {
       App.reloadCustomerScreen();
     }
