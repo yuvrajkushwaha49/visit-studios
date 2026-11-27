@@ -9,20 +9,39 @@ const config = require('../config');
 
 router.use(authenticate);
 
+function canAccessVisit(user, visit) {
+  if (!user || !visit) return false;
+  if (user.role === 'super_admin') return true;
+  if (visit.organization_id !== user.organization_id) return false;
+  if (user.role === 'admin') return true;
+  if (user.role === 'sales_head') {
+    if (visit.sales_head_id === user.id || visit.associate_id === user.id) return true;
+    const assoc = db.get('SELECT sales_head_id FROM users WHERE id = ?', [visit.associate_id]);
+    return Boolean(assoc && assoc.sales_head_id === user.id);
+  }
+  if (user.role === 'sales_associate') {
+    return visit.associate_id === user.id;
+  }
+  return false;
+}
+
 // GET /api/visits - List visits with filters and RBAC
 router.get('/', (req, res) => {
   try {
     const user = req.user;
-    const { status, project_id, associate_id, date, range, search } = req.query;
+    const { status, project_id, developer_id, team_id, sales_head_id, associate_id, date, date_from, date_to, range, search } = req.query;
 
     let sql = `
       SELECT sv.*,
         c.full_name as customer_name,
         c.mobile_number as customer_phone,
         p.name as project_name,
+        p.developer_id as developer_id,
         d.name as developer_name,
         u_assoc.name as associate_name,
         u_assoc.phone as associate_phone,
+        COALESCE(sv.sales_head_id, u_assoc.sales_head_id) as team_id,
+        u_head.name as team_name,
         u_staff.name as staff_name,
         i.token as invitation_token,
         fb.rating as feedback_rating,
@@ -32,6 +51,7 @@ router.get('/', (req, res) => {
       JOIN projects p ON sv.project_id = p.id
       LEFT JOIN developers d ON p.developer_id = d.id
       JOIN users u_assoc ON sv.associate_id = u_assoc.id
+      LEFT JOIN users u_head ON COALESCE(sv.sales_head_id, u_assoc.sales_head_id) = u_head.id
       LEFT JOIN users u_staff ON sv.authorized_staff_id = u_staff.id
       LEFT JOIN invitations i ON sv.invitation_id = i.id
       LEFT JOIN feedback fb ON fb.site_visit_id = sv.id
@@ -56,12 +76,23 @@ router.get('/', (req, res) => {
       params.push(status);
     }
 
+    if (developer_id) {
+      sql += ' AND p.developer_id = ?';
+      params.push(developer_id);
+    }
+
     if (project_id) {
       sql += ' AND sv.project_id = ?';
       params.push(project_id);
     }
 
-    if (associate_id) {
+    const filterTeamId = team_id || sales_head_id;
+    if (filterTeamId && user.role !== 'sales_associate') {
+      sql += ' AND (sv.sales_head_id = ? OR u_assoc.sales_head_id = ?)';
+      params.push(filterTeamId, filterTeamId);
+    }
+
+    if (associate_id && user.role !== 'sales_associate') {
       sql += ' AND sv.associate_id = ?';
       params.push(associate_id);
     }
@@ -69,6 +100,15 @@ router.get('/', (req, res) => {
     if (date) {
       sql += ' AND sv.scheduled_date = ?';
       params.push(date);
+    }
+
+    if (date_from && /^\d{4}-\d{2}-\d{2}$/.test(date_from)) {
+      sql += ' AND sv.scheduled_date >= ?';
+      params.push(date_from);
+    }
+    if (date_to && /^\d{4}-\d{2}-\d{2}$/.test(date_to)) {
+      sql += ' AND sv.scheduled_date <= ?';
+      params.push(date_to);
     }
 
     // Time ranges: today, tomorrow, week, month
@@ -83,9 +123,9 @@ router.get('/', (req, res) => {
     }
 
     if (search) {
-      sql += ' AND (c.full_name LIKE ? OR c.mobile_number LIKE ? OR p.name LIKE ?)';
+      sql += ' AND (c.full_name LIKE ? OR c.mobile_number LIKE ? OR p.name LIKE ? OR COALESCE(d.name, \'\') LIKE ? OR u_assoc.name LIKE ?)';
       const term = `%${search}%`;
-      params.push(term, term, term);
+      params.push(term, term, term, term, term);
     }
 
     sql += ' ORDER BY sv.scheduled_date DESC, sv.scheduled_time ASC';
@@ -126,6 +166,9 @@ router.post('/check-in', (req, res) => {
 
     if (!visit) {
       return res.status(404).json({ error: 'Valid visit record or QR token not found' });
+    }
+    if (!canAccessVisit(user, visit)) {
+      return res.status(403).json({ error: 'Unauthorized to check in this visit' });
     }
 
     if (visit.status === 'completed') {
@@ -185,6 +228,7 @@ router.post('/:id/check-out', (req, res) => {
     `, [req.params.id]);
 
     if (!visit) return res.status(404).json({ error: 'Visit not found' });
+    if (!canAccessVisit(user, visit)) return res.status(403).json({ error: 'Unauthorized' });
 
     db.run(
       `UPDATE site_visits SET
@@ -198,6 +242,30 @@ router.post('/:id/check-out', (req, res) => {
 
     const newCustomerStatus = proceed_to_booking ? 'negotiation' : 'visited';
     db.run(`UPDATE customers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [newCustomerStatus, visit.customer_id]);
+
+    // Sync any linked leads to site_visit_completed (or negotiation)
+    const linkedLeads = db.all('SELECT id, stage, organization_id, assigned_associate_id, assigned_sales_head_id, enquiry_ref FROM leads WHERE site_visit_id = ?', [visit.id]);
+    const targetLeadStage = proceed_to_booking ? 'negotiation' : 'site_visit_completed';
+    const notificationService = require('../services/notificationService');
+    for (const ld of linkedLeads) {
+      if (ld.stage !== targetLeadStage && ld.stage !== 'booked_won' && ld.stage !== 'lost') {
+        db.run('UPDATE leads SET stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [targetLeadStage, ld.id]);
+        db.run(
+          `INSERT INTO lead_stage_history (id, organization_id, lead_id, previous_stage, new_stage, changed_by, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          ['lsh-' + crypto.randomUUID().slice(0, 8), ld.organization_id, ld.id, ld.stage, targetLeadStage, user.id, `Site visit completed (${visit.project_name})`]
+        );
+        notificationService.notifyUsers({
+          organizationId: ld.organization_id,
+          recipientUserIds: [ld.assigned_associate_id, ld.assigned_sales_head_id].filter(Boolean),
+          eventType: 'site_visit_completed',
+          title: `Site Visit Completed (${ld.enquiry_ref})`,
+          message: `${visit.customer_name} completed site visit at ${visit.project_name}.`,
+          entityType: 'leads',
+          entityId: ld.id
+        }).catch(() => {});
+      }
+    }
 
     // Dispatch feedback request WhatsApp
     const baseUrl = config.getBaseUrl(req);
@@ -227,6 +295,9 @@ router.patch('/:id/status', (req, res) => {
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: 'Invalid visit status' });
     }
+    const existingVisit = db.get('SELECT * FROM site_visits WHERE id = ?', [req.params.id]);
+    if (!existingVisit) return res.status(404).json({ error: 'Visit not found' });
+    if (!canAccessVisit(req.user, existingVisit)) return res.status(403).json({ error: 'Unauthorized' });
 
     db.run(
       `UPDATE site_visits SET status = ?, staff_notes = COALESCE(?, staff_notes), updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -288,6 +359,7 @@ router.get('/:id', (req, res) => {
     `, [req.params.id]);
 
     if (!visit) return res.status(404).json({ error: 'Visit not found' });
+    if (!canAccessVisit(req.user, visit)) return res.status(403).json({ error: 'Unauthorized' });
     return res.json({ visit });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -335,6 +407,7 @@ router.put('/:id', (req, res) => {
     const { scheduled_date, scheduled_time, duration, staff_notes, status } = req.body;
     const visit = db.get('SELECT * FROM site_visits WHERE id = ?', [req.params.id]);
     if (!visit) return res.status(404).json({ error: 'Visit not found' });
+    if (!canAccessVisit(req.user, visit)) return res.status(403).json({ error: 'Unauthorized' });
 
     db.run(
       `UPDATE site_visits SET
@@ -375,6 +448,7 @@ router.delete('/:id', (req, res) => {
   try {
     const visit = db.get('SELECT * FROM site_visits WHERE id = ?', [req.params.id]);
     if (!visit) return res.status(404).json({ error: 'Visit not found' });
+    if (!canAccessVisit(req.user, visit)) return res.status(403).json({ error: 'Unauthorized' });
 
     db.run('DELETE FROM site_visits WHERE id = ?', [req.params.id]);
     logActivity(req, 'DELETE_VISIT', 'site_visits', req.params.id, 'Deleted site visit');

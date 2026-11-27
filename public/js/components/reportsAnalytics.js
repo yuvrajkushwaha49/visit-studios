@@ -22,7 +22,7 @@ App.reportsState = {
 };
 
 App.renderReportsAnalytics = async function(container) {
-  const user = this.state.user || {};
+  const user = this.currentUser || this.state?.user || {};
   const role = user.role || 'admin';
 
   // Set default active tab based on role
@@ -45,7 +45,7 @@ App.renderReportsAnalytics = async function(container) {
 };
 
 App.fetchAndRenderReports = async function(container) {
-  const user = this.state.user || {};
+  const user = this.currentUser || this.state?.user || {};
   const role = user.role || 'admin';
   const state = App.reportsState;
 
@@ -87,7 +87,7 @@ App.fetchAndRenderReports = async function(container) {
 };
 
 App.renderReportsUI = function(container, data) {
-  const user = this.state.user || {};
+  const user = this.currentUser || this.state?.user || {};
   const role = user.role || 'admin';
   const state = App.reportsState;
   const k = data.kpis || {};

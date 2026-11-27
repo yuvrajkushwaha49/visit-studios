@@ -184,6 +184,17 @@ Customer visit ratings and post-visit impression surveys.
 - `whatsapp_logs`: Delivery audit records per phone number and status (`sent`, `delivered`, `read`, `failed`).
 - `activity_logs`: Comprehensive audit trail logging `{ user_id, action, entity_type, entity_id, details, ip_address }`.
 
+### 2.15. Lead Management Tables (Migration 002)
+- `campaigns`: Organization-scoped marketing campaigns (`status`, `source_channel`, `start_date`, `end_date`).
+- `tracking_links`: Cryptographically random `token` & `short_code`, creator/owner attribution (`owner_associate_id`, `owner_sales_head_id`), optional `project_id`/`campaign_id`, `is_active`, `expires_at`.
+- `leads`: Project-level customer enquiries (`enquiry_ref`, `customer_id`, `project_id`, `configuration_id`, `apartment_size`, `budget`, `purchase_timeline`, `preferred_callback_time`, `city`, `contact_consent`, immutable `original_*` attribution, mutable `assigned_*` ownership, `stage`, `loss_reason`, `duplicate_status`, `invitation_id`, `site_visit_id`).
+- `campaign_events`: Tracking funnel telemetry (`link_created`, `link_opened`, `form_started`, `enquiry_submitted`, `submission_successful`, `submission_rejected`, `duplicate_detected`).
+- `lead_stage_history`: Audit trail of stage transitions with `previous_stage`, `new_stage`, `changed_by`, `notes`, `loss_reason`.
+- `lead_assignments`: Audit trail of ownership changes preserving original attribution.
+- `lead_settings`: Organization policies (`campaigns_enabled`, `admin_link_assignment_policy`, `sales_head_link_assignment_policy`, `duplicate_policy`, `timezone`, `strict_stage_transitions`).
+- `notifications`, `notification_preferences`, `notification_logs`: In-app alerts, user channel/event preferences, deduplication (`dedupe_key`), and email retry queue.
+- Additive columns: `customers.normalized_mobile`, `customers.city`, `customers.original_source`; `followups.lead_id`, `followups.completed_at`, `followups.reminder_sent_at`.
+
 ---
 
 ## 3. Database Indexes

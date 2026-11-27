@@ -5,29 +5,51 @@ const db = require('../db');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
 const { logActivity } = require('../middleware/audit');
 const { arrayToCSV, parseCSV } = require('../services/exportService');
+const { normalizeMobile } = require('../validators/leadValidators');
 
 router.use(authenticate);
+
+function canAccessCustomer(user, cust) {
+  if (!user || !cust) return false;
+  if (user.role === 'super_admin') return true;
+  if (cust.organization_id !== user.organization_id) return false;
+  if (user.role === 'admin') return true;
+  if (user.role === 'sales_head') {
+    if (cust.assigned_sales_head_id === user.id) return true;
+    if (cust.assigned_associate_id) {
+      const assoc = db.get('SELECT sales_head_id FROM users WHERE id = ?', [cust.assigned_associate_id]);
+      if (assoc && assoc.sales_head_id === user.id) return true;
+    }
+    return false;
+  }
+  if (user.role === 'sales_associate') {
+    return cust.assigned_associate_id === user.id;
+  }
+  return false;
+}
 
 // GET /api/customers - List customers according to RBAC hierarchy
 router.get('/', (req, res) => {
   try {
     const user = req.user;
-    const { status, project_id, search } = req.query;
+    const { status, project_id, developer_id, team_id, sales_head_id, associate_id, date_from, date_to, search } = req.query;
 
     let sql = `
       SELECT c.*,
         p.name as interested_project_name,
+        p.developer_id as developer_id,
         d.name as developer_name,
         u_assoc.name as assigned_associate_name,
         u_assoc.phone as assigned_associate_phone,
         u_head.name as assigned_sales_head_name,
+        COALESCE(c.assigned_sales_head_id, u_assoc.sales_head_id) as team_id,
         (SELECT COUNT(*) FROM invitations i WHERE i.customer_id = c.id) as total_invitations,
         (SELECT COUNT(*) FROM site_visits sv WHERE sv.customer_id = c.id) as total_visits
       FROM customers c
       LEFT JOIN projects p ON c.interested_project_id = p.id
       LEFT JOIN developers d ON p.developer_id = d.id
       LEFT JOIN users u_assoc ON c.assigned_associate_id = u_assoc.id
-      LEFT JOIN users u_head ON c.assigned_sales_head_id = u_head.id
+      LEFT JOIN users u_head ON COALESCE(c.assigned_sales_head_id, u_assoc.sales_head_id) = u_head.id
       WHERE 1=1
     `;
     const params = [];
@@ -57,15 +79,41 @@ router.get('/', (req, res) => {
       params.push(status);
     }
 
+    if (developer_id) {
+      sql += ' AND p.developer_id = ?';
+      params.push(developer_id);
+    }
+
     if (project_id) {
       sql += ' AND c.interested_project_id = ?';
       params.push(project_id);
     }
 
+    const filterTeamId = team_id || sales_head_id;
+    if (filterTeamId && user.role !== 'sales_associate') {
+      sql += ' AND (c.assigned_sales_head_id = ? OR u_assoc.sales_head_id = ?)';
+      params.push(filterTeamId, filterTeamId);
+    }
+
+    if (associate_id && user.role !== 'sales_associate') {
+      sql += ' AND c.assigned_associate_id = ?';
+      params.push(associate_id);
+    }
+
+    if (date_from && /^\d{4}-\d{2}-\d{2}$/.test(date_from)) {
+      sql += ' AND date(c.created_at) >= ?';
+      params.push(date_from);
+    }
+
+    if (date_to && /^\d{4}-\d{2}-\d{2}$/.test(date_to)) {
+      sql += ' AND date(c.created_at) <= ?';
+      params.push(date_to);
+    }
+
     if (search) {
-      sql += ' AND (c.full_name LIKE ? OR c.mobile_number LIKE ? OR c.customer_code LIKE ?)';
+      sql += ' AND (c.full_name LIKE ? OR c.mobile_number LIKE ? OR c.customer_code LIKE ? OR COALESCE(p.name, \'\') LIKE ? OR COALESCE(u_assoc.name, \'\') LIKE ?)';
       const term = `%${search}%`;
-      params.push(term, term, term);
+      params.push(term, term, term, term, term);
     }
 
     sql += ' ORDER BY c.created_at DESC';
@@ -145,6 +193,54 @@ router.get('/:id', (req, res) => {
       ORDER BY f.follow_up_date DESC
     `, [cust.id]);
 
+    let enquiries = db.all(`
+      SELECT l.*, p.name as project_name, d.name as developer_name,
+        pc.name as configuration_name, camp.name as campaign_name,
+        ua.name as assigned_associate_name, uh.name as assigned_sales_head_name,
+        oa.name as original_associate_name, lo.name as original_link_owner_name
+      FROM leads l
+      LEFT JOIN projects p ON l.project_id = p.id
+      LEFT JOIN developers d ON p.developer_id = d.id
+      LEFT JOIN project_configurations pc ON l.configuration_id = pc.id
+      LEFT JOIN campaigns camp ON l.campaign_id = camp.id
+      LEFT JOIN users ua ON l.assigned_associate_id = ua.id
+      LEFT JOIN users uh ON l.assigned_sales_head_id = uh.id
+      LEFT JOIN users oa ON l.original_associate_id = oa.id
+      LEFT JOIN users lo ON l.original_link_owner_id = lo.id
+      WHERE l.customer_id = ?
+      ORDER BY l.submitted_at DESC
+    `, [cust.id]);
+
+    let stageHistory = db.all(`
+      SELECT h.*, l.enquiry_ref, u.name as changed_by_name
+      FROM lead_stage_history h
+      JOIN leads l ON h.lead_id = l.id
+      LEFT JOIN users u ON h.changed_by = u.id
+      WHERE l.customer_id = ?
+      ORDER BY h.created_at DESC
+    `, [cust.id]);
+
+    let assignmentHistory = db.all(`
+      SELECT a.*, l.enquiry_ref, pu.name as previous_owner_name, nu.name as new_owner_name, cb.name as changed_by_name
+      FROM lead_assignments a
+      JOIN leads l ON a.lead_id = l.id
+      LEFT JOIN users pu ON a.previous_owner_id = pu.id
+      LEFT JOIN users nu ON a.new_owner_id = nu.id
+      LEFT JOIN users cb ON a.changed_by = cb.id
+      WHERE l.customer_id = ?
+      ORDER BY a.created_at DESC
+    `, [cust.id]);
+
+    if (user.role === 'sales_associate') {
+      enquiries = enquiries.filter(e => e.assigned_associate_id === user.id);
+    } else if (user.role === 'sales_head') {
+      const teamIds = new Set(
+        (db.all('SELECT id FROM users WHERE sales_head_id = ?', [user.id]) || []).map(row => row.id)
+      );
+      teamIds.add(user.id);
+      enquiries = enquiries.filter(e => e.assigned_sales_head_id === user.id || teamIds.has(e.assigned_associate_id));
+    }
+
     // ORGANIZATION Customer Management: EMP activity notes = only that EMP's Invitation Sent
     const empScope = String(req.query.emp_scope || '') === '1';
     const isInvitationSent = (type) => {
@@ -170,7 +266,10 @@ router.get('/:id', (req, res) => {
       interactions,
       invitations,
       visits,
-      followups
+      followups,
+      enquiries,
+      stageHistory,
+      assignmentHistory
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -192,12 +291,13 @@ router.post('/', async (req, res) => {
     }
 
     const cleanMobile = mobile_number.replace(/[^\d+]/g, '');
+    const normMobile = normalizeMobile(mobile_number).normalized10;
     const orgId = user.role === 'super_admin' ? (req.body.organization_id || user.organization_id) : user.organization_id;
 
     // Check duplicate mobile in organization
     const existing = db.get(
-      'SELECT id, full_name, assigned_associate_id FROM customers WHERE organization_id = ? AND (mobile_number = ? OR mobile_number LIKE ?)',
-      [orgId, cleanMobile, `%${cleanMobile.slice(-10)}`]
+      'SELECT id, full_name, assigned_associate_id FROM customers WHERE organization_id = ? AND (normalized_mobile = ? OR mobile_number = ? OR mobile_number LIKE ?)',
+      [orgId, normMobile, cleanMobile, `%${normMobile}`]
     );
 
     if (existing) {
@@ -229,15 +329,16 @@ router.post('/', async (req, res) => {
 
     db.run(
       `INSERT INTO customers (
-        id, organization_id, customer_code, full_name, mobile_number, whatsapp_number,
-        email, budget, preferred_location, interested_project_id, configuration,
-        lead_source, requirements, assigned_associate_id, assigned_sales_head_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'lead')`,
+        id, organization_id, customer_code, full_name, mobile_number, normalized_mobile, whatsapp_number,
+        email, city, budget, preferred_location, interested_project_id, configuration,
+        lead_source, original_source, requirements, assigned_associate_id, assigned_sales_head_id, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'lead')`,
       [
-        customerId, orgId, customerCode, full_name.trim(), cleanMobile,
+        customerId, orgId, customerCode, full_name.trim(), cleanMobile, normMobile,
         whatsapp_number ? whatsapp_number.replace(/[^\d+]/g, '') : cleanMobile,
-        email ? email.trim().toLowerCase() : '', budget || '', preferred_location || '',
-        interested_project_id || null, configuration || '', lead_source || 'Direct',
+        email ? email.trim().toLowerCase() : '', req.body.city || preferred_location || '',
+        budget || '', preferred_location || '',
+        interested_project_id || null, configuration || '', lead_source || 'Direct', lead_source || 'Direct',
         requirements || '', targetAssociateId || null, targetSalesHeadId || null
       ]
     );
@@ -260,6 +361,111 @@ router.post('/', async (req, res) => {
   }
 });
 
+// GET /api/customers/:id/enquiries - All project enquiries (leads) for this customer
+router.get('/:id/enquiries', (req, res) => {
+  try {
+    const cust = db.get('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+    if (!cust) return res.status(404).json({ error: 'Customer not found' });
+    if (!canAccessCustomer(req.user, cust)) return res.status(403).json({ error: 'Unauthorized' });
+
+    let sql = `
+      SELECT l.*, p.name as project_name, d.name as developer_name,
+        pc.name as configuration_name, camp.name as campaign_name,
+        ua.name as assigned_associate_name, uh.name as assigned_sales_head_name,
+        oa.name as original_associate_name, lo.name as original_link_owner_name
+      FROM leads l
+      LEFT JOIN projects p ON l.project_id = p.id
+      LEFT JOIN developers d ON p.developer_id = d.id
+      LEFT JOIN project_configurations pc ON l.configuration_id = pc.id
+      LEFT JOIN campaigns camp ON l.campaign_id = camp.id
+      LEFT JOIN users ua ON l.assigned_associate_id = ua.id
+      LEFT JOIN users uh ON l.assigned_sales_head_id = uh.id
+      LEFT JOIN users oa ON l.original_associate_id = oa.id
+      LEFT JOIN users lo ON l.original_link_owner_id = lo.id
+      WHERE l.customer_id = ?
+    `;
+    const params = [cust.id];
+    if (req.user.role === 'sales_associate') {
+      sql += ' AND l.assigned_associate_id = ?';
+      params.push(req.user.id);
+    } else if (req.user.role === 'sales_head') {
+      sql += ' AND (l.assigned_sales_head_id = ? OR l.assigned_associate_id IN (SELECT id FROM users WHERE sales_head_id = ?))';
+      params.push(req.user.id, req.user.id);
+    }
+    sql += ' ORDER BY l.submitted_at DESC';
+    const enquiries = db.all(sql, params);
+    return res.json({ enquiries });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/customers/:id/timeline - Consolidated chronological timeline
+router.get('/:id/timeline', (req, res) => {
+  try {
+    const cust = db.get('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+    if (!cust) return res.status(404).json({ error: 'Customer not found' });
+    if (!canAccessCustomer(req.user, cust)) return res.status(403).json({ error: 'Unauthorized' });
+
+    const events = [];
+    const interactions = db.all(
+      `SELECT ci.*, u.name as actor_name FROM customer_interactions ci LEFT JOIN users u ON ci.user_id = u.id WHERE ci.customer_id = ?`,
+      [cust.id]
+    );
+    for (const i of interactions) {
+      events.push({
+        type: 'interaction',
+        title: i.interaction_type,
+        description: i.notes,
+        actor: i.actor_name || 'System',
+        timestamp: i.created_at
+      });
+    }
+
+    const stageChanges = db.all(
+      `SELECT h.*, l.enquiry_ref, u.name as actor_name
+       FROM lead_stage_history h
+       JOIN leads l ON h.lead_id = l.id
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE l.customer_id = ?`,
+      [cust.id]
+    );
+    for (const s of stageChanges) {
+      events.push({
+        type: 'stage_change',
+        title: `Stage: ${s.new_stage.replace(/_/g, ' ')} (${s.enquiry_ref})`,
+        description: `${s.previous_stage ? s.previous_stage + ' -> ' : ''}${s.new_stage}${s.notes ? ' · ' + s.notes : ''}`,
+        actor: s.actor_name || 'System',
+        timestamp: s.created_at
+      });
+    }
+
+    const assignments = db.all(
+      `SELECT a.*, l.enquiry_ref, nu.name as new_owner_name, cb.name as actor_name
+       FROM lead_assignments a
+       JOIN leads l ON a.lead_id = l.id
+       LEFT JOIN users nu ON a.new_owner_id = nu.id
+       LEFT JOIN users cb ON a.changed_by = cb.id
+       WHERE l.customer_id = ?`,
+      [cust.id]
+    );
+    for (const a of assignments) {
+      events.push({
+        type: 'assignment',
+        title: `Lead Assigned (${a.enquiry_ref})`,
+        description: `Assigned to ${a.new_owner_name || 'Team Pool'}${a.reason ? ' · ' + a.reason : ''}`,
+        actor: a.actor_name || 'System',
+        timestamp: a.created_at
+      });
+    }
+
+    events.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+    return res.json({ timeline: events });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/customers/:id - Edit customer
 router.put('/:id', (req, res) => {
   try {
@@ -272,18 +478,24 @@ router.put('/:id', (req, res) => {
 
     const existing = db.get('SELECT * FROM customers WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Customer not found' });
+    if (!canAccessCustomer(user, existing)) return res.status(403).json({ error: 'Unauthorized to edit this customer' });
+
+    const updatedMobile = mobile_number || existing.mobile_number;
+    const normMobile = normalizeMobile(updatedMobile).normalized10;
 
     db.run(
       `UPDATE customers SET
-        full_name = ?, mobile_number = ?, whatsapp_number = ?, email = ?, budget = ?,
+        full_name = ?, mobile_number = ?, normalized_mobile = ?, whatsapp_number = ?, email = ?, city = ?, budget = ?,
         preferred_location = ?, interested_project_id = ?, configuration = ?,
         lead_source = ?, requirements = ?, status = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [
         full_name || existing.full_name,
-        mobile_number || existing.mobile_number,
+        updatedMobile,
+        normMobile,
         whatsapp_number ?? existing.whatsapp_number ?? null,
         email ?? existing.email ?? null,
+        req.body.city ?? existing.city ?? null,
         budget ?? existing.budget ?? null,
         preferred_location ?? existing.preferred_location ?? null,
         interested_project_id ?? existing.interested_project_id ?? null,
@@ -301,7 +513,7 @@ router.put('/:id', (req, res) => {
       ['int-' + crypto.randomUUID().slice(0, 8), req.params.id, user.id]
     );
 
-    logActivity(req, 'UPDATE_CUSTOMER', 'customers', req.params.id, `Updated customer ${full_name}`);
+    logActivity(req, 'UPDATE_CUSTOMER', 'customers', req.params.id, `Updated customer ${full_name || existing.full_name}`);
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -315,6 +527,9 @@ router.post('/:id/interactions', (req, res) => {
     if (!interaction_type || !notes) {
       return res.status(400).json({ error: 'Interaction type and notes are required' });
     }
+    const cust = db.get('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+    if (!cust) return res.status(404).json({ error: 'Customer not found' });
+    if (!canAccessCustomer(req.user, cust)) return res.status(403).json({ error: 'Unauthorized' });
 
     const intId = 'int-' + crypto.randomUUID().slice(0, 8);
     db.run(
@@ -335,8 +550,18 @@ router.patch('/:id/reassign', authorizeRoles('super_admin', 'admin', 'sales_head
     const { associate_id } = req.body;
     if (!associate_id) return res.status(400).json({ error: 'Target associate ID is required' });
 
-    const targetAssoc = db.get('SELECT id, name, sales_head_id FROM users WHERE id = ?', [associate_id]);
+    const cust = db.get('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+    if (!cust) return res.status(404).json({ error: 'Customer not found' });
+    if (!canAccessCustomer(req.user, cust)) return res.status(403).json({ error: 'Unauthorized' });
+
+    const targetAssoc = db.get('SELECT id, name, organization_id, sales_head_id FROM users WHERE id = ?', [associate_id]);
     if (!targetAssoc) return res.status(404).json({ error: 'Associate not found' });
+    if (req.user.role !== 'super_admin' && targetAssoc.organization_id !== cust.organization_id) {
+      return res.status(403).json({ error: 'Cannot assign customer to a user outside the organization' });
+    }
+    if (req.user.role === 'sales_head' && targetAssoc.sales_head_id !== req.user.id && targetAssoc.id !== req.user.id) {
+      return res.status(403).json({ error: 'Sales Head can only reassign within their own team' });
+    }
 
     db.run(
       `UPDATE customers SET assigned_associate_id = ?, assigned_sales_head_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -444,6 +669,7 @@ router.delete('/:id', authorizeRoles('super_admin', 'admin', 'sales_head'), (req
   try {
     const cust = db.get('SELECT * FROM customers WHERE id = ?', [req.params.id]);
     if (!cust) return res.status(404).json({ error: 'Customer not found' });
+    if (!canAccessCustomer(req.user, cust)) return res.status(403).json({ error: 'Unauthorized' });
 
     db.run('DELETE FROM customers WHERE id = ?', [req.params.id]);
     logActivity(req, 'DELETE_CUSTOMER', 'customers', req.params.id, `Deleted customer ${cust.full_name}`);

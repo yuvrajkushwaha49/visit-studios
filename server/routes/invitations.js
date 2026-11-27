@@ -297,7 +297,7 @@ function invitationDateRange(preset, dateFrom, dateTo) {
   }
   if (preset === 'last_7_days') return { from: shift(-6), to: ymd(now) };
   if (preset === 'last_30_days') return { from: shift(-29), to: ymd(now) };
-  if (preset === 'custom') {
+  if (preset === 'custom' || (!preset && (dateFrom || dateTo))) {
     const from = /^\d{4}-\d{2}-\d{2}$/.test(dateFrom || '') ? dateFrom : '';
     const to = /^\d{4}-\d{2}-\d{2}$/.test(dateTo || '') ? dateTo : '';
     if (!from && !to) return null;
@@ -307,7 +307,7 @@ function invitationDateRange(preset, dateFrom, dateTo) {
 }
 
 function listInvitations(user, query) {
-    const { status, project_id, search, period, date_from, date_to } = query;
+    const { status, project_id, developer_id, search, period, date_from, date_to } = query;
     const allowedStatuses = new Set(['draft', 'sent', 'opened', 'confirmed', 'reschedule_requested', 'cancelled', 'expired']);
     const cleanList = (value) => String(value || '')
       .split(',')
@@ -315,9 +315,10 @@ function listInvitations(user, query) {
       .filter(item => /^[A-Za-z0-9_-]{1,80}$/.test(item))
       .slice(0, 50);
     const unique = (items) => [...new Set(items)];
-    const teamIds = unique(cleanList(query.team_ids));
-    const associateIds = unique(cleanList(query.associate_ids));
+    const teamIds = unique(cleanList(query.team_ids || query.team_id || query.sales_head_id));
+    const associateIds = unique(cleanList(query.associate_ids || query.associate_id));
     const projectIds = unique([...cleanList(query.project_ids), ...cleanList(project_id)]);
+    const developerIds = unique([...cleanList(query.developer_ids), ...cleanList(developer_id)]);
     const statuses = unique([...cleanList(query.statuses), ...cleanList(status)].filter(item => allowedStatuses.has(item)));
 
     let sql = `
@@ -370,6 +371,7 @@ function listInvitations(user, query) {
     addIn(`CASE WHEN u.role = 'sales_head' THEN u.id ELSE COALESCE(i.sales_head_id, u.sales_head_id) END`, teamIds);
     addIn('i.associate_id', associateIds);
     addIn('i.project_id', projectIds);
+    addIn('COALESCE(i.developer_id, p.developer_id)', developerIds);
     addIn('i.status', statuses);
 
     const range = invitationDateRange(period, date_from, date_to);

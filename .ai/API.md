@@ -135,7 +135,11 @@ This document catalogues all actual REST API endpoints detected in the codebase 
 ---
 
 ### 3.7. Follow-ups, WhatsApp Automation, Reports & Settings
-- **`/api/followups`**: Full CRUD for scheduled call reminders and priorities (`High`, `Medium`, `Low`).
+- **`/api/followups`**: Full CRUD for scheduled call reminders (`GET /api/followups/overdue`, `PATCH /api/followups/:id`, `PATCH /api/followups/:id/status`).
 - **`/api/whatsapp`**: Template CRUD, manual trigger endpoints, and transmission logs.
-- **`/api/reports`**: Dashboard analytics summary, visit status distribution, sales rep leaderboards, and CSV/Excel exports.
-- **`/api/settings`**: Organization settings, brand colors, pass disclaimer text, and WhatsApp API configuration.
+- **`/api/reports`**: Dashboard analytics summary, Lead Management KPIs (`/api/reports/overview`, `/leads`, `/sources`, `/projects`, `/associates`, `/sales-heads`), and Excel/CSV/PDF exports (`/api/reports/lead-export`).
+- **`/api/settings`**: Organization settings, brand colors, pass disclaimer text, and SMTP configuration.
+- **`/api/lead-links` & `/api/public/enquiry/:token` & `/e/:code`**: Secure trackable enquiry links, campaigns, analytics, and public 5-step enquiry submission.
+- **`/api/leads`**: Lead CRUD, pipeline stage transitions (`/stage`), attribution-preserving assignment (`/assign`), duplicate review (`/duplicates`), and Invitation/Site Visit creation (`/schedule-visit`).
+- **`/api/lead-settings` & `/api/notifications`**: Organization lead rules, notification preferences, inbox, and delivery audit logs.
+- **`/api/customers/:id/timeline` & `/api/customers/:id/enquiries`**: Consolidated Customer 360° timeline and project enquiries.

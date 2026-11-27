@@ -10,8 +10,18 @@ const App = {
   },
 
   async init() {
-    // 1. Check if public invitation token exists in query (?invite=token) or hash (#invite=token)
+    // 1. Check if public enquiry token exists in query (?enquiry=token) or hash (#enquiry=token)
     const urlParams = new URLSearchParams(window.location.search);
+    const queryEnquiry = urlParams.get('enquiry');
+    const hashEnquiry = window.location.hash.startsWith('#enquiry=') ? window.location.hash.replace('#enquiry=', '').trim() : null;
+    const enquiryToken = queryEnquiry || hashEnquiry;
+
+    if (enquiryToken) {
+      document.body.classList.add('public-mode');
+      return this.renderPublicEnquiry(enquiryToken);
+    }
+
+    // 2. Check if public invitation token exists in query (?invite=token) or hash (#invite=token)
     const queryInvite = urlParams.get('invite');
     const hashInvite = window.location.hash.startsWith('#invite=') ? window.location.hash.replace('#invite=', '').trim() : null;
     const inviteToken = queryInvite || hashInvite;
@@ -626,6 +636,10 @@ const App = {
           </div>
 
           <div class="topbar-right">
+            <button type="button" class="btn small soft" onclick="App.navigate('notifications')" title="Notifications" style="position:relative; padding:6px 10px;">
+              🔔
+              <span id="notifBellBadge" class="hidden" style="position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; border-radius:999px; font-size:10px; font-weight:700; min-width:17px; height:17px; display:inline-flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+            </button>
             <div class="user-profile">
               <div class="avatar">${(user.name || 'VS').slice(0, 2).toUpperCase()}</div>
               <div class="user-meta">
@@ -651,6 +665,9 @@ const App = {
       mobNav.classList.remove('hidden');
       mobNav.style.removeProperty('display');
     }
+    if (typeof this.refreshNotificationBadge === 'function') {
+      this.refreshNotificationBadge();
+    }
   },
 
   getNavItems(role) {
@@ -672,6 +689,32 @@ const App = {
         <button class="nav-item ${this.activePage === 'activity_logs' ? 'active' : ''}" onclick="App.navigate('activity_logs')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span>System Audit Logs</span>
+        </button>
+
+        <div class="nav-section">LEAD MANAGEMENT</div>
+        <button class="nav-item ${this.activePage === 'lead_dashboard' ? 'active' : ''}" onclick="App.navigate('lead_dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+          <span>Lead Dashboard</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'leads' ? 'active' : ''}" onclick="App.navigate('leads')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span>All Leads</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_pipeline' ? 'active' : ''}" onclick="App.navigate('lead_pipeline')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h4v14H4zM10 5h4v10h-4zM16 5h4v6h-4z"/></svg>
+          <span>Lead Pipeline</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_analytics' ? 'active' : ''}" onclick="App.navigate('lead_analytics')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+          <span>Lead Analytics</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_reports' ? 'active' : ''}" onclick="App.navigate('lead_reports')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Lead Reports</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_settings' ? 'active' : ''}" onclick="App.navigate('lead_settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+          <span>Lead Settings</span>
         </button>
       `;
     }
@@ -729,6 +772,36 @@ const App = {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
           <span>Brand & Settings</span>
         </button>
+
+        <div class="nav-section">LEAD MANAGEMENT</div>
+        <button class="nav-item ${this.activePage === 'lead_dashboard' ? 'active' : ''}" onclick="App.navigate('lead_dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+          <span>Lead Dashboard</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_generation' ? 'active' : ''}" onclick="App.navigate('lead_generation')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          <span>Lead Generation</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'leads' ? 'active' : ''}" onclick="App.navigate('leads')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span>All Leads</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_pipeline' ? 'active' : ''}" onclick="App.navigate('lead_pipeline')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h4v14H4zM10 5h4v10h-4zM16 5h4v6h-4z"/></svg>
+          <span>Lead Pipeline</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_analytics' ? 'active' : ''}" onclick="App.navigate('lead_analytics')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+          <span>Lead Analytics</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_reports' ? 'active' : ''}" onclick="App.navigate('lead_reports')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Lead Reports</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_settings' ? 'active' : ''}" onclick="App.navigate('lead_settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+          <span>Lead Settings</span>
+        </button>
       `;
     }
 
@@ -767,6 +840,36 @@ const App = {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
           <span>Team Performance</span>
         </button>
+
+        <div class="nav-section">LEAD MANAGEMENT</div>
+        <button class="nav-item ${this.activePage === 'lead_dashboard' ? 'active' : ''}" onclick="App.navigate('lead_dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+          <span>Lead Dashboard</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_generation' ? 'active' : ''}" onclick="App.navigate('lead_generation')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          <span>Lead Generation</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'leads' ? 'active' : ''}" onclick="App.navigate('leads')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span>Team Leads</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_pipeline' ? 'active' : ''}" onclick="App.navigate('lead_pipeline')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h4v14H4zM10 5h4v10h-4zM16 5h4v6h-4z"/></svg>
+          <span>Lead Pipeline</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_analytics' ? 'active' : ''}" onclick="App.navigate('lead_analytics')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+          <span>Lead Analytics</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_reports' ? 'active' : ''}" onclick="App.navigate('lead_reports')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Lead Reports</span>
+        </button>
+        <button class="nav-item ${this.activePage === 'lead_settings' ? 'active' : ''}" onclick="App.navigate('lead_settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+          <span>Notification Prefs</span>
+        </button>
       `;
     }
 
@@ -800,6 +903,32 @@ const App = {
       <button class="nav-item ${this.activePage === 'reports' ? 'active' : ''}" onclick="App.navigate('reports')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
         <span>My Performance</span>
+      </button>
+
+      <div class="nav-section">LEAD MANAGEMENT</div>
+      <button class="nav-item ${this.activePage === 'lead_dashboard' ? 'active' : ''}" onclick="App.navigate('lead_dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+        <span>Lead Dashboard</span>
+      </button>
+      <button class="nav-item ${this.activePage === 'lead_generation' ? 'active' : ''}" onclick="App.navigate('lead_generation')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <span>Lead Generation</span>
+      </button>
+      <button class="nav-item ${this.activePage === 'leads' ? 'active' : ''}" onclick="App.navigate('leads')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <span>My Leads</span>
+      </button>
+      <button class="nav-item ${this.activePage === 'lead_pipeline' ? 'active' : ''}" onclick="App.navigate('lead_pipeline')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h4v14H4zM10 5h4v10h-4zM16 5h4v6h-4z"/></svg>
+        <span>Lead Pipeline</span>
+      </button>
+      <button class="nav-item ${this.activePage === 'lead_analytics' ? 'active' : ''}" onclick="App.navigate('lead_analytics')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        <span>Personal Analytics</span>
+      </button>
+      <button class="nav-item ${this.activePage === 'lead_settings' ? 'active' : ''}" onclick="App.navigate('lead_settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/></svg>
+        <span>Notification Prefs</span>
       </button>
     `;
   },
@@ -887,6 +1016,24 @@ const App = {
         return this.renderReportsAnalytics(container);
       case 'settings':
         return this.renderSettings(container);
+      case 'lead_dashboard':
+        return this.renderLeadDashboard(container);
+      case 'lead_generation':
+        return this.renderLeadGeneration(container);
+      case 'leads':
+        return this.renderLeadsList(container);
+      case 'lead_pipeline':
+        return this.renderLeadPipeline(container);
+      case 'customer_360':
+        return this.renderCustomer360(container);
+      case 'lead_analytics':
+        return this.renderLeadReports(container, true);
+      case 'lead_reports':
+        return this.renderLeadReports(container, false);
+      case 'lead_settings':
+        return this.renderLeadSettings(container);
+      case 'notifications':
+        return this.renderNotificationsCenter(container);
       default:
         return this.renderDashboard(container);
     }
@@ -1007,4 +1154,80 @@ App.applyDomTablePager = function({ key, tableId, pagerId, matchRow, resetPage =
     }
   }
   return pageData;
+};
+
+// Shared filter catalog loader for all list views (Team Name, Associate Name, Builder Name, Project Name)
+App.getFilterCatalog = async function() {
+  const role = this.currentUser?.role || 'sales_associate';
+  const [usersRes, devsRes, projsRes] = await Promise.all([
+    role !== 'sales_associate' ? API.get('/users').catch(() => ({ users: [] })) : Promise.resolve({ users: [] }),
+    API.get('/developers').catch(() => ({ developers: [] })),
+    API.get('/projects').catch(() => ({ projects: [] }))
+  ]);
+  const users = usersRes.users || [];
+  const teams = users
+    .filter(u => u.role === 'sales_head' && u.status === 'active')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const associates = users
+    .filter(u => u.role === 'sales_associate' && u.status === 'active')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const developers = (devsRes.developers || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  const projects = (projsRes.projects || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  return { role, teams, associates, developers, projects };
+};
+
+// Shared filter fields builder: Date (From - To), Team Name, Associate Name, Builder Name, Project Name
+App.buildStandardFilterFieldsHtml = function({ state, catalog, onChangeHandler, idPrefix }) {
+  const role = catalog.role || 'sales_associate';
+  const showTeam = role === 'admin' || role === 'super_admin';
+  const showAssoc = role === 'admin' || role === 'super_admin' || role === 'sales_head';
+  const visibleProjects = state.developer_id
+    ? catalog.projects.filter(p => p.developer_id === state.developer_id)
+    : catalog.projects;
+  const visibleAssociates = state.team_id
+    ? catalog.associates.filter(a => a.sales_head_id === state.team_id)
+    : catalog.associates;
+
+  return `
+    <label class="inv-filter-field">
+      <span>Date From</span>
+      <input type="date" id="${idPrefix}DateFrom" value="${Utils.escapeHTML(state.date_from || '')}" onchange="${onChangeHandler}('date_from', this.value)">
+    </label>
+    <label class="inv-filter-field">
+      <span>Date To</span>
+      <input type="date" id="${idPrefix}DateTo" value="${Utils.escapeHTML(state.date_to || '')}" onchange="${onChangeHandler}('date_to', this.value)">
+    </label>
+    ${showTeam ? `
+      <label class="inv-filter-field">
+        <span>Team Name</span>
+        <select id="${idPrefix}Team" onchange="${onChangeHandler}('team_id', this.value)">
+          <option value="">All Teams</option>
+          ${catalog.teams.map(t => `<option value="${t.id}" ${state.team_id === t.id ? 'selected' : ''}>${Utils.escapeHTML(t.name)}</option>`).join('')}
+        </select>
+      </label>
+    ` : ''}
+    ${showAssoc ? `
+      <label class="inv-filter-field">
+        <span>Associate Name</span>
+        <select id="${idPrefix}Assoc" onchange="${onChangeHandler}('associate_id', this.value)">
+          <option value="">All Associates</option>
+          ${visibleAssociates.map(a => `<option value="${a.id}" ${state.associate_id === a.id ? 'selected' : ''}>${Utils.escapeHTML(a.name)}</option>`).join('')}
+        </select>
+      </label>
+    ` : ''}
+    <label class="inv-filter-field">
+      <span>Builder Name</span>
+      <select id="${idPrefix}Dev" onchange="${onChangeHandler}('developer_id', this.value)">
+        <option value="">All Builders</option>
+        ${catalog.developers.map(d => `<option value="${d.id}" ${state.developer_id === d.id ? 'selected' : ''}>${Utils.escapeHTML(d.name)}</option>`).join('')}
+      </select>
+    </label>
+    <label class="inv-filter-field">
+      <span>Project Name</span>
+      <select id="${idPrefix}Proj" onchange="${onChangeHandler}('project_id', this.value)">
+        <option value="">All Projects</option>
+        ${visibleProjects.map(p => `<option value="${p.id}" ${state.project_id === p.id ? 'selected' : ''}>${Utils.escapeHTML(p.name)}</option>`).join('')}
+      </select>
+    </label>
+  `;
 };

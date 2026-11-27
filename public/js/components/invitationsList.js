@@ -3,6 +3,7 @@ App.invitationFilters = App.invitationFilters || {
   search: '',
   teams: [],
   members: [],
+  developers: [],
   projects: [],
   statuses: [],
   period: '',
@@ -17,6 +18,7 @@ App.normalizeInvitationFilters = function() {
     search: current.search || '',
     teams: asList(current.teams || current.team),
     members: asList(current.members || current.member),
+    developers: asList(current.developers || current.developer),
     projects: asList(current.projects || current.project),
     statuses: asList(current.statuses || current.status),
     period: current.period || '',
@@ -31,28 +33,63 @@ App.invitationQuery = function(filters) {
   if (filters.search) params.search = filters.search;
   if (filters.teams.length) params.team_ids = filters.teams.join(',');
   if (filters.members.length) params.associate_ids = filters.members.join(',');
+  if (filters.developers.length) params.developer_ids = filters.developers.join(',');
   if (filters.projects.length) params.project_ids = filters.projects.join(',');
   if (filters.statuses.length) params.statuses = filters.statuses.join(',');
   if (filters.period) params.period = filters.period;
-  if (filters.period === 'custom') {
-    if (filters.dateFrom) params.date_from = filters.dateFrom;
-    if (filters.dateTo) params.date_to = filters.dateTo;
-  }
+  if (filters.dateFrom) params.date_from = filters.dateFrom;
+  if (filters.dateTo) params.date_to = filters.dateTo;
   return params;
 };
 
 App.invitationHasFilters = function(filters) {
   return Boolean(
     filters.search || filters.teams.length || filters.members.length ||
-    filters.projects.length || filters.statuses.length || filters.period
+    filters.developers.length || filters.projects.length || filters.statuses.length ||
+    filters.period || filters.dateFrom || filters.dateTo
   );
+};
+
+App.invitationListFilters = App.invitationListFilters || {
+  search: '',
+  date_from: '',
+  date_to: '',
+  team_id: '',
+  associate_id: '',
+  developer_id: '',
+  project_id: '',
+  status: ''
+};
+
+App.onInvListFilterChange = function(key, value) {
+  App.invitationListFilters[key] = value;
+  if (key === 'developer_id') App.invitationListFilters.project_id = '';
+  if (key === 'team_id') App.invitationListFilters.associate_id = '';
+  this.ensurePager('digital_invitations', { resetPage: true });
+  this.renderInvitationsList(document.getElementById('pageContent'));
+};
+
+App.resetInvListFilters = function() {
+  App.invitationListFilters = {
+    search: '', date_from: '', date_to: '',
+    team_id: '', associate_id: '', developer_id: '', project_id: '', status: ''
+  };
+  this.ensurePager('digital_invitations', { resetPage: true });
+  this.renderInvitationsList(document.getElementById('pageContent'));
 };
 
 App.renderInvitationsList = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading invitations...</div>`;
 
   try {
-    const data = await API.get('/invitations');
+    const lf = App.invitationListFilters;
+    const query = {};
+    Object.entries(lf).forEach(([k, v]) => { if (v) query[k] = v; });
+
+    const [data, catalog] = await Promise.all([
+      API.get('/invitations', query),
+      App.getFilterCatalog()
+    ]);
     const list = data.invitations || [];
 
     container.innerHTML = `
@@ -69,16 +106,39 @@ App.renderInvitationsList = async function(container) {
         </div>
       </div>
 
-      <div class="filter-bar">
-        <input class="filter-input filter-search" id="invSearch" placeholder="Search customer, project or advisor..." oninput="App.filterInvitationsTable(true)">
-        <select class="filter-input" id="invStatusFilter" onchange="App.filterInvitationsTable(true)">
-          <option value="">All Statuses</option>
-          <option value="sent">Sent</option>
-          <option value="opened">Opened</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="reschedule_requested">Reschedule Requested</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="invSearch" placeholder="Search customer, builder, project or advisor..." value="${Utils.escapeHTML(lf.search)}" oninput="App.invitationListFilters.search=this.value; App.filterInvitationsTable(true)" onkeydown="if(event.key==='Enter'){event.preventDefault(); App.invitationListFilters.search=this.value; App.renderInvitationsList(document.getElementById('pageContent'));}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          ${App.buildStandardFilterFieldsHtml({
+            state: lf,
+            catalog,
+            onChangeHandler: 'App.onInvListFilterChange',
+            idPrefix: 'invL'
+          })}
+          <label class="inv-filter-field">
+            <span>Status</span>
+            <select id="invStatusFilter" onchange="App.invitationListFilters.status=this.value; App.filterInvitationsTable(true)">
+              <option value="">All Statuses</option>
+              <option value="sent" ${lf.status === 'sent' ? 'selected' : ''}>Sent</option>
+              <option value="opened" ${lf.status === 'opened' ? 'selected' : ''}>Opened</option>
+              <option value="confirmed" ${lf.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+              <option value="reschedule_requested" ${lf.status === 'reschedule_requested' ? 'selected' : ''}>Reschedule Requested</option>
+              <option value="cancelled" ${lf.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+            </select>
+          </label>
+        </div>
+        <div class="inv-filters-actions">
+          <span class="inv-filter-count">${list.length} invitation${list.length === 1 ? '' : 's'}</span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetInvListFilters()">Reset</button>
+            <button type="button" class="btn small primary" onclick="App.invitationListFilters.search=document.getElementById('invSearch').value; App.renderInvitationsList(document.getElementById('pageContent'));">Search</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -97,7 +157,7 @@ App.renderInvitationsList = async function(container) {
             </thead>
             <tbody>
               ${list.length ? list.map(inv => `
-                <tr data-search="${Utils.escapeHTML((inv.customer_name + ' ' + inv.project_name + ' ' + inv.associate_name).toLowerCase())}" data-status="${inv.status}">
+                <tr data-search="${Utils.escapeHTML((inv.customer_name + ' ' + inv.project_name + ' ' + (inv.developer_name || '') + ' ' + inv.associate_name).toLowerCase())}" data-status="${inv.status}">
                   <td>
                     <strong>${Utils.escapeHTML(inv.customer_name)}</strong>
                     <small>${Utils.escapeHTML(inv.customer_phone || '')}</small>
@@ -196,13 +256,17 @@ App.renderDigitalInvitations = async function(container) {
     const showMember = showTeam || role === 'sales_head';
     const filters = this.normalizeInvitationFilters();
 
-    const [data, usersRes, projectsRes] = await Promise.all([
+    const [data, usersRes, projectsRes, devsRes] = await Promise.all([
       API.get('/invitations', this.invitationQuery(filters)),
       showMember ? API.get('/users') : Promise.resolve({ users: [] }),
-      API.get('/projects').catch(() => ({ projects: [] }))
+      API.get('/projects').catch(() => ({ projects: [] })),
+      API.get('/developers').catch(() => ({ developers: [] }))
     ]);
     const list = data.invitations || [];
     const users = usersRes.users || [];
+    const developerOptions = (devsRes.developers || [])
+      .map(d => ({ id: d.id, name: d.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     const heads = users
       .filter(u => u.role === 'sales_head' && u.status === 'active')
@@ -319,14 +383,18 @@ App.renderDigitalInvitations = async function(container) {
               <option value="custom" ${filters.period === 'custom' ? 'selected' : ''}>Custom Range</option>
             </select>
           </label>
-          <label class="inv-filter-field ${filters.period === 'custom' ? '' : 'is-hidden'}" id="invDateFromWrap">
-            <span>From</span>
+          <label class="inv-filter-field" id="invDateFromWrap">
+            <span>Date From</span>
             <input type="date" id="invDateFrom" value="${Utils.escapeHTML(filters.dateFrom)}">
           </label>
-          <label class="inv-filter-field ${filters.period === 'custom' ? '' : 'is-hidden'}" id="invDateToWrap">
-            <span>To</span>
+          <label class="inv-filter-field" id="invDateToWrap">
+            <span>Date To</span>
             <input type="date" id="invDateTo" value="${Utils.escapeHTML(filters.dateTo)}">
           </label>
+          <div class="inv-filter-field">
+            <span>Builder</span>
+            ${multiSelect('invDeveloper', 'All Builders', developerOptions, filters.developers, 'App.onInvitationDevelopersChange()')}
+          </div>
           <div class="inv-filter-field">
             <span>Project</span>
             ${multiSelect('invProject', 'All Projects', projectOptions, filters.projects, 'App.onInvitationProjectsChange()')}
@@ -407,6 +475,11 @@ App.onInvitationMembersChange = function() {
   this.setInvitationMultiLabel('invMemberLabel', count, 'All Members');
 };
 
+App.onInvitationDevelopersChange = function() {
+  const count = this.checkedInvitationValues('invDeveloperOptions').length;
+  this.setInvitationMultiLabel('invDeveloperLabel', count, 'All Builders');
+};
+
 App.onInvitationProjectsChange = function() {
   const count = this.checkedInvitationValues('invProjectOptions').length;
   this.setInvitationMultiLabel('invProjectLabel', count, 'All Projects');
@@ -422,6 +495,7 @@ App.readInvitationFilters = function() {
     search: (document.getElementById('invSearch')?.value || '').trim(),
     teams: this.checkedInvitationValues('invTeamOptions'),
     members: this.checkedInvitationValues('invMemberOptions'),
+    developers: this.checkedInvitationValues('invDeveloperOptions'),
     projects: this.checkedInvitationValues('invProjectOptions'),
     statuses: this.checkedInvitationValues('invStatusOptions'),
     period: document.getElementById('invPeriodFilter')?.value || '',
@@ -508,9 +582,12 @@ App.renderInvitationRows = function(list, filtered, options = {}) {
 
 App.onInvitationPeriodChange = function() {
   const period = document.getElementById('invPeriodFilter')?.value || '';
-  const show = period === 'custom';
-  document.getElementById('invDateFromWrap')?.classList.toggle('is-hidden', !show);
-  document.getElementById('invDateToWrap')?.classList.toggle('is-hidden', !show);
+  if (period && period !== 'custom') {
+    const f = document.getElementById('invDateFrom');
+    const t = document.getElementById('invDateTo');
+    if (f) f.value = '';
+    if (t) t.value = '';
+  }
 };
 
 App.exportInvitationsExcel = async function() {
@@ -577,6 +654,7 @@ App.resetInvitationFilters = function() {
     search: '',
     teams: [],
     members: [],
+    developers: [],
     projects: [],
     statuses: [],
     period: '',
@@ -591,12 +669,11 @@ App.resetInvitationFilters = function() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.querySelectorAll('#invTeamOptions input, #invMemberOptions input, #invProjectOptions input, #invStatusOptions input').forEach(input => {
+  document.querySelectorAll('#invTeamOptions input, #invMemberOptions input, #invDeveloperOptions input, #invProjectOptions input, #invStatusOptions input').forEach(input => {
     input.checked = false;
   });
-  document.getElementById('invDateFromWrap')?.classList.add('is-hidden');
-  document.getElementById('invDateToWrap')?.classList.add('is-hidden');
   this.onInvitationTeamsChange();
+  this.onInvitationDevelopersChange();
   this.onInvitationProjectsChange();
   this.onInvitationStatusesChange();
   this.searchInvitations();

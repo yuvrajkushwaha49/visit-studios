@@ -24,13 +24,45 @@ db.exec('PRAGMA mmap_size = 268435456;');
 db.exec(schemaSQL);
 
 // Automatic non-destructive schema migrations for existing databases
-try {
-  db.exec('ALTER TABLE invitations ADD COLUMN theme TEXT;');
-} catch (e) {
-  // Column already exists or already migrated
+const migrationStatements = [
+  'ALTER TABLE invitations ADD COLUMN theme TEXT;',
+  'ALTER TABLE customers ADD COLUMN normalized_mobile TEXT;',
+  'ALTER TABLE customers ADD COLUMN city TEXT;',
+  'ALTER TABLE customers ADD COLUMN original_source TEXT;',
+  'ALTER TABLE followups ADD COLUMN lead_id TEXT;',
+  'ALTER TABLE followups ADD COLUMN completed_at DATETIME;',
+  'ALTER TABLE followups ADD COLUMN reminder_sent_at DATETIME;'
+];
+
+for (const stmt of migrationStatements) {
+  try {
+    db.exec(stmt);
+  } catch (_) {
+    // Column already exists or already migrated
+  }
 }
 
+try {
+  db.exec('CREATE INDEX IF NOT EXISTS idx_customers_norm_mobile ON customers(organization_id, normalized_mobile);');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_followups_lead ON followups(lead_id);');
+} catch (_) {}
+
+// Backfill normalized_mobile for existing customers where missing
+try {
+  const missingNorm = db.prepare("SELECT id, mobile_number FROM customers WHERE normalized_mobile IS NULL OR normalized_mobile = ''").all();
+  if (missingNorm.length > 0) {
+    const upd = db.prepare('UPDATE customers SET normalized_mobile = ? WHERE id = ?');
+    for (const row of missingNorm) {
+      const digits = String(row.mobile_number || '').replace(/\D/g, '');
+      const norm = digits.length >= 10 ? digits.slice(-10) : digits;
+      upd.run(norm, row.id);
+    }
+  }
+} catch (_) {}
+
 const { executeMySQL, syncAllFromSQLite, syncFromMySQLToSQLite, testConnection } = require('./mysql');
+
+let pendingTxMySQLQueue = null;
 
 // Database helper functions with parameter normalization & real-time MySQL synchronization
 const query = {
@@ -45,14 +77,46 @@ const query = {
   run(sql, params = []) {
     const stmt = db.prepare(sql);
     const result = stmt.run(...params);
-    // Real-time asynchronous write-through to MySQL visit_studio_db
-    executeMySQL(sql, params).catch(() => {});
+    if (pendingTxMySQLQueue) {
+      pendingTxMySQLQueue.push({ sql, params });
+    } else {
+      // Real-time asynchronous write-through to MySQL visit_studio_db
+      executeMySQL(sql, params).catch(() => {});
+    }
     return result;
   },
   exec(sql) {
     const res = db.exec(sql);
-    executeMySQL(sql).catch(() => {});
+    if (pendingTxMySQLQueue) {
+      pendingTxMySQLQueue.push({ sql, params: [] });
+    } else {
+      executeMySQL(sql).catch(() => {});
+    }
     return res;
+  },
+  transaction(fn) {
+    if (pendingTxMySQLQueue) {
+      // Already inside an outer transaction
+      return fn();
+    }
+    pendingTxMySQLQueue = [];
+    db.exec('BEGIN IMMEDIATE;');
+    try {
+      const result = fn();
+      db.exec('COMMIT;');
+      const queued = pendingTxMySQLQueue;
+      pendingTxMySQLQueue = null;
+      for (const op of queued) {
+        executeMySQL(op.sql, op.params).catch(() => {});
+      }
+      return result;
+    } catch (err) {
+      pendingTxMySQLQueue = null;
+      try {
+        db.exec('ROLLBACK;');
+      } catch (_) {}
+      throw err;
+    }
   },
   raw: db
 };

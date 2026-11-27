@@ -16,14 +16,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap">
-  <link rel="stylesheet" href="/css/style.css?v=v23-modal-fix">
+  <link rel="stylesheet" href="/css/style.css?v=v28-prestige-budget">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
     (function() {
       var s = window.location.search || '';
       var h = window.location.hash || '';
-      if (s.indexOf('invite=') !== -1 || h.indexOf('invite=') !== -1 || s.indexOf('feedback=') !== -1 || h.indexOf('feedback=') !== -1) {
+      if (s.indexOf('invite=') !== -1 || h.indexOf('invite=') !== -1 || s.indexOf('feedback=') !== -1 || h.indexOf('feedback=') !== -1 || s.indexOf('enquiry=') !== -1 || h.indexOf('enquiry=') !== -1) {
         document.documentElement.classList.add('public-mode');
       }
     })();
@@ -90,6 +90,15 @@
   <script src="/js/components/settingsView.js"></script>
   <script src="/js/components/superAdminView.js?v=v30-admin-creds-reset"></script>
   <script src="/js/components/publicCustomerPortal.js?v=v31-pure-typography-no-logo"></script>
+  <script src="/js/components/publicEnquiryForm.js?v=v6-prestige-budget"></script>
+  <script src="/js/components/leadDashboard.js?v=v1-lead-mgmt"></script>
+  <script src="/js/components/leadGeneration.js?v=v2-edit-link"></script>
+  <script src="/js/components/leadsList.js?v=v1-lead-mgmt"></script>
+  <script src="/js/components/leadPipeline.js?v=v1-lead-mgmt"></script>
+  <script src="/js/components/customer360.js?v=v1-lead-mgmt"></script>
+  <script src="/js/components/leadReports.js?v=v1-lead-mgmt"></script>
+  <script src="/js/components/leadSettings.js?v=v1-lead-mgmt"></script>
+  <script src="/js/components/notificationsCenter.js?v=v1-lead-mgmt"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {

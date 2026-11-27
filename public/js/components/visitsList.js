@@ -1,10 +1,50 @@
 // Site Visits Management & Attendance Component
+App.visitFilters = App.visitFilters || {
+  search: '',
+  range: '',
+  date_from: '',
+  date_to: '',
+  team_id: '',
+  associate_id: '',
+  developer_id: '',
+  project_id: '',
+  status: ''
+};
+
+App.onVisitsFilterChange = function(key, value) {
+  App.visitFilters[key] = value;
+  if (key === 'developer_id') App.visitFilters.project_id = '';
+  if (key === 'team_id') App.visitFilters.associate_id = '';
+  if (key === 'date_from' || key === 'date_to') App.visitFilters.range = '';
+  this.ensurePager('site_visits', { resetPage: true });
+  this.renderVisitsList(document.getElementById('pageContent'));
+};
+
+App.resetVisitsFilters = function() {
+  App.visitFilters = {
+    search: '', range: '', date_from: '', date_to: '',
+    team_id: '', associate_id: '', developer_id: '', project_id: '', status: ''
+  };
+  this.currentVisitRange = '';
+  this.ensurePager('site_visits', { resetPage: true });
+  this.renderVisitsList(document.getElementById('pageContent'));
+};
+
 App.renderVisitsList = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading site visits...</div>`;
 
   try {
-    const range = this.currentVisitRange || '';
-    const data = await API.get('/visits', { range });
+    const vf = App.visitFilters;
+    if (this.currentVisitRange && !vf.range && !vf.date_from && !vf.date_to) {
+      vf.range = this.currentVisitRange;
+    }
+    const query = {};
+    Object.entries(vf).forEach(([k, v]) => { if (v) query[k] = v; });
+
+    const [data, catalog] = await Promise.all([
+      API.get('/visits', query),
+      App.getFilterCatalog()
+    ]);
     const visits = data.visits || [];
 
     container.innerHTML = `
@@ -26,24 +66,50 @@ App.renderVisitsList = async function(container) {
       </div>
 
       <!-- Filter Bar -->
-      <div class="filter-bar">
-        <input class="filter-input filter-search" id="visitSearch" placeholder="Search customer, project or advisor..." oninput="App.filterVisitsTable(true)">
-        <select class="filter-input" id="visitRangeFilter" onchange="App.onVisitRangeChange(this.value)">
-          <option value="" ${!range ? 'selected' : ''}>All Dates</option>
-          <option value="today" ${range === 'today' ? 'selected' : ''}>Today's Visits</option>
-          <option value="tomorrow" ${range === 'tomorrow' ? 'selected' : ''}>Tomorrow's Visits</option>
-          <option value="week" ${range === 'week' ? 'selected' : ''}>This Week</option>
-          <option value="month" ${range === 'month' ? 'selected' : ''}>This Month</option>
-        </select>
-        <select class="filter-input" id="visitStatusFilter" onchange="App.filterVisitsTable(true)">
-          <option value="">All Statuses</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="checked_in">Checked In</option>
-          <option value="completed">Completed</option>
-          <option value="no_show">No Show</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="visitSearch" placeholder="Search customer, builder, project or advisor..." value="${Utils.escapeHTML(vf.search)}" oninput="App.visitFilters.search=this.value; App.filterVisitsTable(true)" onkeydown="if(event.key==='Enter'){event.preventDefault(); App.visitFilters.search=this.value; App.renderVisitsList(document.getElementById('pageContent'));}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          <label class="inv-filter-field">
+            <span>Quick Range</span>
+            <select id="visitRangeFilter" onchange="App.onVisitRangeChange(this.value)">
+              <option value="" ${!vf.range ? 'selected' : ''}>All Dates</option>
+              <option value="today" ${vf.range === 'today' ? 'selected' : ''}>Today's Visits</option>
+              <option value="tomorrow" ${vf.range === 'tomorrow' ? 'selected' : ''}>Tomorrow's Visits</option>
+              <option value="week" ${vf.range === 'week' ? 'selected' : ''}>This Week</option>
+              <option value="month" ${vf.range === 'month' ? 'selected' : ''}>This Month</option>
+            </select>
+          </label>
+          ${App.buildStandardFilterFieldsHtml({
+            state: vf,
+            catalog,
+            onChangeHandler: 'App.onVisitsFilterChange',
+            idPrefix: 'vis'
+          })}
+          <label class="inv-filter-field">
+            <span>Status</span>
+            <select id="visitStatusFilter" onchange="App.visitFilters.status=this.value; App.filterVisitsTable(true)">
+              <option value="">All Statuses</option>
+              <option value="upcoming" ${vf.status === 'upcoming' ? 'selected' : ''}>Upcoming</option>
+              <option value="confirmed" ${vf.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+              <option value="checked_in" ${vf.status === 'checked_in' ? 'selected' : ''}>Checked In</option>
+              <option value="completed" ${vf.status === 'completed' ? 'selected' : ''}>Completed</option>
+              <option value="no_show" ${vf.status === 'no_show' ? 'selected' : ''}>No Show</option>
+              <option value="cancelled" ${vf.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+            </select>
+          </label>
+        </div>
+        <div class="inv-filters-actions">
+          <span class="inv-filter-count">${visits.length} visit${visits.length === 1 ? '' : 's'}</span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetVisitsFilters()">Reset</button>
+            <button type="button" class="btn small primary" onclick="App.visitFilters.search=document.getElementById('visitSearch').value; App.renderVisitsList(document.getElementById('pageContent'));">Search</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -62,7 +128,7 @@ App.renderVisitsList = async function(container) {
             </thead>
             <tbody>
               ${visits.length ? visits.map(v => `
-                <tr data-search="${Utils.escapeHTML((v.customer_name + ' ' + v.project_name + ' ' + v.associate_name).toLowerCase())}" data-status="${v.status}">
+                <tr data-search="${Utils.escapeHTML((v.customer_name + ' ' + v.project_name + ' ' + (v.developer_name || '') + ' ' + v.associate_name).toLowerCase())}" data-status="${v.status}">
                   <td>
                     <strong>${Utils.escapeHTML(v.customer_name)}</strong>
                     <small>${Utils.escapeHTML(v.customer_phone)}</small>
@@ -142,6 +208,9 @@ App.renderVisitsList = async function(container) {
 
 App.onVisitRangeChange = function(range) {
   this.currentVisitRange = range;
+  App.visitFilters.range = range;
+  App.visitFilters.date_from = '';
+  App.visitFilters.date_to = '';
   this.ensurePager('site_visits', { resetPage: true });
   this.renderVisitsList(document.getElementById('pageContent'));
 };

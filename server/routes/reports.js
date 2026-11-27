@@ -8,6 +8,7 @@ const {
   generateCSVReport,
   generatePDFReport
 } = require('../services/exportService');
+const { getLeadOverviewReport } = require('../services/leadReportService');
 
 router.use(authenticate);
 
@@ -790,6 +791,173 @@ router.get('/dashboard', (req, res) => {
 
 router.get('/export/performance', (req, res) => {
   res.redirect('/api/reports/export/csv');
+});
+
+// ==========================================
+// LEAD MANAGEMENT REAL-TIME REPORT ENDPOINTS
+// ==========================================
+
+// GET /api/reports/overview - Complete Lead KPIs, trends, distributions & leaderboards
+router.get('/overview', (req, res) => {
+  try {
+    const data = getLeadOverviewReport(req.user, req.query);
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/leads - Lead trend & stage breakdown
+router.get('/leads', (req, res) => {
+  try {
+    const data = getLeadOverviewReport(req.user, req.query);
+    return res.json({
+      dateRange: data.dateRange,
+      granularity: data.granularity,
+      kpis: data.kpis,
+      kpiDefinitions: data.kpiDefinitions,
+      trends: data.trends,
+      stageDistribution: data.stageDistribution,
+      budgetDistribution: data.budgetDistribution,
+      configurationDistribution: data.configurationDistribution,
+      timelineDistribution: data.timelineDistribution,
+      lostReasons: data.lostReasons
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/sources
+router.get('/sources', (req, res) => {
+  try {
+    const data = getLeadOverviewReport(req.user, req.query);
+    return res.json({ dateRange: data.dateRange, sources: data.sourcePerformance });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/projects
+router.get('/projects', (req, res) => {
+  try {
+    const data = getLeadOverviewReport(req.user, req.query);
+    return res.json({ dateRange: data.dateRange, projects: data.projectPerformance });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/associates
+router.get('/associates', (req, res) => {
+  try {
+    const data = getLeadOverviewReport(req.user, req.query);
+    return res.json({ dateRange: data.dateRange, associates: data.associatePerformance });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/sales-heads
+router.get('/sales-heads', (req, res) => {
+  try {
+    const data = getLeadOverviewReport(req.user, req.query);
+    return res.json({ dateRange: data.dateRange, salesHeads: data.salesHeadPerformance });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/reports/lead-export - Authorized Excel / CSV / PDF export for Lead Reports
+router.get('/lead-export', async (req, res) => {
+  try {
+    const format = String(req.query.format || 'excel').toLowerCase();
+    const data = getLeadOverviewReport(req.user, req.query);
+
+    const projectRows = (data.projectPerformance || []).map(p => ({
+      'Project': p.project_name,
+      'Developer': p.developer_name || '—',
+      'Total Leads': p.total_leads,
+      'Interested': p.interested_leads,
+      'Visits Scheduled': p.visits_scheduled,
+      'Visits Completed': p.visits_completed,
+      'Booked': p.booked_leads,
+      'Lost': p.lost_leads,
+      'Conversion %': `${p.conversion_rate}%`
+    }));
+
+    const sourceRows = (data.sourcePerformance || []).map(s => ({
+      'Lead Source': s.source,
+      'Total Leads': s.total_leads,
+      'Visits Completed': s.visits_completed,
+      'Booked': s.booked_leads,
+      'Lost': s.lost_leads,
+      'Conversion %': `${s.conversion_rate}%`
+    }));
+
+    const associateRows = (data.associatePerformance || []).map(a => ({
+      'Associate': a.associate_name,
+      'Sales Head': a.sales_head_name,
+      'Total Leads': a.total_leads,
+      'Visits Scheduled': a.visits_scheduled,
+      'Visits Completed': a.visits_completed,
+      'Booked': a.booked_leads,
+      'Lost': a.lost_leads,
+      'Conversion %': `${a.conversion_rate}%`
+    }));
+
+    const tables = [];
+    if (projectRows.length) tables.push({ name: 'Project Performance', rows: projectRows });
+    if (sourceRows.length) tables.push({ name: 'Source Performance', rows: sourceRows });
+    if (associateRows.length) tables.push({ name: 'Associate Performance', rows: associateRows });
+
+    if (format === 'csv') {
+      const csv = generateCSVReport({
+        title: 'Visit Studio Lead Management Report',
+        dateRange: data.dateRange.label,
+        kpis: data.kpis,
+        tables
+      });
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="lead_report_${Date.now()}.csv"`);
+      return res.send(csv);
+    }
+
+    if (format === 'pdf') {
+      const pdf = await generatePDFReport({
+        title: 'Visit Studio Lead Management Report',
+        subtitle: `Role: ${req.user.role.toUpperCase()} | User: ${req.user.name}`,
+        dateRange: data.dateRange.label,
+        filters: { Scope: req.user.role, Period: data.dateRange.label },
+        kpis: {
+          'Total Leads': data.kpis.totalLeads,
+          'New': data.kpis.newLeads,
+          'Visited': data.kpis.siteVisitsCompleted,
+          'Booked': data.kpis.bookedLeads,
+          'Lost': data.kpis.lostLeads,
+          'Conversion': `${data.kpis.conversionRate}%`
+        },
+        tables
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="lead_report_${Date.now()}.pdf"`);
+      return res.send(pdf);
+    }
+
+    const xlsxBuf = generateExcelReport({
+      title: 'Visit Studio Lead Management Report',
+      subtitle: `Role: ${req.user.role.toUpperCase()} | User: ${req.user.name}`,
+      dateRange: data.dateRange.label,
+      filters: { Scope: req.user.role, Period: data.dateRange.label },
+      kpis: data.kpis,
+      tables
+    });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="lead_report_${Date.now()}.xlsx"`);
+    return res.send(xlsxBuf);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

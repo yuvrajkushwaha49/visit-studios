@@ -1,4 +1,32 @@
 // Customer Management Component
+App.orgCustomerFilters = App.orgCustomerFilters || {
+  search: '',
+  date_from: '',
+  date_to: '',
+  team_id: '',
+  associate_id: '',
+  developer_id: '',
+  project_id: '',
+  status: ''
+};
+
+App.onOrgCustomerFilterChange = function(key, value) {
+  App.orgCustomerFilters[key] = value;
+  if (key === 'developer_id') App.orgCustomerFilters.project_id = '';
+  if (key === 'team_id') App.orgCustomerFilters.associate_id = '';
+  this.ensurePager('customers', { resetPage: true });
+  this.renderCustomersList(document.getElementById('pageContent'));
+};
+
+App.resetOrgCustomerFilters = function() {
+  App.orgCustomerFilters = {
+    search: '', date_from: '', date_to: '',
+    team_id: '', associate_id: '', developer_id: '', project_id: '', status: ''
+  };
+  this.ensurePager('customers', { resetPage: true });
+  this.renderCustomersList(document.getElementById('pageContent'));
+};
+
 App.renderCustomersList = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading customers...</div>`;
 
@@ -8,8 +36,15 @@ App.renderCustomersList = async function(container) {
     }
     const role = this.currentUser.role || 'admin';
     const userId = this.currentUser.id;
+    const cf = App.orgCustomerFilters;
+    const query = role === 'admin' ? { mine: '1' } : {};
+    Object.entries(cf).forEach(([k, v]) => { if (v) query[k] = v; });
+
     // ORGANIZATION Customer Management: only this logged-in EMP's customers (admin included)
-    const data = await API.get('/customers', role === 'admin' ? { mine: '1' } : {});
+    const [data, catalog] = await Promise.all([
+      API.get('/customers', query),
+      App.getFilterCatalog()
+    ]);
     let customers = data.customers || [];
     if (role === 'admin' || role === 'sales_associate') {
       customers = customers.filter(c =>
@@ -47,17 +82,40 @@ App.renderCustomersList = async function(container) {
       </div>
 
       <!-- Filter Bar -->
-      <div class="filter-bar">
-        <input class="filter-input filter-search" id="custSearch" placeholder="Search customer name, mobile or code..." oninput="App.filterCustomersTable(true)">
-        <select class="filter-input" id="custStatusFilter" onchange="App.filterCustomersTable(true)">
-          <option value="">All Statuses</option>
-          <option value="lead">Lead</option>
-          <option value="interested">Interested</option>
-          <option value="visit_scheduled">Visit Scheduled</option>
-          <option value="visited">Visited</option>
-          <option value="negotiation">Negotiation</option>
-          <option value="booked">Booked</option>
-        </select>
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="custSearch" placeholder="Search customer name, mobile, builder, project or code..." value="${Utils.escapeHTML(cf.search)}" oninput="App.orgCustomerFilters.search=this.value; App.filterCustomersTable(true)" onkeydown="if(event.key==='Enter'){event.preventDefault(); App.orgCustomerFilters.search=this.value; App.renderCustomersList(document.getElementById('pageContent'));}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          ${App.buildStandardFilterFieldsHtml({
+            state: cf,
+            catalog,
+            onChangeHandler: 'App.onOrgCustomerFilterChange',
+            idPrefix: 'orgCust'
+          })}
+          <label class="inv-filter-field">
+            <span>Status</span>
+            <select id="custStatusFilter" onchange="App.orgCustomerFilters.status=this.value; App.filterCustomersTable(true)">
+              <option value="">All Statuses</option>
+              <option value="lead" ${cf.status === 'lead' ? 'selected' : ''}>Lead</option>
+              <option value="interested" ${cf.status === 'interested' ? 'selected' : ''}>Interested</option>
+              <option value="visit_scheduled" ${cf.status === 'visit_scheduled' ? 'selected' : ''}>Visit Scheduled</option>
+              <option value="visited" ${cf.status === 'visited' ? 'selected' : ''}>Visited</option>
+              <option value="negotiation" ${cf.status === 'negotiation' ? 'selected' : ''}>Negotiation</option>
+              <option value="booked" ${cf.status === 'booked' ? 'selected' : ''}>Booked</option>
+            </select>
+          </label>
+        </div>
+        <div class="inv-filters-actions">
+          <span class="inv-filter-count">${customers.length} customer${customers.length === 1 ? '' : 's'}</span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetOrgCustomerFilters()">Reset</button>
+            <button type="button" class="btn small primary" onclick="App.orgCustomerFilters.search=document.getElementById('custSearch').value; App.renderCustomersList(document.getElementById('pageContent'));">Search</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -76,7 +134,7 @@ App.renderCustomersList = async function(container) {
             </thead>
             <tbody>
               ${customers.length ? customers.map(c => `
-                <tr data-search="${Utils.escapeHTML((c.full_name + ' ' + c.mobile_number + ' ' + c.customer_code).toLowerCase())}" data-status="${c.status}">
+                <tr data-search="${Utils.escapeHTML((c.full_name + ' ' + c.mobile_number + ' ' + c.customer_code + ' ' + (c.interested_project_name || '') + ' ' + (c.developer_name || '') + ' ' + (c.assigned_associate_name || '')).toLowerCase())}" data-status="${c.status}">
                   <td><code>${Utils.escapeHTML(c.customer_code)}</code></td>
                   <td>
                     <button type="button" class="row-link" onclick="App.openCustomerDetail('${c.id}', 'customers')">${Utils.escapeHTML(c.full_name)}</button>
@@ -264,8 +322,11 @@ App.reloadCustomerScreen = function() {
 
 App.managementCustomerFilters = App.managementCustomerFilters || {
   search: '',
+  dateFrom: '',
+  dateTo: '',
   teams: [],
   members: [],
+  developers: [],
   projects: [],
   statuses: []
 };
@@ -275,8 +336,11 @@ App.normalizeManagementCustomerFilters = function() {
   const asList = (value) => Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
   this.managementCustomerFilters = {
     search: current.search || '',
+    dateFrom: current.dateFrom || '',
+    dateTo: current.dateTo || '',
     teams: asList(current.teams),
     members: asList(current.members),
+    developers: asList(current.developers),
     projects: asList(current.projects),
     statuses: asList(current.statuses)
   };
@@ -293,13 +357,18 @@ App.applyManagementCustomerFilters = function(customers, filters) {
       customer.email,
       customer.assigned_associate_name,
       customer.assigned_sales_head_name,
-      customer.interested_project_name
+      customer.interested_project_name,
+      customer.developer_name
     ].join(' ').toLowerCase().includes(query);
-    const matchesTeam = !filters.teams.length || filters.teams.includes(String(customer.assigned_sales_head_id || ''));
+    const createdDay = String(customer.created_at || '').slice(0, 10);
+    const matchesFrom = !filters.dateFrom || (createdDay && createdDay >= filters.dateFrom);
+    const matchesTo = !filters.dateTo || (createdDay && createdDay <= filters.dateTo);
+    const matchesTeam = !filters.teams.length || filters.teams.includes(String(customer.assigned_sales_head_id || customer.team_id || ''));
     const matchesMember = !filters.members.length || filters.members.includes(String(customer.assigned_associate_id || ''));
+    const matchesDev = !filters.developers.length || filters.developers.includes(String(customer.developer_id || ''));
     const matchesProject = !filters.projects.length || filters.projects.includes(String(customer.interested_project_id || ''));
     const matchesStatus = !filters.statuses.length || filters.statuses.includes(String(customer.status || ''));
-    return matchesSearch && matchesTeam && matchesMember && matchesProject && matchesStatus;
+    return matchesSearch && matchesFrom && matchesTo && matchesTeam && matchesMember && matchesDev && matchesProject && matchesStatus;
   });
 };
 
@@ -362,10 +431,11 @@ App.renderManagementCustomers = async function(container) {
 
   try {
     const filters = this.normalizeManagementCustomerFilters();
-    const [data, usersRes, projectsRes] = await Promise.all([
+    const [data, usersRes, projectsRes, devsRes] = await Promise.all([
       API.get('/customers'),
       API.get('/users').catch(() => ({ users: [] })),
-      API.get('/projects').catch(() => ({ projects: [] }))
+      API.get('/projects').catch(() => ({ projects: [] })),
+      API.get('/developers').catch(() => ({ developers: [] }))
     ]);
     const customers = data.customers || [];
     const users = usersRes.users || [];
@@ -375,6 +445,7 @@ App.renderManagementCustomers = async function(container) {
     const members = users
       .filter(user => user.role === 'sales_associate' && user.status === 'active')
       .sort((a, b) => a.name.localeCompare(b.name));
+    const developers = (devsRes.developers || []).slice().sort((a, b) => a.name.localeCompare(b.name));
     const projects = (projectsRes.projects || []).slice().sort((a, b) => a.name.localeCompare(b.name));
     this.cache = this.cache || {};
     this.cache.customers = customers;
@@ -429,6 +500,14 @@ App.renderManagementCustomers = async function(container) {
           </label>
         </div>
         <div class="inv-filters-grid">
+          <label class="inv-filter-field">
+            <span>Date From</span>
+            <input type="date" id="mgmtCustDateFrom" value="${Utils.escapeHTML(filters.dateFrom)}">
+          </label>
+          <label class="inv-filter-field">
+            <span>Date To</span>
+            <input type="date" id="mgmtCustDateTo" value="${Utils.escapeHTML(filters.dateTo)}">
+          </label>
           <div class="inv-filter-field">
             <span>Team</span>
             ${multiSelect('mgmtCustTeam', 'All Teams', heads.map(head => ({ id: head.id, name: head.name })), filters.teams, 'App.onManagementCustomerTeamsChange()')}
@@ -436,6 +515,10 @@ App.renderManagementCustomers = async function(container) {
           <div class="inv-filter-field">
             <span>Member</span>
             ${multiSelect('mgmtCustMember', 'All Members', members.map(member => ({ id: member.id, name: member.name, sales_head_id: member.sales_head_id || '' })), filters.members, 'App.onManagementCustomerMembersChange()')}
+          </div>
+          <div class="inv-filter-field">
+            <span>Builder</span>
+            ${multiSelect('mgmtCustDev', 'All Builders', developers.map(dev => ({ id: dev.id, name: dev.name })), filters.developers, 'App.onManagementCustomerDevelopersChange()')}
           </div>
           <div class="inv-filter-field">
             <span>Project</span>
@@ -511,6 +594,11 @@ App.onManagementCustomerMembersChange = function() {
   this.setManagementCustomerMultiLabel('mgmtCustMemberLabel', count, 'All Members');
 };
 
+App.onManagementCustomerDevelopersChange = function() {
+  const count = this.checkedManagementCustomerValues('mgmtCustDevOptions').length;
+  this.setManagementCustomerMultiLabel('mgmtCustDevLabel', count, 'All Builders');
+};
+
 App.onManagementCustomerProjectsChange = function() {
   const count = this.checkedManagementCustomerValues('mgmtCustProjectOptions').length;
   this.setManagementCustomerMultiLabel('mgmtCustProjectLabel', count, 'All Projects');
@@ -524,8 +612,11 @@ App.onManagementCustomerStatusesChange = function() {
 App.readManagementCustomerFilters = function() {
   return {
     search: (document.getElementById('mgmtCustSearch')?.value || '').trim(),
+    dateFrom: document.getElementById('mgmtCustDateFrom')?.value || '',
+    dateTo: document.getElementById('mgmtCustDateTo')?.value || '',
     teams: this.checkedManagementCustomerValues('mgmtCustTeamOptions'),
     members: this.checkedManagementCustomerValues('mgmtCustMemberOptions'),
+    developers: this.checkedManagementCustomerValues('mgmtCustDevOptions'),
     projects: this.checkedManagementCustomerValues('mgmtCustProjectOptions'),
     statuses: this.checkedManagementCustomerValues('mgmtCustStatusOptions')
   };
@@ -555,17 +646,22 @@ App.searchManagementCustomers = async function() {
 };
 
 App.resetManagementCustomerFilters = function() {
-  this.managementCustomerFilters = { search: '', teams: [], members: [], projects: [], statuses: [] };
+  this.managementCustomerFilters = { search: '', dateFrom: '', dateTo: '', teams: [], members: [], developers: [], projects: [], statuses: [] };
   this.ensurePager('management_customers', { resetPage: true });
   const search = document.getElementById('mgmtCustSearch');
   if (search) search.value = '';
-  document.querySelectorAll('#mgmtCustTeamOptions input, #mgmtCustMemberOptions input, #mgmtCustProjectOptions input, #mgmtCustStatusOptions input').forEach(input => {
+  ['mgmtCustDateFrom', 'mgmtCustDateTo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.querySelectorAll('#mgmtCustTeamOptions input, #mgmtCustMemberOptions input, #mgmtCustDevOptions input, #mgmtCustProjectOptions input, #mgmtCustStatusOptions input').forEach(input => {
     input.checked = false;
   });
   document.querySelectorAll('#mgmtCustMemberOptions .multi-select-item').forEach(item => {
     item.style.display = 'flex';
   });
   this.onManagementCustomerTeamsChange();
+  this.onManagementCustomerDevelopersChange();
   this.onManagementCustomerProjectsChange();
   this.onManagementCustomerStatusesChange();
   this.searchManagementCustomers();
@@ -642,6 +738,7 @@ App.renderCustomerDetail = async function(container) {
         </div>
         <div class="actions">
           <button class="btn" onclick="App.navigate('${returnPage}')">Back to Customer</button>
+          <button class="btn small primary" onclick="App.openCustomer360('${c.id}', '${returnPage}')">360° Profile</button>
           <button class="btn small soft" onclick="App.openEditCustomerModal('${c.id}')">Edit</button>
           ${role !== 'sales_associate' ? `<button class="btn small" onclick="App.openReassignCustomerModal('${c.id}', '${Utils.escapeHTML(c.full_name)}')">Reassign</button>` : ''}
           <button class="btn small danger" onclick="App.deleteCustomer('${c.id}', '${Utils.escapeHTML(c.full_name)}')">Delete</button>

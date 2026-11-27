@@ -1,9 +1,44 @@
 // Follow-ups Management Component with Full CRUD
+App.followupFilters = App.followupFilters || {
+  search: '',
+  date_from: '',
+  date_to: '',
+  team_id: '',
+  associate_id: '',
+  developer_id: '',
+  project_id: '',
+  status: '',
+  priority: ''
+};
+
+App.onFollowupsFilterChange = function(key, value) {
+  App.followupFilters[key] = value;
+  if (key === 'developer_id') App.followupFilters.project_id = '';
+  if (key === 'team_id') App.followupFilters.associate_id = '';
+  this.renderFollowupsList(document.getElementById('pageContent'));
+};
+
+App.resetFollowupsFilters = function() {
+  App.followupFilters = {
+    search: '', date_from: '', date_to: '',
+    team_id: '', associate_id: '', developer_id: '', project_id: '',
+    status: '', priority: ''
+  };
+  this.renderFollowupsList(document.getElementById('pageContent'));
+};
+
 App.renderFollowupsList = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted);">Loading follow-up pipeline...</div>`;
 
   try {
-    const data = await API.get('/followups');
+    const ff = App.followupFilters;
+    const query = {};
+    Object.entries(ff).forEach(([k, v]) => { if (v) query[k] = v; });
+
+    const [data, catalog] = await Promise.all([
+      API.get('/followups', query),
+      App.getFilterCatalog()
+    ]);
     const followups = data.followups || [];
 
     this.cache.followups = followups;
@@ -22,21 +57,47 @@ App.renderFollowupsList = async function(container) {
         </div>
       </div>
 
-      <div class="filter-bar">
-        <input class="filter-input filter-search" id="folSearch" placeholder="Search customer or notes..." oninput="App.filterFollowupsTable(true)">
-        <select class="filter-input" id="folStatusFilter" onchange="App.filterFollowupsTable(true)">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="overdue">Overdue Alerts</option>
-          <option value="completed">Completed</option>
-        </select>
-        <select class="filter-input" id="folPriorityFilter" onchange="App.filterFollowupsTable(true)">
-          <option value="">All Priorities</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
+      <div class="inv-filters">
+        <div class="inv-filters-top">
+          <label class="inv-filter-search">
+            <span>Search</span>
+            <input id="folSearch" placeholder="Search customer, builder, project, advisor or notes..." value="${Utils.escapeHTML(ff.search)}" oninput="App.followupFilters.search=this.value; App.filterFollowupsTable(true)" onkeydown="if(event.key==='Enter'){event.preventDefault(); App.followupFilters.search=this.value; App.renderFollowupsList(document.getElementById('pageContent'));}">
+          </label>
+        </div>
+        <div class="inv-filters-grid">
+          ${App.buildStandardFilterFieldsHtml({
+            state: ff,
+            catalog,
+            onChangeHandler: 'App.onFollowupsFilterChange',
+            idPrefix: 'fol'
+          })}
+          <label class="inv-filter-field">
+            <span>Status</span>
+            <select id="folStatusFilter" onchange="App.followupFilters.status=this.value; App.filterFollowupsTable(true)">
+              <option value="">All Statuses</option>
+              <option value="pending" ${ff.status === 'pending' ? 'selected' : ''}>Pending</option>
+              <option value="overdue" ${ff.status === 'overdue' ? 'selected' : ''}>Overdue Alerts</option>
+              <option value="completed" ${ff.status === 'completed' ? 'selected' : ''}>Completed</option>
+            </select>
+          </label>
+          <label class="inv-filter-field">
+            <span>Priority</span>
+            <select id="folPriorityFilter" onchange="App.followupFilters.priority=this.value; App.filterFollowupsTable(true)">
+              <option value="">All Priorities</option>
+              <option value="urgent" ${ff.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+              <option value="high" ${ff.priority === 'high' ? 'selected' : ''}>High</option>
+              <option value="medium" ${ff.priority === 'medium' ? 'selected' : ''}>Medium</option>
+              <option value="low" ${ff.priority === 'low' ? 'selected' : ''}>Low</option>
+            </select>
+          </label>
+        </div>
+        <div class="inv-filters-actions">
+          <span class="inv-filter-count">${followups.length} follow-up${followups.length === 1 ? '' : 's'}</span>
+          <div class="actions">
+            <button type="button" class="btn small" onclick="App.resetFollowupsFilters()">Reset</button>
+            <button type="button" class="btn small primary" onclick="App.followupFilters.search=document.getElementById('folSearch').value; App.renderFollowupsList(document.getElementById('pageContent'));">Search</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -56,7 +117,7 @@ App.renderFollowupsList = async function(container) {
             </thead>
             <tbody>
               ${followups.length ? followups.map(f => `
-                <tr data-search="${Utils.escapeHTML((f.customer_name + ' ' + f.notes + ' ' + f.associate_name).toLowerCase())}" data-status="${f.calculated_status}" data-priority="${f.priority}">
+                <tr data-search="${Utils.escapeHTML((f.customer_name + ' ' + f.notes + ' ' + f.associate_name + ' ' + (f.project_name || '') + ' ' + (f.developer_name || '')).toLowerCase())}" data-status="${f.calculated_status}" data-priority="${f.priority}">
                   <td>
                     <strong>${Utils.escapeHTML(f.customer_name)}</strong>
                     <small>${Utils.escapeHTML(f.customer_phone)}</small>
@@ -141,7 +202,7 @@ App.filterFollowupsTable = Utils.debounce(function(resetPage) {
 }, 100);
 
 // Add Follow-up Modal
-App.openAddFollowupModal = async function() {
+App.openAddFollowupModal = async function(preselectCustomerId = '') {
   const custRes = await API.get('/customers');
   const customers = custRes.customers || [];
   const todayStr = new Date().toISOString().split('T')[0];
@@ -153,7 +214,7 @@ App.openAddFollowupModal = async function() {
         <label>Customer *</label>
         <select id="folCustomerSelect" required>
           ${customers.map(c => `
-            <option value="${c.id}">${Utils.escapeHTML(c.full_name)} (${Utils.escapeHTML(c.mobile_number)})</option>
+            <option value="${c.id}" ${preselectCustomerId && preselectCustomerId === c.id ? 'selected' : ''}>${Utils.escapeHTML(c.full_name)} (${Utils.escapeHTML(c.mobile_number)})</option>
           `).join('')}
         </select>
       </div>

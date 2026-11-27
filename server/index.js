@@ -106,6 +106,7 @@ app.get('/api/health', (req, res) => {
 // Apply rate limiting to sensitive routes
 app.use('/api/auth/login', authRateLimiter);
 app.use('/api/invitations/public', publicRateLimiter);
+app.use('/api/public/enquiry', publicRateLimiter);
 
 // Mount modular API routers
 app.use('/api/auth', require('./routes/auth'));
@@ -121,6 +122,45 @@ app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/public/enquiry', require('./routes/publicEnquiry'));
+app.use('/api/lead-links', require('./routes/leadLinks'));
+app.use('/api/leads', require('./routes/leads'));
+app.use('/api/lead-settings', require('./routes/leadSettings'));
+app.use('/api/notifications', require('./routes/notifications'));
+
+// Short Enquiry Link Redirect (/e/:code) protected by rate limiter
+app.get('/e/:code', publicRateLimiter, (req, res) => {
+  try {
+    const { resolvePublicLinkByToken } = require('./services/trackingLinkService');
+    const resolved = resolvePublicLinkByToken(req.params.code);
+    if (resolved.error || !resolved.link) {
+      return res.status(resolved.status || 404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property Enquiry · Visit Studio</title>
+  <style>
+    body { margin: 0; background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+    .card { max-width: 440px; width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 36px 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    h2 { font-size: 20px; margin: 0 0 10px; color: #ffffff; }
+    p { font-size: 13.5px; line-height: 1.6; color: #94a3b8; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Enquiry Link Unavailable</h2>
+    <p>${String(resolved.error || 'This enquiry link is invalid, deactivated, or expired.').replace(/[<>]/g, '')}</p>
+  </div>
+</body>
+</html>`);
+    }
+    const baseUrl = config.getBaseUrl(req);
+    return res.redirect(302, `${baseUrl}/?enquiry=${encodeURIComponent(resolved.link.token)}`);
+  } catch (err) {
+    return res.status(500).send('Unable to open enquiry link');
+  }
+});
 
 // On-demand QR Code Generator Endpoint (returns PNG directly)
 app.get('/api/qr', async (req, res) => {
@@ -287,6 +327,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start listening
+const backgroundJobs = require('./services/backgroundJobs');
 const server = app.listen(config.PORT, () => {
   console.log(`====================================================`);
   console.log(` Visit Studio Platform Server running on port ${config.PORT}`);
@@ -294,11 +335,13 @@ const server = app.listen(config.PORT, () => {
   console.log(` Database: SQLite WAL mode (${config.DB_PATH})`);
   console.log(` Environment: ${config.ENV}`);
   console.log(`====================================================`);
+  backgroundJobs.startBackgroundJobs();
 });
 
 // Graceful shutdown handler
 function gracefulShutdown(signal) {
   console.log(`\nReceived ${signal}. Gracefully shutting down Visit Studio...`);
+  backgroundJobs.stopBackgroundJobs();
   server.close(async () => {
     try {
       const db = require('./db');
