@@ -451,9 +451,13 @@ router.get('/', (req, res) => {
 router.get('/export/excel', async (req, res) => {
   try {
     const invitations = listInvitations(req.user, req.query);
+    const range = invitationDateRange(req.query.period, req.query.date_from, req.query.date_to);
     const buffer = await generateInvitationExcel(invitations, {
       generatedBy: req.user.name,
       role: req.user.role,
+      period: req.query.period || 'all',
+      dateFrom: range?.from || null,
+      dateTo: range?.to || null,
       directory: invitationDirectory(req.user, req.query)
     });
     const filename = `digital_invitations_${new Date().toISOString().slice(0, 10)}.xlsx`;

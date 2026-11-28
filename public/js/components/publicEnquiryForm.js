@@ -1,4 +1,245 @@
-// Public 5-Step Property Enquiry Form Component (Dark Ivory & Gold Editorial Theme)
+// Public 5-Step Property Enquiry Form Component (Project Logo-Matched Editorial Theme)
+App.enquiryLogoColorCache = {};
+
+App.hexToRgb = function(hex) {
+  const m = String(hex || '').replace('#', '').match(/^([0-9a-f]{6})$/i);
+  if (!m) return { r: 198, g: 161, b: 91 };
+  const n = parseInt(m[1], 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+};
+
+App.buildDarkPaletteFromAccent = function(accentHex, opts = {}) {
+  const { r, g, b } = App.hexToRgb(accentHex);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const lighten = (amt) => `rgb(${Math.min(255, Math.round(r + (255 - r) * amt))}, ${Math.min(255, Math.round(g + (255 - g) * amt))}, ${Math.min(255, Math.round(b + (255 - b) * amt))})`;
+  const tintDark = (ratio, base = 14) => `rgb(${Math.round(base + r * ratio)}, ${Math.round(base + g * ratio)}, ${Math.round(base + b * ratio)})`;
+  return {
+    pageBg: opts.pageBg || tintDark(0.03, 9),
+    glow: opts.glow || `rgba(${r}, ${g}, ${b}, 0.16)`,
+    cardBg: opts.cardBg || tintDark(0.05, 14),
+    surface: opts.surface || tintDark(0.075, 20),
+    footerBg: opts.footerBg || tintDark(0.035, 11),
+    border: opts.border || tintDark(0.14, 34),
+    borderStrong: opts.borderStrong || tintDark(0.22, 46),
+    mastheadBg: opts.mastheadBg || '#FFFFFF',
+    mastheadBorder: opts.mastheadBorder || 'rgba(12, 12, 12, 0.08)',
+    mastheadText: opts.mastheadText || '#181818',
+    eyebrow: opts.eyebrow || '#5E5B55',
+    accent: accentHex,
+    accentSoft: opts.accentSoft || lighten(0.22),
+    accentDim: opts.accentDim || `rgba(${r}, ${g}, ${b}, 0.15)`,
+    accentText: opts.accentText || (lum > 0.52 ? '#10120E' : '#FFFFFF'),
+    heading: opts.heading || '#F6F4EF',
+    text: opts.text || '#EFECE6',
+    muted: opts.muted || '#A29D93'
+  };
+};
+
+App.resolveEnquiryProjectTheme = function(project, meta) {
+  const key = `${project?.name || ''} ${project?.developer_name || ''} ${project?.project_logo || ''} ${project?.developer_logo || ''}`.toLowerCase();
+
+  if (key.includes('godrej')) {
+    return App.buildDarkPaletteFromAccent('#78BE20', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#4B5E48',
+      accentSoft: '#93D63D',
+      accentText: '#0B1605',
+      cardBg: '#0E1410',
+      surface: '#141D17',
+      border: '#223327',
+      borderStrong: '#304938',
+      heading: '#F2F7F2'
+    });
+  }
+  if (key.includes('jacob')) {
+    return App.buildDarkPaletteFromAccent('#C42534', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#6B4246',
+      accentSoft: '#DC3B4B',
+      accentText: '#FFFFFF',
+      cardBg: '#130C0D',
+      surface: '#1B1113',
+      border: '#341F23',
+      borderStrong: '#4B2D33',
+      heading: '#FBF2F3'
+    });
+  }
+  if (key.includes('trump')) {
+    return App.buildDarkPaletteFromAccent('#E2B65E', {
+      mastheadBg: '#0D0B08',
+      mastheadBorder: 'rgba(226, 182, 94, 0.22)',
+      mastheadText: '#E2B65E',
+      eyebrow: '#B8A06E',
+      accentSoft: '#EECA7E',
+      accentText: '#141006',
+      pageBg: '#080705',
+      cardBg: '#12100B',
+      surface: '#1A1610',
+      footerBg: '#0D0B08',
+      border: '#2F281A',
+      borderStrong: '#483E28',
+      heading: '#FBF5E8'
+    });
+  }
+  if (key.includes('peridona') || key.includes('crc')) {
+    return App.buildDarkPaletteFromAccent('#2EB37B', {
+      mastheadBg: '#F3F8F5',
+      mastheadText: '#143D2E',
+      eyebrow: '#3D6353',
+      accentSoft: '#49CA92',
+      accentText: '#05170F',
+      cardBg: '#0D1512',
+      surface: '#131E19',
+      footerBg: '#0A110E',
+      border: '#1F332B',
+      borderStrong: '#2D493E',
+      heading: '#F0F7F4'
+    });
+  }
+  if (key.includes('prestige')) {
+    return App.buildDarkPaletteFromAccent('#C6A15B', {
+      mastheadBg: '#F6F1E7',
+      eyebrow: '#6C6355',
+      accentSoft: '#DCC08A',
+      accentText: '#14110B',
+      pageBg: '#0C0C0C',
+      cardBg: '#111110',
+      surface: '#171614',
+      footerBg: '#0E0E0D',
+      border: '#2A2723',
+      borderStrong: '#3A352D',
+      heading: '#F6F1E7'
+    });
+  }
+  if (key.includes('elie') || key.includes('elle saab')) {
+    return App.buildDarkPaletteFromAccent('#D4AF37', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#6E5F3E',
+      accentText: '#141005'
+    });
+  }
+  if (key.includes('cullinan') || key.includes('the line') || key.includes('m3m')) {
+    return App.buildDarkPaletteFromAccent('#1D8FE1', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#3B5670',
+      accentText: '#FFFFFF'
+    });
+  }
+  if (key.includes('saya')) {
+    return App.buildDarkPaletteFromAccent('#F59E0B', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#1D3C78',
+      cardBg: '#0D121D',
+      surface: '#131B2A',
+      border: '#23324D',
+      borderStrong: '#314569'
+    });
+  }
+  if (key.includes('ncr')) {
+    return App.buildDarkPaletteFromAccent('#DC2626', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#6E4545',
+      accentText: '#FFFFFF'
+    });
+  }
+  if (key.includes('gulshan')) {
+    return App.buildDarkPaletteFromAccent('#B68D65', {
+      mastheadBg: '#FAF7F2',
+      eyebrow: '#6F5842',
+      accentText: '#14100B'
+    });
+  }
+  if (key.includes('max') || key.includes('ekanam')) {
+    return App.buildDarkPaletteFromAccent('#14B8A6', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#3F635E',
+      accentText: '#041715'
+    });
+  }
+  if (key.includes('dlf') || key.includes('camellias')) {
+    return App.buildDarkPaletteFromAccent('#E11D48', {
+      mastheadBg: '#FFFFFF',
+      eyebrow: '#694952',
+      accentText: '#FFFFFF'
+    });
+  }
+
+  const logoUrl = project?.project_logo || project?.developer_logo || meta?.agency_logo || '';
+  if (logoUrl && App.enquiryLogoColorCache[logoUrl]) {
+    return App.buildDarkPaletteFromAccent(App.enquiryLogoColorCache[logoUrl], { mastheadBg: '#FFFFFF' });
+  }
+  if (meta?.accent_color && /^#[0-9a-f]{6}$/i.test(meta.accent_color)) {
+    return { ...App.buildDarkPaletteFromAccent(meta.accent_color, { mastheadBg: '#F6F1E7' }), isFallback: true };
+  }
+  return { ...App.buildDarkPaletteFromAccent('#C6A15B', { mastheadBg: '#F6F1E7' }), isFallback: true };
+};
+
+App.getEnquiryThemeStyleAttr = function(theme) {
+  return [
+    `--enq-page-bg:${theme.pageBg}`,
+    `--enq-glow:${theme.glow}`,
+    `--enq-card-bg:${theme.cardBg}`,
+    `--enq-surface:${theme.surface}`,
+    `--enq-footer-bg:${theme.footerBg}`,
+    `--enq-border:${theme.border}`,
+    `--enq-border-strong:${theme.borderStrong}`,
+    `--enq-masthead-bg:${theme.mastheadBg}`,
+    `--enq-masthead-border:${theme.mastheadBorder}`,
+    `--enq-masthead-text:${theme.mastheadText}`,
+    `--enq-eyebrow:${theme.eyebrow}`,
+    `--enq-accent:${theme.accent}`,
+    `--enq-accent-soft:${theme.accentSoft}`,
+    `--enq-accent-dim:${theme.accentDim}`,
+    `--enq-accent-text:${theme.accentText}`,
+    `--enq-heading:${theme.heading}`,
+    `--enq-text:${theme.text}`,
+    `--enq-muted:${theme.muted}`
+  ].join(';');
+};
+
+App.maybeExtractEnquiryLogoColor = function(logoUrl) {
+  if (!logoUrl || App.enquiryLogoColorCache[logoUrl] !== undefined) return;
+  App.enquiryLogoColorCache[logoUrl] = null; // mark in-flight
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        const w = 36, h = 36;
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;
+        let best = null;
+        let bestScore = -1;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+          if (a < 140) continue;
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          if (max < 45 || min > 225) continue; // skip pure black & white
+          const sat = max === 0 ? 0 : (max - min) / max;
+          const score = sat * 2 + (max / 255) * 0.4;
+          if (score > bestScore && sat > 0.18) {
+            bestScore = score;
+            best = '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+          }
+        }
+        if (best) {
+          App.enquiryLogoColorCache[logoUrl] = best;
+          const shell = document.querySelector('.public-customer-shell.enq-dark-mode');
+          if (shell && !shell.dataset.curatedTheme) {
+            const palette = App.buildDarkPaletteFromAccent(best, { mastheadBg: '#FFFFFF' });
+            shell.setAttribute('style', App.getEnquiryThemeStyleAttr(palette));
+          }
+        }
+      } catch (_) {}
+    };
+    img.src = logoUrl;
+  } catch (_) {}
+};
+
 App.enquiryState = {
   token: null,
   sessionId: null,
@@ -142,8 +383,11 @@ App.paintPublicEnquiryStep = function() {
   const displayStep = skipProjectStep ? Math.max(1, st.step - 1) : st.step;
 
   const selectedProject = (meta.projects || []).find(p => p.id === v.project_id) || (meta.projects || [])[0] || null;
-  const headerLogo = selectedProject?.developer_logo || selectedProject?.project_logo || meta.agency_logo || '';
-  const headerBrandName = selectedProject?.developer_name || meta.agency_name || 'Prestige Group';
+  const headerLogo = selectedProject?.project_logo || selectedProject?.developer_logo || meta.agency_logo || '';
+  const headerBrandName = selectedProject?.name || selectedProject?.developer_name || meta.agency_name || 'Property Enquiry';
+  const projectTheme = App.resolveEnquiryProjectTheme(selectedProject, meta);
+  const themeStyleAttr = App.getEnquiryThemeStyleAttr(projectTheme);
+  if (headerLogo && projectTheme.isFallback) App.maybeExtractEnquiryLogoColor(headerLogo);
 
   const progressBarHtml = `
     <div class="enq-step-top-row">
@@ -338,12 +582,13 @@ App.paintPublicEnquiryStep = function() {
   }
 
   publicContainer.innerHTML = `
-    <div class="public-customer-shell enq-dark-mode">
+    <div class="public-customer-shell enq-dark-mode" style="${themeStyleAttr}">
       <div class="public-customer-wrap enq-wrap-compact">
         <article class="enq-wizard-card">
           <div class="enq-wizard-header">
             ${headerLogo ? `
-              <img src="${Utils.escapeHTML(headerLogo)}" alt="${Utils.escapeHTML(headerBrandName)}" class="enq-header-logo" onerror="this.style.display='none'">
+              <img src="${Utils.escapeHTML(headerLogo)}" alt="${Utils.escapeHTML(headerBrandName)}" class="enq-header-logo" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block';">
+              <div class="enq-header-brand-fallback" style="display:none;">${Utils.escapeHTML(headerBrandName)}</div>
             ` : `
               <div class="enq-header-brand-fallback">${Utils.escapeHTML(headerBrandName)}</div>
             `}
@@ -476,17 +721,20 @@ App.submitPublicEnquiryForm = async function(e) {
     const conf = res.confirmation || {};
     const meta = st.formMeta || {};
     const selectedProject = (meta.projects || []).find(p => p.id === v.project_id) || (meta.projects || [])[0] || null;
-    const headerLogo = selectedProject?.developer_logo || selectedProject?.project_logo || meta.agency_logo || '';
-    const headerBrandName = selectedProject?.developer_name || meta.agency_name || 'Prestige Group';
+    const headerLogo = selectedProject?.project_logo || selectedProject?.developer_logo || meta.agency_logo || '';
+    const headerBrandName = selectedProject?.name || selectedProject?.developer_name || meta.agency_name || 'Property Enquiry';
+    const projectTheme = App.resolveEnquiryProjectTheme(selectedProject, meta);
+    const themeStyleAttr = App.getEnquiryThemeStyleAttr(projectTheme);
 
     const publicContainer = document.getElementById('publicViewContainer');
     publicContainer.innerHTML = `
-      <div class="public-customer-shell enq-dark-mode">
+      <div class="public-customer-shell enq-dark-mode" style="${themeStyleAttr}">
         <div class="public-customer-wrap enq-wrap-compact">
           <article class="enq-wizard-card">
             <div class="enq-wizard-header">
               ${headerLogo ? `
-                <img src="${Utils.escapeHTML(headerLogo)}" alt="${Utils.escapeHTML(headerBrandName)}" class="enq-header-logo" onerror="this.style.display='none'">
+                <img src="${Utils.escapeHTML(headerLogo)}" alt="${Utils.escapeHTML(headerBrandName)}" class="enq-header-logo" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block';">
+                <div class="enq-header-brand-fallback" style="display:none;">${Utils.escapeHTML(headerBrandName)}</div>
               ` : `
                 <div class="enq-header-brand-fallback">${Utils.escapeHTML(headerBrandName)}</div>
               `}
@@ -494,8 +742,8 @@ App.submitPublicEnquiryForm = async function(e) {
             </div>
             <div class="enq-wizard-body" style="padding:34px 24px 26px; text-align:center;">
               <div class="enq-done-mark" aria-hidden="true">✓</div>
-              <h2 style="font-family:Arial, Helvetica, sans-serif; font-weight:500; margin:0 0 6px; color:#F6F1E7; font-size:28px;">Enquiry received</h2>
-              <p style="color:#A29B8D; font-size:14px; margin:0 auto 20px;">
+              <h2 style="font-family:Arial, Helvetica, sans-serif; font-weight:500; margin:0 0 6px; color:var(--enq-heading); font-size:28px;">Enquiry received</h2>
+              <p style="color:var(--enq-muted); font-size:14px; margin:0 auto 20px;">
                 Your enquiry has been recorded.
               </p>
               <div class="enq-confirm-box">

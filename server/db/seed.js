@@ -187,6 +187,7 @@ async function seedDatabase() {
   const devNcrWId = 'dev-ncr-org-08a1da1a';
   const devGulshanWId = 'dev-gulshan-org-08a1da1a';
   const devGodrejWId = 'dev-godrej-org-08a1da1a';
+  const devCrcWId = 'dev-crc-org-08a1da1a';
 
   db.run(
     `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -219,6 +220,10 @@ async function seedDatabase() {
   db.run(
     `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [devGodrejWId, org3Id, 'Godrej Properties', 'Mohit Malhotra', '+91 22 61664444', 'sales@godrejproperties.com', 'https://godrejproperties.com', 'Godrej One, Pirojshanagar, Eastern Express Highway, Mumbai & NCR Hub', "India's most trusted developer bringing sustainability and innovation to NCR.", '/uploads/logos/logo-dev-godrej.png', 'active']
+  );
+  db.run(
+    `INSERT INTO developers (id, organization_id, name, contact_name, contact_phone, contact_email, website, address, description, company_logo, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [devCrcWId, org3Id, 'CRC Group', 'Kunal Rishi', '+91 120 4555000', 'sales@crcgroup.in', 'https://crcgroup.in', 'Jaypee Greens, Greater Noida', 'Luxury residential developer crafting iconic golf-course and green-centric landmarks across NCR.', '/uploads/logos/logo-dev-crc.svg', 'active']
   );
 
   // 4. Projects
@@ -389,6 +394,7 @@ async function seedDatabase() {
   const projMax105WId = 'proj-max105-org-08a1da1a';
   const projGvEkanamWId = 'proj-gv-ekanam-org-08a1da1a';
   const projPrestige150WId = 'proj-prestige-150-org-08a1da1a';
+  const projCrcPeridonaWId = 'proj-crc-peridona-org-08a1da1a';
 
   db.run(
     `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -572,6 +578,20 @@ async function seedDatabase() {
     ]
   );
 
+  db.run(
+    `INSERT INTO projects (id, organization_id, developer_id, name, location, google_maps_url, description, project_logo, carpet_area, built_up_area, super_built_up_area, starting_price, price_range, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projCrcPeridonaWId, org3Id, devCrcWId, 'CRC - Peridona',
+      'Jaypee Greens, Greater Noida',
+      'https://maps.google.com/?q=CRC+Peridona+Jaypee+Greens+Greater+Noida',
+      'Ultra-luxury golf-facing whole-floor and oversized residences inspired by the peridot gemstone at Jaypee Greens, Greater Noida (UPRERAPRJ298067/05/2025).',
+      '/uploads/logos/logo-proj-crc-peridona.svg',
+      '3,200 sq. ft.', '3,935 sq. ft.', '4,950 sq. ft.', '₹6.50 Cr', '₹6.50 Cr - ₹14.00 Cr',
+      '152-Acre Golf Course Views, Private Lift Lobbies, Luxury Clubhouse, Infinity Pool, Concierge',
+      'active'
+    ]
+  );
+
   // Workians Project Configurations
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -686,6 +706,18 @@ async function seedDatabase() {
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ['cfg-w28', projPrestige150WId, 'Sky Mansion', 'Top-floor Sky Mansion Penthouse', 'Uppermost Floors · ~5,591–6,091 sq. ft.', '', 5, 5]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w29', projCrcPeridonaWId, '4 BHK Golf Residence', '4 Bed + Maid · Golf Course Facing', '3,935 – 4,950 sq. ft.', '', 4, 5]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w30', projCrcPeridonaWId, '4 BHK Luxury Signature', '4 Bed Grand Layout · Private Lobby', '4,950 – 5,400 sq. ft.', '', 4, 5]
+  );
+  db.run(
+    `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['cfg-w31', projCrcPeridonaWId, '5 BHK Sky Penthouse / Duplex', '5 Bed Ultra-Luxury Sky Residence', '6,000 – 7,400 sq. ft.', '', 5, 6]
   );
 
   // 5. Project Configurations
