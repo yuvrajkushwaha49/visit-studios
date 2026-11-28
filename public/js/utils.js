@@ -245,6 +245,11 @@ const Utils = {
   },
 
   enhanceAllSelects(root = document) {
+    document.querySelectorAll('body > .searchable-dropdown-panel').forEach(p => {
+      if (!p._ssTrigger || !p._ssTrigger.isConnected) {
+        p.remove();
+      }
+    });
     if (!root || typeof root.querySelectorAll !== 'function') return;
     const selects = root.querySelectorAll('select');
     selects.forEach(sel => {
@@ -350,12 +355,62 @@ const Utils = {
       }
     };
 
+    const positionPanel = () => {
+      if (!trigger.isConnected) {
+        closePanel();
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      if (rect.bottom < -20 || rect.top > window.innerHeight + 20 || rect.width === 0) {
+        closePanel();
+        return;
+      }
+      const panelWidth = Math.max(rect.width, 220);
+      const left = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - panelWidth - 8));
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const openUpward = spaceBelow < 250 && spaceAbove > spaceBelow;
+
+      panel.style.position = 'fixed';
+      panel.style.zIndex = '10050';
+      panel.style.left = `${left}px`;
+      panel.style.width = `${panelWidth}px`;
+      panel.style.right = 'auto';
+
+      if (openUpward) {
+        panel.style.top = 'auto';
+        panel.style.bottom = `${Math.max(8, window.innerHeight - rect.top + 4)}px`;
+        panel.classList.add('open-upward');
+      } else {
+        panel.style.bottom = 'auto';
+        panel.style.top = `${Math.max(8, rect.bottom + 4)}px`;
+        panel.classList.remove('open-upward');
+      }
+    };
+
     const closePanel = () => {
       panel.classList.add('hidden');
       panel.classList.remove('open-upward');
+      panel.style.position = '';
+      panel.style.zIndex = '';
+      panel.style.left = '';
+      panel.style.width = '';
+      panel.style.right = '';
+      panel.style.top = '';
+      panel.style.bottom = '';
       trigger.classList.remove('active');
       trigger.setAttribute('aria-expanded', 'false');
+      if (wrapper.isConnected) {
+        if (panel.parentNode !== wrapper) wrapper.appendChild(panel);
+      } else {
+        panel.remove();
+      }
     };
+
+    panel._ssClose = closePanel;
+    panel._ssPosition = positionPanel;
+    panel._ssTrigger = trigger;
+    panel._ssWrapper = wrapper;
 
     const selectOptionByValue = (val) => {
       select.value = val;
@@ -413,26 +468,15 @@ const Utils = {
     const openPanel = () => {
       document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => {
         if (p !== panel) {
-          p.classList.add('hidden');
-          p.classList.remove('open-upward');
+          if (typeof p._ssClose === 'function') p._ssClose();
+          else p.classList.add('hidden');
         }
-      });
-      document.querySelectorAll('.searchable-select-trigger.active').forEach(t => {
-        if (t !== trigger) t.classList.remove('active');
       });
 
       syncTriggerLabel();
-      const rect = trigger.getBoundingClientRect();
-      const scrollParent = trigger.closest('.modal-scroll-body');
-      const spaceBelow = scrollParent
-        ? scrollParent.getBoundingClientRect().bottom - rect.bottom
-        : window.innerHeight - rect.bottom;
-      const spaceAbove = scrollParent
-        ? rect.top - scrollParent.getBoundingClientRect().top
-        : rect.top;
-      panel.classList.toggle('open-upward', spaceBelow < 240 && spaceAbove > spaceBelow);
-
+      document.body.appendChild(panel);
       panel.classList.remove('hidden');
+      positionPanel();
       trigger.classList.add('active');
       trigger.setAttribute('aria-expanded', 'true');
       searchInput.value = '';
@@ -990,12 +1034,31 @@ const Utils = {
   }
 };
 
-// Global click & escape listeners for searchable dropdowns
+// Global click, scroll & escape listeners for searchable dropdowns
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.searchable-select-container')) {
-    document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => p.classList.add('hidden'));
-    document.querySelectorAll('.searchable-select-trigger.active').forEach(t => t.classList.remove('active'));
+  if (!e.target.closest('.searchable-select-container') && !e.target.closest('.searchable-dropdown-panel')) {
+    document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => {
+      if (typeof p._ssClose === 'function') p._ssClose();
+      else p.classList.add('hidden');
+    });
+    document.querySelectorAll('.searchable-select-trigger.active').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-expanded', 'false');
+    });
   }
+});
+
+window.addEventListener('scroll', (e) => {
+  if (e.target && typeof e.target.closest === 'function' && e.target.closest('.searchable-dropdown-panel')) return;
+  document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => {
+    if (typeof p._ssPosition === 'function') p._ssPosition();
+  });
+}, true);
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => {
+    if (typeof p._ssPosition === 'function') p._ssPosition();
+  });
 });
 
 document.addEventListener('keydown', (e) => {
@@ -1003,12 +1066,8 @@ document.addEventListener('keydown', (e) => {
     const openPanels = document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)');
     if (openPanels.length > 0) {
       openPanels.forEach(p => {
-        p.classList.add('hidden');
-        p.classList.remove('open-upward');
-      });
-      document.querySelectorAll('.searchable-select-trigger.active').forEach(t => {
-        t.classList.remove('active');
-        t.setAttribute('aria-expanded', 'false');
+        if (typeof p._ssClose === 'function') p._ssClose();
+        else p.classList.add('hidden');
       });
       return;
     }
