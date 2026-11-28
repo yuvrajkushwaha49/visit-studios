@@ -45,6 +45,7 @@ App.renderLeadGeneration = async function(container) {
     const projects = catalog.projects || [];
     const campaigns = campsRes.campaigns || [];
     const campaignsEnabled = campsRes.campaignsEnabled !== false;
+    const canUseBulkWhatsapp = role === 'admin' || role === 'super_admin';
     const associates = catalog.associates || [];
     const links = linksRes.links || [];
     const pagination = linksRes.pagination || { page: 1, totalPages: 1, total: 0 };
@@ -67,6 +68,15 @@ App.renderLeadGeneration = async function(container) {
         <h3 class="panel-title" style="margin-bottom:14px;">Generate Enquiry Link</h3>
         <form id="generateLeadLinkForm" onsubmit="App.handleGenerateLeadLink(event)">
           <div class="fields-grid">
+            ${canUseBulkWhatsapp ? `
+              <div>
+                <label for="lnkType">Link Type</label>
+                <select id="lnkType" onchange="App.onLeadLinkTypeChange('lnk', this.value)">
+                  <option value="advisor">Associate / Advisor Link</option>
+                  <option value="bulk_whatsapp">Bulk WhatsApp Marketing (Advisor: Aiswarya · 9289846060)</option>
+                </select>
+              </div>
+            ` : ''}
             <div>
               <label for="lnkTitle">Link Label (Optional)</label>
               <input id="lnkTitle" maxlength="180" placeholder="e.g. Prestige Luxury Campaign — WhatsApp">
@@ -91,6 +101,7 @@ App.renderLeadGeneration = async function(container) {
               <label for="lnkSource">Enquiry Source</label>
               <select id="lnkSource">
                 <option value="Enquiry Link">Enquiry Link</option>
+                ${canUseBulkWhatsapp ? `<option value="Bulk WhatsApp Marketing">Bulk WhatsApp Marketing</option>` : ''}
                 <option value="WhatsApp Outreach">WhatsApp Outreach</option>
                 <option value="Instagram / Meta">Instagram / Meta</option>
                 <option value="Google Ads">Google Ads</option>
@@ -103,12 +114,22 @@ App.renderLeadGeneration = async function(container) {
               <input id="lnkExpires" type="datetime-local">
             </div>
             ${(role === 'admin' || role === 'sales_head' || role === 'super_admin') ? `
-              <div>
+              <div id="lnkOwnerAssocWrap">
                 <label for="lnkOwnerAssoc">Assign Link to Associate (Optional)</label>
                 <select id="lnkOwnerAssoc">
                   <option value="">Self / Policy Default (${role === 'sales_head' ? 'Team Pool' : 'Org Pool'})</option>
                   ${associates.map(a => `<option value="${a.id}">${Utils.escapeHTML(a.name)}</option>`).join('')}
                 </select>
+              </div>
+            ` : ''}
+            ${canUseBulkWhatsapp ? `
+              <div id="lnkBulkAdvisorNameWrap" class="hidden">
+                <label for="lnkAdvisorName">Receipt Advisor Name</label>
+                <input id="lnkAdvisorName" maxlength="120" value="Aiswarya" placeholder="Aiswarya">
+              </div>
+              <div id="lnkBulkAdvisorPhoneWrap" class="hidden">
+                <label for="lnkAdvisorPhone">Receipt Advisor Number</label>
+                <input id="lnkAdvisorPhone" maxlength="32" value="9289846060" placeholder="9289846060">
               </div>
             ` : ''}
           </div>
@@ -183,8 +204,13 @@ App.renderLeadGeneration = async function(container) {
                     <small><code>/e/${Utils.escapeHTML(lnk.short_code)}</code> · ${Utils.escapeHTML(lnk.project_name || 'All Active Projects')}${lnk.campaign_name ? ` · ${Utils.escapeHTML(lnk.campaign_name)}` : ''}</small>
                   </td>
                   <td>
-                    <strong>${Utils.escapeHTML(lnk.owner_associate_name || lnk.owner_sales_head_name || lnk.creator_name)}</strong>
-                    <small>${lnk.owner_associate_name ? 'Associate' : (lnk.owner_sales_head_name ? 'Sales Head Pool' : 'Admin Pool')} · ${Utils.escapeHTML(lnk.source_name)}</small>
+                    ${lnk.link_type === 'bulk_whatsapp' ? `
+                      <strong>${Utils.escapeHTML(lnk.advisor_display_name || 'Aiswarya')} (${Utils.escapeHTML(lnk.advisor_display_phone || '9289846060')})</strong>
+                      <small>Bulk WhatsApp Marketing · ${Utils.escapeHTML(lnk.creator_name || 'Marketing')}</small>
+                    ` : `
+                      <strong>${Utils.escapeHTML(lnk.owner_associate_name || lnk.owner_sales_head_name || lnk.creator_name)}</strong>
+                      <small>${lnk.owner_associate_name ? 'Associate Advisor' : (lnk.owner_sales_head_name ? 'Sales Head Pool' : 'Admin Pool')} · ${Utils.escapeHTML(lnk.source_name)}</small>
+                    `}
                   </td>
                   <td><strong>${lnk.total_opens || 0}</strong> <small>(${lnk.unique_opens || 0} unique)</small></td>
                   <td><strong>${lnk.total_submissions || 0}</strong> <small>(${lnk.unique_submissions || 0} unique)</small></td>
@@ -240,12 +266,38 @@ App.resetLeadLinksFilters = function() {
   App.renderLeadGeneration(document.getElementById('pageContent'));
 };
 
+App.onLeadLinkTypeChange = function(prefix, linkType) {
+  const isBulk = linkType === 'bulk_whatsapp';
+  const nameWrap = document.getElementById(`${prefix}BulkAdvisorNameWrap`);
+  const phoneWrap = document.getElementById(`${prefix}BulkAdvisorPhoneWrap`);
+  const nameInput = document.getElementById(`${prefix}AdvisorName`);
+  const phoneInput = document.getElementById(`${prefix}AdvisorPhone`);
+  const srcSelect = document.getElementById(`${prefix}Source`);
+
+  if (nameWrap) nameWrap.classList.toggle('hidden', !isBulk);
+  if (phoneWrap) phoneWrap.classList.toggle('hidden', !isBulk);
+
+  if (isBulk) {
+    if (nameInput && !nameInput.value.trim()) nameInput.value = 'Aiswarya';
+    if (phoneInput && !phoneInput.value.trim()) phoneInput.value = '9289846060';
+    if (srcSelect) {
+      srcSelect.value = 'Bulk WhatsApp Marketing';
+      Utils.searchableSelects.get(srcSelect.id)?.refresh();
+    }
+  } else if (srcSelect && srcSelect.value === 'Bulk WhatsApp Marketing') {
+    srcSelect.value = 'Enquiry Link';
+    Utils.searchableSelects.get(srcSelect.id)?.refresh();
+  }
+};
+
 App.handleGenerateLeadLink = async function(e) {
   e.preventDefault();
   const btn = document.getElementById('btnGenLink');
   try {
     if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+    const linkType = document.getElementById('lnkType')?.value || 'advisor';
     const payload = {
+      link_type: linkType,
       title: document.getElementById('lnkTitle')?.value.trim() || '',
       project_id: document.getElementById('lnkProject')?.value || null,
       campaign_id: document.getElementById('lnkCampaign')?.value || null,
@@ -253,6 +305,10 @@ App.handleGenerateLeadLink = async function(e) {
       expires_at: document.getElementById('lnkExpires')?.value || null,
       owner_associate_id: document.getElementById('lnkOwnerAssoc')?.value || null
     };
+    if (linkType === 'bulk_whatsapp') {
+      payload.advisor_display_name = document.getElementById('lnkAdvisorName')?.value.trim() || 'Aiswarya';
+      payload.advisor_display_phone = document.getElementById('lnkAdvisorPhone')?.value.trim() || '9289846060';
+    }
     const res = await API.post('/lead-links', payload);
     Utils.toast('Trackable enquiry link generated!');
     if (res.link?.shortUrl) {
@@ -277,6 +333,8 @@ App.openEditTrackingLinkModal = async function(linkId) {
     const projects = projsRes.projects || [];
     const campaigns = campsRes.campaigns || [];
     const campaignsEnabled = campsRes.campaignsEnabled !== false;
+    const role = this.currentUser?.role || 'sales_associate';
+    const canEditBulk = role === 'admin' || role === 'super_admin';
 
     const toLocalInputVal = (dtStr) => {
       if (!dtStr) return '';
@@ -289,6 +347,7 @@ App.openEditTrackingLinkModal = async function(linkId) {
 
     const sourceChoices = [
       'Enquiry Link',
+      ...(canEditBulk ? ['Bulk WhatsApp Marketing'] : []),
       'WhatsApp Outreach',
       'Instagram / Meta',
       'Google Ads',
@@ -298,12 +357,22 @@ App.openEditTrackingLinkModal = async function(linkId) {
     if (lnk.source_name && !sourceChoices.includes(lnk.source_name)) {
       sourceChoices.unshift(lnk.source_name);
     }
+    const isBulk = lnk.link_type === 'bulk_whatsapp';
 
     Utils.showModal(`
       <form onsubmit="App.handleUpdateTrackingLink(event, '${lnk.id}')" style="text-align:left;">
         <div class="eyebrow">EDIT TRACKING LINK · /e/${Utils.escapeHTML(lnk.short_code)}</div>
         <h3 style="margin:4px 0 14px;">Update Enquiry Link Settings</h3>
         <div class="fields-grid">
+          ${canEditBulk ? `
+            <div>
+              <label for="editLnkType">Link Type</label>
+              <select id="editLnkType" onchange="App.onLeadLinkTypeChange('editLnk', this.value)">
+                <option value="advisor" ${!isBulk ? 'selected' : ''}>Associate / Advisor Link</option>
+                <option value="bulk_whatsapp" ${isBulk ? 'selected' : ''}>Bulk WhatsApp Marketing (Advisor: Aiswarya · 9289846060)</option>
+              </select>
+            </div>
+          ` : ''}
           <div>
             <label for="editLnkTitle">Link Label</label>
             <input id="editLnkTitle" maxlength="180" value="${Utils.escapeHTML(lnk.title || '')}" placeholder="e.g. Prestige Luxury Campaign">
@@ -341,6 +410,16 @@ App.openEditTrackingLinkModal = async function(linkId) {
               <option value="0" ${!lnk.is_active ? 'selected' : ''}>Inactive</option>
             </select>
           </div>
+          ${canEditBulk ? `
+            <div id="editLnkBulkAdvisorNameWrap" class="${isBulk ? '' : 'hidden'}">
+              <label for="editLnkAdvisorName">Receipt Advisor Name</label>
+              <input id="editLnkAdvisorName" maxlength="120" value="${Utils.escapeHTML(lnk.advisor_display_name || 'Aiswarya')}">
+            </div>
+            <div id="editLnkBulkAdvisorPhoneWrap" class="${isBulk ? '' : 'hidden'}">
+              <label for="editLnkAdvisorPhone">Receipt Advisor Number</label>
+              <input id="editLnkAdvisorPhone" maxlength="32" value="${Utils.escapeHTML(lnk.advisor_display_phone || '9289846060')}">
+            </div>
+          ` : ''}
         </div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="btn soft" onclick="Utils.closeModal()">Cancel</button>
@@ -359,6 +438,7 @@ App.handleUpdateTrackingLink = async function(e, linkId) {
   try {
     if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
     const expVal = document.getElementById('editLnkExpires')?.value || '';
+    const editTypeEl = document.getElementById('editLnkType');
     const payload = {
       title: document.getElementById('editLnkTitle')?.value.trim() || '',
       project_id: document.getElementById('editLnkProject')?.value || null,
@@ -366,6 +446,13 @@ App.handleUpdateTrackingLink = async function(e, linkId) {
       expires_at: expVal ? new Date(expVal).toISOString() : null,
       is_active: document.getElementById('editLnkActive')?.value === '1'
     };
+    if (editTypeEl) {
+      payload.link_type = editTypeEl.value || 'advisor';
+      if (payload.link_type === 'bulk_whatsapp') {
+        payload.advisor_display_name = document.getElementById('editLnkAdvisorName')?.value.trim() || 'Aiswarya';
+        payload.advisor_display_phone = document.getElementById('editLnkAdvisorPhone')?.value.trim() || '9289846060';
+      }
+    }
     const campEl = document.getElementById('editLnkCampaign');
     if (campEl) payload.campaign_id = campEl.value || null;
 

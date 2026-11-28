@@ -97,7 +97,10 @@ async function ensureMySQLSchema() {
       "ALTER TABLE `customers` ADD COLUMN `original_source` VARCHAR(120) NULL",
       "ALTER TABLE `followups` ADD COLUMN `lead_id` VARCHAR(64) NULL",
       "ALTER TABLE `followups` ADD COLUMN `completed_at` DATETIME NULL",
-      "ALTER TABLE `followups` ADD COLUMN `reminder_sent_at` DATETIME NULL"
+      "ALTER TABLE `followups` ADD COLUMN `reminder_sent_at` DATETIME NULL",
+      "ALTER TABLE `tracking_links` ADD COLUMN `link_type` VARCHAR(40) DEFAULT 'advisor'",
+      "ALTER TABLE `tracking_links` ADD COLUMN `advisor_display_name` VARCHAR(120) NULL",
+      "ALTER TABLE `tracking_links` ADD COLUMN `advisor_display_phone` VARCHAR(32) NULL"
     ];
     for (const stmt of alterStatements) {
       try { await p.query(stmt); } catch (_) {}
@@ -133,6 +136,9 @@ async function ensureMySQLSchema() {
         \`campaign_id\` VARCHAR(64),
         \`title\` VARCHAR(255),
         \`source_name\` VARCHAR(120) DEFAULT 'Enquiry Link',
+        \`link_type\` VARCHAR(40) DEFAULT 'advisor',
+        \`advisor_display_name\` VARCHAR(120) NULL,
+        \`advisor_display_phone\` VARCHAR(32) NULL,
         \`is_active\` TINYINT DEFAULT 1,
         \`expires_at\` DATETIME NULL,
         \`deactivated_at\` DATETIME NULL,

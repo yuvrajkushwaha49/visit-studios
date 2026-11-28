@@ -219,19 +219,91 @@ const Utils = {
   },
 
   searchableSelects: new Map(),
+  _searchableSelectSeq: 0,
+  _autoSelectObserver: null,
 
-  setupSearchableSelect(selectId, searchPlaceholder = 'Search options...') {
+  shouldEnhanceSelect(select) {
+    if (!select || select.tagName !== 'SELECT') return false;
+    if (select.multiple || select.hasAttribute('data-no-search')) return false;
+    if (select.closest('.table-pagination-meta')) return false;
+    if (select.classList.contains('enq-cc-select')) return false;
+    if (select.id === 'inviteCountryCode' || select.id === 'inviteSizeUnit') return false;
+    return true;
+  },
+
+  inferSearchPlaceholder(select) {
+    const explicit = select.getAttribute('data-search-placeholder');
+    if (explicit) return explicit;
+    const labelText = select.closest('label')?.querySelector(':scope > span')?.textContent?.trim()
+      || select.previousElementSibling?.textContent?.trim()
+      || '';
+    const cleaned = labelText.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+    if (cleaned && cleaned.length <= 32) {
+      return `Search ${cleaned.toLowerCase()}...`;
+    }
+    return 'Search options...';
+  },
+
+  enhanceAllSelects(root = document) {
+    if (!root || typeof root.querySelectorAll !== 'function') return;
+    const selects = root.querySelectorAll('select');
+    selects.forEach(sel => {
+      if (!this.shouldEnhanceSelect(sel)) return;
+      if (sel.dataset.searchableEnhanced === '1' && sel.id && document.getElementById(`searchable_wrap_${sel.id}`)) {
+        return;
+      }
+      this.setupSearchableSelect(sel);
+    });
+  },
+
+  initAutoSearchableSelects() {
+    if (this._autoSelectObserver || typeof MutationObserver === 'undefined') return;
+    const attachObserver = () => {
+      if (!document.body || this._autoSelectObserver) return;
+      this.enhanceAllSelects(document);
+      let queued = false;
+      this._autoSelectObserver = new MutationObserver((mutations) => {
+        const hasNodes = mutations.some(m => m.addedNodes && m.addedNodes.length > 0);
+        if (!hasNodes || queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          this.enhanceAllSelects(document);
+        });
+      });
+      this._autoSelectObserver.observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) {
+      attachObserver();
+    } else {
+      document.addEventListener('DOMContentLoaded', attachObserver, { once: true });
+    }
+  },
+
+  setupSearchableSelect(selectId, searchPlaceholder = null) {
     const select = typeof selectId === 'string' ? document.getElementById(selectId) : selectId;
-    if (!select) return;
+    if (!this.shouldEnhanceSelect(select)) return;
 
+    if (!select.id) {
+      select.id = `ss_auto_${++this._searchableSelectSeq}`;
+    }
     const id = select.id;
+    const placeholderText = searchPlaceholder || this.inferSearchPlaceholder(select);
+
+    // Disconnect previous option observer if re-initializing
+    if (select._ssOptionsObserver) {
+      select._ssOptionsObserver.disconnect();
+      select._ssOptionsObserver = null;
+    }
+
     // Remove existing wrapper if present
     const existing = document.getElementById(`searchable_wrap_${id}`);
     if (existing) {
       existing.remove();
     }
 
-    // Keep native select hidden in DOM for accessibility, validation & form data
+    // Mark enhanced & keep native select hidden in DOM for accessibility, validation & form data
+    select.dataset.searchableEnhanced = '1';
     select.style.display = 'none';
 
     // Create custom wrapper
@@ -255,7 +327,7 @@ const Utils = {
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <input type="text" class="searchable-search-input" placeholder="${this.escapeHTML(searchPlaceholder)}" autocomplete="off" spellcheck="false">
+          <input type="text" class="searchable-search-input" placeholder="${this.escapeHTML(placeholderText)}" autocomplete="off" spellcheck="false">
           <button type="button" class="searchable-clear-btn hidden" title="Clear">×</button>
         </div>
         <div class="searchable-options-list" id="searchable_list_${id}"></div>
@@ -269,6 +341,34 @@ const Utils = {
     const searchInput = wrapper.querySelector('.searchable-search-input');
     const clearBtn = wrapper.querySelector('.searchable-clear-btn');
     const list = wrapper.querySelector('.searchable-options-list');
+
+    const syncTriggerLabel = () => {
+      const currentOpt = select.options[select.selectedIndex] || select.options[0];
+      const valSpan = trigger.querySelector('.searchable-select-val');
+      if (valSpan) {
+        valSpan.textContent = currentOpt ? currentOpt.text : 'Select an option...';
+      }
+    };
+
+    const closePanel = () => {
+      panel.classList.add('hidden');
+      panel.classList.remove('open-upward');
+      trigger.classList.remove('active');
+      trigger.setAttribute('aria-expanded', 'false');
+    };
+
+    const selectOptionByValue = (val) => {
+      select.value = val;
+      for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === val) {
+          select.selectedIndex = i;
+          break;
+        }
+      }
+      syncTriggerLabel();
+      closePanel();
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    };
 
     const renderOptions = (filterText = '') => {
       const term = filterText.trim().toLowerCase();
@@ -303,29 +403,34 @@ const Utils = {
 
       list.querySelectorAll('.searchable-option').forEach(el => {
         el.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          const val = el.getAttribute('data-value');
-          select.value = val;
-          for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === val) {
-              select.selectedIndex = i;
-              break;
-            }
-          }
-          trigger.querySelector('.searchable-select-val').textContent = select.options[select.selectedIndex]?.text || '';
-          closePanel();
-          select.dispatchEvent(new Event('change', { bubbles: true }));
+          selectOptionByValue(el.getAttribute('data-value'));
         });
       });
     };
 
     const openPanel = () => {
       document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => {
-        if (p !== panel) p.classList.add('hidden');
+        if (p !== panel) {
+          p.classList.add('hidden');
+          p.classList.remove('open-upward');
+        }
       });
       document.querySelectorAll('.searchable-select-trigger.active').forEach(t => {
         if (t !== trigger) t.classList.remove('active');
       });
+
+      syncTriggerLabel();
+      const rect = trigger.getBoundingClientRect();
+      const scrollParent = trigger.closest('.modal-scroll-body');
+      const spaceBelow = scrollParent
+        ? scrollParent.getBoundingClientRect().bottom - rect.bottom
+        : window.innerHeight - rect.bottom;
+      const spaceAbove = scrollParent
+        ? rect.top - scrollParent.getBoundingClientRect().top
+        : rect.top;
+      panel.classList.toggle('open-upward', spaceBelow < 240 && spaceAbove > spaceBelow);
 
       panel.classList.remove('hidden');
       trigger.classList.add('active');
@@ -333,14 +438,16 @@ const Utils = {
       searchInput.value = '';
       clearBtn.classList.add('hidden');
       renderOptions('');
-      setTimeout(() => searchInput.focus(), 50);
+      setTimeout(() => searchInput.focus(), 30);
     };
 
-    const closePanel = () => {
-      panel.classList.add('hidden');
-      trigger.classList.remove('active');
-      trigger.setAttribute('aria-expanded', 'false');
-    };
+    // Guard clicks inside dropdown panel so enclosing <label> never triggers toggle
+    panel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!e.target.closest('input, button')) {
+        e.preventDefault();
+      }
+    });
 
     trigger.addEventListener('click', (e) => {
       e.preventDefault();
@@ -358,7 +465,24 @@ const Utils = {
       renderOptions(val);
     });
 
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        const firstOpt = list.querySelector('.searchable-option');
+        if (firstOpt) {
+          selectOptionByValue(firstOpt.getAttribute('data-value'));
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closePanel();
+        trigger.focus();
+      }
+    });
+
     clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       searchInput.value = '';
       clearBtn.classList.add('hidden');
@@ -366,21 +490,26 @@ const Utils = {
       searchInput.focus();
     });
 
-    // Close dropdown on outside click
-    document.addEventListener('click', (e) => {
-      if (!wrap.contains(e.target)) {
-        closePanel();
+    if (!select._ssChangeSyncAttached) {
+      select._ssChangeSyncAttached = true;
+      select.addEventListener('change', () => {
+        Utils.searchableSelects.get(select.id)?.refresh();
+      });
+    }
+
+    const optObserver = new MutationObserver(() => {
+      syncTriggerLabel();
+      if (!panel.classList.contains('hidden')) {
+        renderOptions(searchInput.value);
       }
     });
+    optObserver.observe(select, { childList: true, subtree: true });
+    select._ssOptionsObserver = optObserver;
 
     Utils.searchableSelects.set(id, {
       refresh() {
-        const currentOpt = select.options[select.selectedIndex];
-        const valSpan = trigger.querySelector('.searchable-select-val');
-        if (valSpan) {
-          valSpan.textContent = currentOpt ? currentOpt.text : 'Select an option...';
-        }
-        renderOptions('');
+        syncTriggerLabel();
+        renderOptions(panel.classList.contains('hidden') ? '' : searchInput.value);
       },
       setValue(val) {
         select.value = val;
@@ -871,15 +1000,25 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    const openPanels = document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)');
+    if (openPanels.length > 0) {
+      openPanels.forEach(p => {
+        p.classList.add('hidden');
+        p.classList.remove('open-upward');
+      });
+      document.querySelectorAll('.searchable-select-trigger.active').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-expanded', 'false');
+      });
+      return;
+    }
     // Close any open modals
     const overlay = document.getElementById('globalModalOverlay');
     if (overlay && !overlay.classList.contains('hidden')) {
       Utils.closeModal();
     }
-    // Close any open searchable dropdowns
-    document.querySelectorAll('.searchable-dropdown-panel:not(.hidden)').forEach(p => p.classList.add('hidden'));
-    document.querySelectorAll('.searchable-select-trigger.active').forEach(t => t.classList.remove('active'));
   }
 });
 
 window.Utils = Utils;
+Utils.initAutoSearchableSelects();

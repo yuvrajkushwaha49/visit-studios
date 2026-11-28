@@ -113,8 +113,7 @@ App.renderLeadsList = async function(container) {
                 <th>Enquiry Ref</th>
                 <th>Customer</th>
                 <th>Project & Config</th>
-                <th>Source & Attribution</th>
-                <th>Owner</th>
+                <th>Employee Name</th>
                 <th>Stage</th>
                 <th>Actions</th>
               </tr>
@@ -136,12 +135,7 @@ App.renderLeadsList = async function(container) {
                     <small>${Utils.escapeHTML(l.apartment_size || '')}${l.budget ? ` · ${Utils.escapeHTML(l.budget)}` : ''}</small>
                   </td>
                   <td>
-                    <span>${Utils.escapeHTML(l.enquiry_source || 'Direct')}</span>
-                    <small>Orig: ${Utils.escapeHTML(l.original_associate_name || l.original_sales_head_name || l.original_link_owner_name || 'Direct')}</small>
-                  </td>
-                  <td>
-                    <strong>${Utils.escapeHTML(l.assigned_associate_name || 'Unassigned')}</strong>
-                    <small>${Utils.escapeHTML(l.assigned_sales_head_name ? 'Head: ' + l.assigned_sales_head_name : '')}</small>
+                    ${App.formatLeadEmployeeCell(l)}
                   </td>
                   <td>
                     <span class="badge lead-stage-${l.stage}">${Utils.escapeHTML(l.stage.replace(/_/g, ' '))}</span>
@@ -153,7 +147,7 @@ App.renderLeadsList = async function(container) {
                     </div>
                   </td>
                 </tr>
-              `).join('') : `<tr><td colspan="7" style="text-align:center; padding:36px; color:var(--muted);">No leads match these criteria.</td></tr>`}
+              `).join('') : `<tr><td colspan="6" style="text-align:center; padding:36px; color:var(--muted);">No leads match these criteria.</td></tr>`}
             </tbody>
           </table>
         </div>

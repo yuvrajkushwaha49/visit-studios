@@ -221,6 +221,9 @@ router.post('/', (req, res) => {
       campaignId: req.body.campaign_id || null,
       title: req.body.title || '',
       sourceName: req.body.source_name || 'Enquiry Link',
+      linkType: req.body.link_type || 'advisor',
+      advisorDisplayName: req.body.advisor_display_name || null,
+      advisorDisplayPhone: req.body.advisor_display_phone || null,
       expiresAt: req.body.expires_at || null,
       ownerAssociateId: req.body.owner_associate_id || null
     });
@@ -269,7 +272,19 @@ router.patch('/:id', (req, res) => {
     }
 
     const title = req.body.title !== undefined ? sanitizeText(req.body.title, 180) : existing.title;
+    const linkType = req.body.link_type !== undefined
+      ? (sanitizeText(req.body.link_type, 40) === 'bulk_whatsapp' ? 'bulk_whatsapp' : 'advisor')
+      : (existing.link_type || 'advisor');
+    if (req.body.link_type !== undefined && linkType === 'bulk_whatsapp' && !['admin', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Only Admin users can set Bulk WhatsApp Marketing link type.' });
+    }
     const sourceName = req.body.source_name !== undefined ? (sanitizeText(req.body.source_name, 100) || existing.source_name) : existing.source_name;
+    const advisorDisplayName = linkType === 'bulk_whatsapp'
+      ? ((req.body.advisor_display_name !== undefined ? sanitizeText(req.body.advisor_display_name, 120) : existing.advisor_display_name) || 'Aiswarya')
+      : (req.body.advisor_display_name !== undefined ? (sanitizeText(req.body.advisor_display_name, 120) || null) : (req.body.link_type === 'advisor' ? null : existing.advisor_display_name));
+    const advisorDisplayPhone = linkType === 'bulk_whatsapp'
+      ? ((req.body.advisor_display_phone !== undefined ? sanitizeText(req.body.advisor_display_phone, 32) : existing.advisor_display_phone) || '9289846060')
+      : (req.body.advisor_display_phone !== undefined ? (sanitizeText(req.body.advisor_display_phone, 32) || null) : (req.body.link_type === 'advisor' ? null : existing.advisor_display_phone));
     const isActive = req.body.is_active !== undefined ? (req.body.is_active ? 1 : 0) : existing.is_active;
 
     let projectId = existing.project_id;
@@ -307,12 +322,12 @@ router.patch('/:id', (req, res) => {
 
     db.run(
       `UPDATE tracking_links
-       SET title = ?, project_id = ?, campaign_id = ?, source_name = ?, is_active = ?, expires_at = ?,
+       SET title = ?, project_id = ?, campaign_id = ?, source_name = ?, link_type = ?, advisor_display_name = ?, advisor_display_phone = ?, is_active = ?, expires_at = ?,
            deactivated_at = CASE WHEN ? = 0 AND is_active = 1 THEN CURRENT_TIMESTAMP WHEN ? = 1 THEN NULL ELSE deactivated_at END,
            deactivated_by = CASE WHEN ? = 0 AND is_active = 1 THEN ? WHEN ? = 1 THEN NULL ELSE deactivated_by END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [title, projectId, campaignId, sourceName, isActive, expiresAt, isActive, isActive, isActive, req.user.id, isActive, existing.id]
+      [title, projectId, campaignId, sourceName, linkType, advisorDisplayName, advisorDisplayPhone, isActive, expiresAt, isActive, isActive, isActive, req.user.id, isActive, existing.id]
     );
 
     logActivity(req, 'UPDATE_TRACKING_LINK', 'tracking_links', existing.id, `Updated link ${existing.short_code} (active=${isActive})`);

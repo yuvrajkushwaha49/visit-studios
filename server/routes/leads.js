@@ -81,9 +81,12 @@ router.get('/', (req, res) => {
          d.name as developer_name,
          camp.name as campaign_name,
          ua.name as assigned_associate_name,
+         ua.role as assigned_associate_role,
+         sh.name as assigned_associate_team_name,
          uh.name as assigned_sales_head_name,
          oa.name as original_associate_name,
          oh.name as original_sales_head_name,
+         lo.name as original_link_owner_name,
          sv.status as site_visit_status,
          inv.short_code as invitation_short_code
        FROM leads l
@@ -92,9 +95,11 @@ router.get('/', (req, res) => {
        LEFT JOIN developers d ON p.developer_id = d.id
        LEFT JOIN campaigns camp ON l.campaign_id = camp.id
        LEFT JOIN users ua ON l.assigned_associate_id = ua.id
+       LEFT JOIN users sh ON ua.sales_head_id = sh.id
        LEFT JOIN users uh ON l.assigned_sales_head_id = uh.id
        LEFT JOIN users oa ON l.original_associate_id = oa.id
        LEFT JOIN users oh ON l.original_sales_head_id = oh.id
+       LEFT JOIN users lo ON l.original_link_owner_id = lo.id
        LEFT JOIN site_visits sv ON l.site_visit_id = sv.id
        LEFT JOIN invitations inv ON l.invitation_id = inv.id
        WHERE ${whereSql}

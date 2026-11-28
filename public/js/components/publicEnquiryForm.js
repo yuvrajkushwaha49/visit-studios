@@ -137,17 +137,21 @@ App.paintPublicEnquiryStep = function() {
     5: { tag: 'Details', title: 'Your details', sub: 'So we can reach you about this enquiry' }
   }[st.step];
 
+  const skipProjectStep = Boolean(meta.project_locked && (meta.projects || []).length === 1);
+  const totalSteps = skipProjectStep ? 4 : 5;
+  const displayStep = skipProjectStep ? Math.max(1, st.step - 1) : st.step;
+
   const selectedProject = (meta.projects || []).find(p => p.id === v.project_id) || (meta.projects || [])[0] || null;
   const headerLogo = selectedProject?.developer_logo || selectedProject?.project_logo || meta.agency_logo || '';
   const headerBrandName = selectedProject?.developer_name || meta.agency_name || 'Prestige Group';
 
   const progressBarHtml = `
     <div class="enq-step-top-row">
-      <span>Step ${st.step} of 5</span>
+      <span>Step ${displayStep} of ${totalSteps}</span>
       <span class="enq-step-name">${stepMeta.tag}</span>
     </div>
     <div class="enq-progress-track">
-      <div class="enq-progress-fill" style="width:${(st.step / 5) * 100}%;"></div>
+      <div class="enq-progress-fill" style="width:${(displayStep / totalSteps) * 100}%;"></div>
     </div>
   `;
 
@@ -186,7 +190,7 @@ App.paintPublicEnquiryStep = function() {
       '4BHK + 4T + Servant - 2700 sq.ft',
       '4BHK + 4T + Servant - 3350 sq.ft'
     ];
-    const budgetOptions = ['₹1 Cr – ₹2 Cr', '₹2 Cr – ₹3.5 Cr', '₹3.5 Cr – ₹5 Cr', '₹5 Cr – ₹8 Cr', '₹8 Cr+'];
+    const budgetOptions = ['₹2 Cr – ₹3.5 Cr', '₹3.5 Cr – ₹5 Cr', '₹5 Cr – ₹8 Cr', '₹8 Cr+'];
 
     bodyHtml = `
       <div class="enq-step-head">
@@ -224,7 +228,7 @@ App.paintPublicEnquiryStep = function() {
       </div>
 
       <div class="enq-actions-bar">
-        ${!meta.project_locked ? `<button type="button" class="enq-back-btn" onclick="App.goEnquiryStep(1)">Back</button>` : ''}
+        ${!skipProjectStep ? `<button type="button" class="enq-back-btn" onclick="App.goEnquiryStep(1)">Back</button>` : ''}
         <button type="button" class="enq-next-btn" onclick="App.nextEnquiryStep()">Next</button>
       </div>
     `;
@@ -496,9 +500,12 @@ App.submitPublicEnquiryForm = async function(e) {
               </p>
               <div class="enq-confirm-box">
                 <div><span>Reference</span><strong><code>${Utils.escapeHTML(conf.enquiry_ref || '')}</code></strong></div>
+                <div><span>Customer</span><strong>${Utils.escapeHTML(conf.customer_name || v.full_name)}</strong></div>
+                <div><span>Mobile</span><strong>${Utils.escapeHTML(conf.customer_mobile || fullPhone)}</strong></div>
                 <div><span>Project</span><strong>${Utils.escapeHTML(conf.project_name || v.project_name)}</strong></div>
                 <div><span>Size</span><strong>${Utils.escapeHTML(conf.apartment_size || v.apartment_size)}</strong></div>
                 <div><span>Advisor</span><strong>${Utils.escapeHTML(conf.advisor_name || 'Property Advisory Desk')}</strong></div>
+                <div><span>Advisor No.</span><strong>${conf.advisor_phone ? `<a href="tel:${Utils.escapeHTML(conf.advisor_phone)}" style="color:#DCC08A; text-decoration:none;">${Utils.escapeHTML(conf.advisor_phone)}</a>` : '—'}</strong></div>
                 <div><span>Call time</span><strong>${Utils.escapeHTML(conf.preferred_callback_time || v.preferred_callback_time)}</strong></div>
               </div>
               <p style="margin:0; font-size:12.5px; color:#847D6F;">Keep the reference number for any follow-up about this enquiry.</p>

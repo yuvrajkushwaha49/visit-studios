@@ -45,6 +45,9 @@ function createTrackingLink({
   campaignId = null,
   title = '',
   sourceName = 'Enquiry Link',
+  linkType = 'advisor',
+  advisorDisplayName = null,
+  advisorDisplayPhone = null,
   expiresAt = null,
   ownerAssociateId = null
 }) {
@@ -109,6 +112,22 @@ function createTrackingLink({
     parsedExpiresAt = dt.toISOString().replace('T', ' ').slice(0, 19);
   }
 
+  const normalizedLinkType = sanitizeText(linkType, 40) === 'bulk_whatsapp' ? 'bulk_whatsapp' : 'advisor';
+  if (normalizedLinkType === 'bulk_whatsapp' && !['admin', 'super_admin'].includes(user.role)) {
+    throw Object.assign(new Error('Only Admin users can create Bulk WhatsApp Marketing links.'), { status: 403 });
+  }
+  const resolvedSourceName = normalizedLinkType === 'bulk_whatsapp'
+    ? (sanitizeText(sourceName, 100) && sanitizeText(sourceName, 100) !== 'Enquiry Link'
+        ? sanitizeText(sourceName, 100)
+        : 'Bulk WhatsApp Marketing')
+    : (sanitizeText(sourceName, 100) || 'Enquiry Link');
+  const resolvedAdvisorDisplayName = normalizedLinkType === 'bulk_whatsapp'
+    ? (sanitizeText(advisorDisplayName, 120) || 'Aiswarya')
+    : (sanitizeText(advisorDisplayName, 120) || null);
+  const resolvedAdvisorDisplayPhone = normalizedLinkType === 'bulk_whatsapp'
+    ? (sanitizeText(advisorDisplayPhone, 32) || '9289846060')
+    : (sanitizeText(advisorDisplayPhone, 32) || null);
+
   const linkId = 'lnk-' + crypto.randomUUID().slice(0, 8);
   const token = generateSecureToken();
   const shortCode = generateShortCode();
@@ -118,8 +137,8 @@ function createTrackingLink({
       `INSERT INTO tracking_links (
         id, token, short_code, organization_id, creator_user_id, creator_role,
         owner_associate_id, owner_sales_head_id, project_id, campaign_id,
-        title, source_name, is_active, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+        title, source_name, link_type, advisor_display_name, advisor_display_phone, is_active, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
       [
         linkId,
         token,
@@ -132,7 +151,10 @@ function createTrackingLink({
         projectId || null,
         campaignId || null,
         sanitizeText(title, 180) || null,
-        sanitizeText(sourceName, 100) || 'Enquiry Link',
+        resolvedSourceName,
+        normalizedLinkType,
+        resolvedAdvisorDisplayName,
+        resolvedAdvisorDisplayPhone,
         parsedExpiresAt
       ]
     );
@@ -145,7 +167,7 @@ function createTrackingLink({
         orgId,
         linkId,
         campaignId || null,
-        JSON.stringify({ creator_role: user.role, project_id: projectId || null })
+        JSON.stringify({ creator_role: user.role, project_id: projectId || null, link_type: normalizedLinkType })
       ]
     );
   });
@@ -216,8 +238,11 @@ function resolvePublicLinkByToken(tokenOrCode) {
        os.accent_color,
        c.name as campaign_name,
        ua.name as owner_associate_name,
+       ua.phone as owner_associate_phone,
        uh.name as owner_sales_head_name,
-       uc.name as creator_name
+       uh.phone as owner_sales_head_phone,
+       uc.name as creator_name,
+       uc.phone as creator_phone
      FROM tracking_links tl
      JOIN organizations o ON tl.organization_id = o.id
      LEFT JOIN organization_settings os ON tl.organization_id = os.organization_id
@@ -279,9 +304,15 @@ function buildPublicEnquiryFormPayload(link) {
     short_code: link.short_code,
     title: link.title || 'Private Property Enquiry',
     source_name: link.source_name || 'Enquiry Link',
+    link_type: link.link_type || 'advisor',
     campaign_name: link.campaign_name || null,
     project_locked: Boolean(link.project_id),
-    advisor_display_name: link.owner_associate_name || link.owner_sales_head_name || link.creator_name || 'Property Advisory Desk',
+    advisor_display_name: link.link_type === 'bulk_whatsapp'
+      ? (link.advisor_display_name || 'Aiswarya')
+      : (link.advisor_display_name || link.owner_associate_name || link.owner_sales_head_name || link.creator_name || 'Property Advisory Desk'),
+    advisor_display_phone: link.link_type === 'bulk_whatsapp'
+      ? (link.advisor_display_phone || '9289846060')
+      : (link.advisor_display_phone || link.owner_associate_phone || link.owner_sales_head_phone || link.creator_phone || ''),
     agency_name: link.agency_name || link.organization_name || 'Prestige Property Advisory',
     agency_subtitle: link.agency_subtitle || 'Luxury Real Estate Advisory',
     agency_logo: link.agency_logo || null,

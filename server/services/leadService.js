@@ -44,7 +44,9 @@ function getLeadById(leadId) {
        tl.short_code as tracking_short_code,
        tl.source_name as link_source_name,
        ua.name as assigned_associate_name,
+       ua.role as assigned_associate_role,
        ua.phone as assigned_associate_phone,
+       sh.name as assigned_associate_team_name,
        uh.name as assigned_sales_head_name,
        oa.name as original_associate_name,
        oh.name as original_sales_head_name,
@@ -63,6 +65,7 @@ function getLeadById(leadId) {
      LEFT JOIN campaigns camp ON l.campaign_id = camp.id
      LEFT JOIN tracking_links tl ON l.tracking_link_id = tl.id
      LEFT JOIN users ua ON l.assigned_associate_id = ua.id
+     LEFT JOIN users sh ON ua.sales_head_id = sh.id
      LEFT JOIN users uh ON l.assigned_sales_head_id = uh.id
      LEFT JOIN users oa ON l.original_associate_id = oa.id
      LEFT JOIN users oh ON l.original_sales_head_id = oh.id
@@ -455,14 +458,29 @@ function submitPublicEnquiry({ token, body, req }) {
     `Enquiry ${txResult.enquiryRef} for ${txResult.attr.project.name} (${txResult.duplicateStatus})`
   );
 
+  const isBulkWhatsapp = link.link_type === 'bulk_whatsapp';
+  const assignedAdvisorId = txResult.finalAssignedAssocId || txResult.finalAssignedHeadId || null;
+  const assignedAdvisor = !isBulkWhatsapp && assignedAdvisorId
+    ? db.get('SELECT name, phone FROM users WHERE id = ?', [assignedAdvisorId])
+    : null;
+  const advisorName = isBulkWhatsapp
+    ? (link.advisor_display_name || 'Aiswarya')
+    : (link.advisor_display_name || assignedAdvisor?.name || link.owner_associate_name || link.owner_sales_head_name || link.creator_name || 'Property Advisory Desk');
+  const advisorPhone = isBulkWhatsapp
+    ? (link.advisor_display_phone || '9289846060')
+    : (link.advisor_display_phone || assignedAdvisor?.phone || link.owner_associate_phone || link.owner_sales_head_phone || link.creator_phone || '');
+
   return {
     enquiry_ref: txResult.enquiryRef,
     submitted_at: nowIso,
+    customer_name: data.full_name,
+    customer_mobile: data.mobile_number,
     project_name: txResult.attr.project.name,
     apartment_size: data.apartment_size || txResult.attr.configuration?.name || '',
     preferred_callback_time: data.preferred_callback_time,
     purchase_timeline: data.purchase_timeline,
-    advisor_name: link.owner_associate_name || link.owner_sales_head_name || link.creator_name || 'Property Advisory Desk'
+    advisor_name: advisorName,
+    advisor_phone: advisorPhone
   };
 }
 

@@ -106,7 +106,7 @@ App.renderLeadPipeline = async function(container) {
         <div class="panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Ref</th><th>Customer</th><th>Project</th><th>Stage</th><th>Owner</th><th>Updated</th><th>Action</th></tr></thead>
+              <thead><tr><th>Ref</th><th>Customer</th><th>Project</th><th>Stage</th><th>Employee Name</th><th>Updated</th><th>Action</th></tr></thead>
               <tbody>
                 ${leads.length ? leads.map(l => `
                   <tr>
@@ -114,7 +114,7 @@ App.renderLeadPipeline = async function(container) {
                     <td><strong>${Utils.escapeHTML(l.customer_name)}</strong><small>${Utils.escapeHTML(l.customer_mobile)}</small></td>
                     <td>${Utils.escapeHTML(l.project_name || '—')}</td>
                     <td><span class="badge lead-stage-${l.stage}">${Utils.escapeHTML(l.stage.replace(/_/g, ' '))}</span></td>
-                    <td>${Utils.escapeHTML(l.assigned_associate_name || 'Unassigned')}</td>
+                    <td>${App.formatLeadEmployeeCell(l)}</td>
                     <td>${Utils.formatDate(l.updated_at)}</td>
                     <td><button class="btn small primary" onclick="App.openLeadDetailModal('${l.id}')">Manage</button></td>
                   </tr>

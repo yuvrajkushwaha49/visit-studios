@@ -140,6 +140,7 @@ function generatePDFReport({ title = 'Performance Report', subtitle = '', dateRa
       const doc = new PDFDocument({
         margin: 36,
         size: 'A4',
+        bufferPages: true,
         info: {
           Title: title,
           Author: 'Invitation Meeting Portal',
@@ -251,14 +252,14 @@ function generatePDFReport({ title = 'Performance Report', subtitle = '', dateRa
       });
 
       // Footer
-      const totalPages = doc.bufferedPageRange().count;
-      for (let i = 0; i < totalPages; i++) {
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
         doc.fontSize(8).fillColor('#94a3b8').text(
-          `Page ${i + 1} of ${totalPages}   •   Confidential - For Internal Use Only`,
+          `Page ${i - range.start + 1} of ${range.count}   •   Confidential - For Internal Use Only`,
           36,
           doc.page.height - 25,
-          { align: 'center', width: doc.page.width - 72 }
+          { align: 'center', width: doc.page.width - 72, lineBreak: false }
         );
       }
 

@@ -1,4 +1,16 @@
 // Lead Dashboard Component (Role-Based: Associate, Sales Head, Admin, Super Admin)
+App.formatLeadEmployeeCell = function(l) {
+  const isTeamHeadOwner =
+    l.assigned_associate_role === 'sales_head' ||
+    (!l.assigned_associate_name && Boolean(l.assigned_sales_head_name));
+  const employeeName = l.assigned_associate_name || l.assigned_sales_head_name || 'Unassigned';
+  const teamName = !isTeamHeadOwner ? (l.assigned_sales_head_name || l.assigned_associate_team_name || '') : '';
+  return `
+    <strong>${Utils.escapeHTML(employeeName)}</strong>
+    ${teamName ? `<small>Head: ${Utils.escapeHTML(teamName)}</small>` : ''}
+  `;
+};
+
 App.renderLeadDashboard = async function(container) {
   container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted);">Loading Lead Management dashboard...</div>`;
   try {
@@ -70,7 +82,7 @@ App.renderLeadDashboard = async function(container) {
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Ref / Customer</th><th>Project</th><th>Stage</th><th>Owner</th></tr>
+                <tr><th>Ref / Customer</th><th>Project</th><th>Stage</th><th>Employee Name</th></tr>
               </thead>
               <tbody>
                 ${recentLeads.length ? recentLeads.map(l => `
@@ -81,7 +93,7 @@ App.renderLeadDashboard = async function(container) {
                     </td>
                     <td>${Utils.escapeHTML(l.project_name || '—')}<small>${Utils.escapeHTML(l.apartment_size || '')}</small></td>
                     <td><span class="badge lead-stage-${l.stage}">${Utils.escapeHTML(l.stage.replace(/_/g, ' '))}</span></td>
-                    <td>${Utils.escapeHTML(l.assigned_associate_name || l.assigned_sales_head_name || 'Unassigned')}</td>
+                    <td>${App.formatLeadEmployeeCell(l)}</td>
                   </tr>
                 `).join('') : `<tr><td colspan="4" style="text-align:center; padding:28px; color:var(--muted);">No enquiries recorded yet.</td></tr>`}
               </tbody>

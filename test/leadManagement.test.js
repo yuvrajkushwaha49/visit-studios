@@ -203,6 +203,56 @@ async function runLeadTests() {
   assert.strictEqual(submitRes.status, 201, `Submit failed: ${JSON.stringify(submitRes.data)}`);
   assert(submitRes.data.confirmation.enquiry_ref.startsWith('ENQ-'));
   assert.strictEqual(submitRes.data.confirmation.project_name, project1.name, 'Project-locked link must enforce project1');
+  assert.strictEqual(submitRes.data.confirmation.customer_name, 'Rhea Oberoi');
+  assert.strictEqual(submitRes.data.confirmation.advisor_name, assoc1.user.name, 'Associate link must show Associate name');
+
+  // 5b. Associate must NOT create Bulk WhatsApp Marketing link; Admin CAN and receipt shows Aiswarya & 9289846060
+  const assocBulkDenied = await apiReq('/api/lead-links', {
+    method: 'POST',
+    headers: hAssoc1,
+    body: JSON.stringify({
+      title: 'Unauthorized Bulk WA',
+      project_id: project1.id,
+      link_type: 'bulk_whatsapp'
+    })
+  });
+  assert.strictEqual(assocBulkDenied.status, 403, 'Associate must not generate Bulk WhatsApp Marketing links');
+
+  const bulkLinkRes = await apiReq('/api/lead-links', {
+    method: 'POST',
+    headers: hAdmin,
+    body: JSON.stringify({
+      title: 'Bulk WA Blast',
+      project_id: project1.id,
+      link_type: 'bulk_whatsapp'
+    })
+  });
+  assert.strictEqual(bulkLinkRes.status, 201);
+  const bulkMetaRes = await apiReq(`/api/public/enquiry/${bulkLinkRes.data.link.token}`);
+  assert.strictEqual(bulkMetaRes.status, 200);
+  assert.strictEqual(bulkMetaRes.data.enquiryForm.advisor_display_name, 'Aiswarya');
+  assert.strictEqual(bulkMetaRes.data.enquiryForm.advisor_display_phone, '9289846060');
+  assert.strictEqual(bulkMetaRes.data.enquiryForm.organization_id, undefined, 'Bulk WA public metadata must not leak org ID');
+
+  const bulkPhone = '+9197' + Math.floor(10000000 + Math.random() * 89999999);
+  const bulkSubmit = await apiReq(`/api/public/enquiry/${bulkLinkRes.data.link.token}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({
+      project_id: project1.id,
+      apartment_size: '3 Bed Ultima',
+      purchase_timeline: 'Immediately',
+      preferred_callback_time: '12:00 PM to 3:00 PM',
+      full_name: 'Bulk WA Prospect',
+      mobile_number: bulkPhone,
+      city: 'Noida',
+      contact_consent: true
+    })
+  });
+  assert.strictEqual(bulkSubmit.status, 201);
+  assert.strictEqual(bulkSubmit.data.confirmation.advisor_name, 'Aiswarya');
+  assert.strictEqual(bulkSubmit.data.confirmation.advisor_phone, '9289846060');
+  assert.strictEqual(bulkSubmit.data.confirmation.customer_name, 'Bulk WA Prospect');
+  assert(bulkSubmit.data.confirmation.customer_mobile);
 
   // Verify attribution in Associate 1, Sales Head 1, Admin, Super Admin dashboards
   const assoc1Leads = await apiReq(`/api/leads?search=${encodeURIComponent(submitRes.data.confirmation.enquiry_ref)}`, { headers: hAssoc1 });

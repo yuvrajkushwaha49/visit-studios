@@ -31,7 +31,10 @@ const migrationStatements = [
   'ALTER TABLE customers ADD COLUMN original_source TEXT;',
   'ALTER TABLE followups ADD COLUMN lead_id TEXT;',
   'ALTER TABLE followups ADD COLUMN completed_at DATETIME;',
-  'ALTER TABLE followups ADD COLUMN reminder_sent_at DATETIME;'
+  'ALTER TABLE followups ADD COLUMN reminder_sent_at DATETIME;',
+  "ALTER TABLE tracking_links ADD COLUMN link_type TEXT DEFAULT 'advisor';",
+  'ALTER TABLE tracking_links ADD COLUMN advisor_display_name TEXT;',
+  'ALTER TABLE tracking_links ADD COLUMN advisor_display_phone TEXT;'
 ];
 
 for (const stmt of migrationStatements) {
