@@ -73,7 +73,7 @@ App.renderLeadGeneration = async function(container) {
                 <label for="lnkType">Link Type</label>
                 <select id="lnkType" onchange="App.onLeadLinkTypeChange('lnk', this.value)">
                   <option value="advisor">Associate / Advisor Link</option>
-                  <option value="bulk_whatsapp">Bulk WhatsApp Marketing (Advisor: Aiswarya · 9289846060)</option>
+                  <option value="bulk_whatsapp">Bulk WhatsApp Marketing (Advisor: Aishwarya · 9289846060)</option>
                 </select>
               </div>
             ` : ''}
@@ -125,7 +125,7 @@ App.renderLeadGeneration = async function(container) {
             ${canUseBulkWhatsapp ? `
               <div id="lnkBulkAdvisorNameWrap" class="hidden">
                 <label for="lnkAdvisorName">Receipt Advisor Name</label>
-                <input id="lnkAdvisorName" maxlength="120" value="Aiswarya" placeholder="Aiswarya">
+                <input id="lnkAdvisorName" maxlength="120" value="Aishwarya" placeholder="Aishwarya">
               </div>
               <div id="lnkBulkAdvisorPhoneWrap" class="hidden">
                 <label for="lnkAdvisorPhone">Receipt Advisor Number</label>
@@ -205,7 +205,7 @@ App.renderLeadGeneration = async function(container) {
                   </td>
                   <td>
                     ${lnk.link_type === 'bulk_whatsapp' ? `
-                      <strong>${Utils.escapeHTML(lnk.advisor_display_name || 'Aiswarya')} (${Utils.escapeHTML(lnk.advisor_display_phone || '9289846060')})</strong>
+                      <strong>${Utils.escapeHTML(lnk.advisor_display_name || 'Aishwarya')} (${Utils.escapeHTML(lnk.advisor_display_phone || '9289846060')})</strong>
                       <small>Bulk WhatsApp Marketing · ${Utils.escapeHTML(lnk.creator_name || 'Marketing')}</small>
                     ` : `
                       <strong>${Utils.escapeHTML(lnk.owner_associate_name || lnk.owner_sales_head_name || lnk.creator_name)}</strong>
@@ -278,7 +278,7 @@ App.onLeadLinkTypeChange = function(prefix, linkType) {
   if (phoneWrap) phoneWrap.classList.toggle('hidden', !isBulk);
 
   if (isBulk) {
-    if (nameInput && !nameInput.value.trim()) nameInput.value = 'Aiswarya';
+    if (nameInput && !nameInput.value.trim()) nameInput.value = 'Aishwarya';
     if (phoneInput && !phoneInput.value.trim()) phoneInput.value = '9289846060';
     if (srcSelect) {
       srcSelect.value = 'Bulk WhatsApp Marketing';
@@ -306,7 +306,7 @@ App.handleGenerateLeadLink = async function(e) {
       owner_associate_id: document.getElementById('lnkOwnerAssoc')?.value || null
     };
     if (linkType === 'bulk_whatsapp') {
-      payload.advisor_display_name = document.getElementById('lnkAdvisorName')?.value.trim() || 'Aiswarya';
+      payload.advisor_display_name = document.getElementById('lnkAdvisorName')?.value.trim() || 'Aishwarya';
       payload.advisor_display_phone = document.getElementById('lnkAdvisorPhone')?.value.trim() || '9289846060';
     }
     const res = await API.post('/lead-links', payload);
@@ -369,7 +369,7 @@ App.openEditTrackingLinkModal = async function(linkId) {
               <label for="editLnkType">Link Type</label>
               <select id="editLnkType" onchange="App.onLeadLinkTypeChange('editLnk', this.value)">
                 <option value="advisor" ${!isBulk ? 'selected' : ''}>Associate / Advisor Link</option>
-                <option value="bulk_whatsapp" ${isBulk ? 'selected' : ''}>Bulk WhatsApp Marketing (Advisor: Aiswarya · 9289846060)</option>
+                <option value="bulk_whatsapp" ${isBulk ? 'selected' : ''}>Bulk WhatsApp Marketing (Advisor: Aishwarya · 9289846060)</option>
               </select>
             </div>
           ` : ''}
@@ -413,7 +413,7 @@ App.openEditTrackingLinkModal = async function(linkId) {
           ${canEditBulk ? `
             <div id="editLnkBulkAdvisorNameWrap" class="${isBulk ? '' : 'hidden'}">
               <label for="editLnkAdvisorName">Receipt Advisor Name</label>
-              <input id="editLnkAdvisorName" maxlength="120" value="${Utils.escapeHTML(lnk.advisor_display_name || 'Aiswarya')}">
+              <input id="editLnkAdvisorName" maxlength="120" value="${Utils.escapeHTML(lnk.advisor_display_name || 'Aishwarya')}">
             </div>
             <div id="editLnkBulkAdvisorPhoneWrap" class="${isBulk ? '' : 'hidden'}">
               <label for="editLnkAdvisorPhone">Receipt Advisor Number</label>
@@ -449,7 +449,7 @@ App.handleUpdateTrackingLink = async function(e, linkId) {
     if (editTypeEl) {
       payload.link_type = editTypeEl.value || 'advisor';
       if (payload.link_type === 'bulk_whatsapp') {
-        payload.advisor_display_name = document.getElementById('editLnkAdvisorName')?.value.trim() || 'Aiswarya';
+        payload.advisor_display_name = document.getElementById('editLnkAdvisorName')?.value.trim() || 'Aishwarya';
         payload.advisor_display_phone = document.getElementById('editLnkAdvisorPhone')?.value.trim() || '9289846060';
       }
     }

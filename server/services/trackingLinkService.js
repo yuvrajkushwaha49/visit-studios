@@ -122,7 +122,7 @@ function createTrackingLink({
         : 'Bulk WhatsApp Marketing')
     : (sanitizeText(sourceName, 100) || 'Enquiry Link');
   const resolvedAdvisorDisplayName = normalizedLinkType === 'bulk_whatsapp'
-    ? (sanitizeText(advisorDisplayName, 120) || 'Aiswarya')
+    ? (sanitizeText(advisorDisplayName, 120) || 'Aishwarya')
     : (sanitizeText(advisorDisplayName, 120) || null);
   const resolvedAdvisorDisplayPhone = normalizedLinkType === 'bulk_whatsapp'
     ? (sanitizeText(advisorDisplayPhone, 32) || '9289846060')
@@ -308,7 +308,7 @@ function buildPublicEnquiryFormPayload(link) {
     campaign_name: link.campaign_name || null,
     project_locked: Boolean(link.project_id),
     advisor_display_name: link.link_type === 'bulk_whatsapp'
-      ? (link.advisor_display_name || 'Aiswarya')
+      ? (link.advisor_display_name || 'Aishwarya')
       : (link.advisor_display_name || link.owner_associate_name || link.owner_sales_head_name || link.creator_name || 'Property Advisory Desk'),
     advisor_display_phone: link.link_type === 'bulk_whatsapp'
       ? (link.advisor_display_phone || '9289846060')

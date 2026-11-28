@@ -280,7 +280,7 @@ router.patch('/:id', (req, res) => {
     }
     const sourceName = req.body.source_name !== undefined ? (sanitizeText(req.body.source_name, 100) || existing.source_name) : existing.source_name;
     const advisorDisplayName = linkType === 'bulk_whatsapp'
-      ? ((req.body.advisor_display_name !== undefined ? sanitizeText(req.body.advisor_display_name, 120) : existing.advisor_display_name) || 'Aiswarya')
+      ? ((req.body.advisor_display_name !== undefined ? sanitizeText(req.body.advisor_display_name, 120) : existing.advisor_display_name) || 'Aishwarya')
       : (req.body.advisor_display_name !== undefined ? (sanitizeText(req.body.advisor_display_name, 120) || null) : (req.body.link_type === 'advisor' ? null : existing.advisor_display_name));
     const advisorDisplayPhone = linkType === 'bulk_whatsapp'
       ? ((req.body.advisor_display_phone !== undefined ? sanitizeText(req.body.advisor_display_phone, 32) : existing.advisor_display_phone) || '9289846060')

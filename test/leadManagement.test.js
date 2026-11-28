@@ -206,7 +206,7 @@ async function runLeadTests() {
   assert.strictEqual(submitRes.data.confirmation.customer_name, 'Rhea Oberoi');
   assert.strictEqual(submitRes.data.confirmation.advisor_name, assoc1.user.name, 'Associate link must show Associate name');
 
-  // 5b. Associate must NOT create Bulk WhatsApp Marketing link; Admin CAN and receipt shows Aiswarya & 9289846060
+  // 5b. Associate must NOT create Bulk WhatsApp Marketing link; Admin CAN and receipt shows Aishwarya & 9289846060
   const assocBulkDenied = await apiReq('/api/lead-links', {
     method: 'POST',
     headers: hAssoc1,
@@ -230,7 +230,7 @@ async function runLeadTests() {
   assert.strictEqual(bulkLinkRes.status, 201);
   const bulkMetaRes = await apiReq(`/api/public/enquiry/${bulkLinkRes.data.link.token}`);
   assert.strictEqual(bulkMetaRes.status, 200);
-  assert.strictEqual(bulkMetaRes.data.enquiryForm.advisor_display_name, 'Aiswarya');
+  assert.strictEqual(bulkMetaRes.data.enquiryForm.advisor_display_name, 'Aishwarya');
   assert.strictEqual(bulkMetaRes.data.enquiryForm.advisor_display_phone, '9289846060');
   assert.strictEqual(bulkMetaRes.data.enquiryForm.organization_id, undefined, 'Bulk WA public metadata must not leak org ID');
 
@@ -249,7 +249,7 @@ async function runLeadTests() {
     })
   });
   assert.strictEqual(bulkSubmit.status, 201);
-  assert.strictEqual(bulkSubmit.data.confirmation.advisor_name, 'Aiswarya');
+  assert.strictEqual(bulkSubmit.data.confirmation.advisor_name, 'Aishwarya');
   assert.strictEqual(bulkSubmit.data.confirmation.advisor_phone, '9289846060');
   assert.strictEqual(bulkSubmit.data.confirmation.customer_name, 'Bulk WA Prospect');
   assert(bulkSubmit.data.confirmation.customer_mobile);

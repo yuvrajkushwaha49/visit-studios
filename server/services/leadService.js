@@ -464,7 +464,7 @@ function submitPublicEnquiry({ token, body, req }) {
     ? db.get('SELECT name, phone FROM users WHERE id = ?', [assignedAdvisorId])
     : null;
   const advisorName = isBulkWhatsapp
-    ? (link.advisor_display_name || 'Aiswarya')
+    ? (link.advisor_display_name || 'Aishwarya')
     : (link.advisor_display_name || assignedAdvisor?.name || link.owner_associate_name || link.owner_sales_head_name || link.creator_name || 'Property Advisory Desk');
   const advisorPhone = isBulkWhatsapp
     ? (link.advisor_display_phone || '9289846060')
