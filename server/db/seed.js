@@ -673,19 +673,19 @@ async function seedDatabase() {
   );
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['cfg-w25', projPrestige150WId, '3 Bed Ultima', 'Three-bedroom family home', 'Fern & Gulmohar', '', 3, 3]
+    ['cfg-w25', projPrestige150WId, '3 Bed Ultima', '3 Bed + 3 Toilets + Home Office', '3 Bed + 3T + Home Office · ~2,246–2,268 sq. ft.', '', 3, 3]
   );
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['cfg-w26', projPrestige150WId, '4 Bed Magnus', 'Four-bedroom family home', 'Fern & Gulmohar', '', 4, 4]
+    ['cfg-w26', projPrestige150WId, '4 Bed Magnus', '4 Bed + 4 Toilets + Home Office', '4 Bed + 4T + Home Office · ~2,526–2,851 sq. ft.', '', 4, 4]
   );
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['cfg-w27', projPrestige150WId, 'Ground-floor Duplex', 'Ground-floor duplex', 'Limited · Fern & Gulmohar', '', 4, 5]
+    ['cfg-w27', projPrestige150WId, 'Ground-floor Duplex', '4 Bed Luxury Duplex (Fern & Gulmohar)', 'Limited Duplex · ~4,187–4,591 sq. ft.', '', 4, 5]
   );
   db.run(
     `INSERT INTO project_configurations (id, project_id, name, carpet_area, super_built_up_area, price, bedrooms, bathrooms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['cfg-w28', projPrestige150WId, 'Sky Mansion', 'Top-floor Sky Mansion', 'Uppermost floors', '', 5, 5]
+    ['cfg-w28', projPrestige150WId, 'Sky Mansion', 'Top-floor Sky Mansion Penthouse', 'Uppermost Floors · ~5,591–6,091 sq. ft.', '', 5, 5]
   );
 
   // 5. Project Configurations
